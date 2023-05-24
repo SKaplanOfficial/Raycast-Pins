@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Form, ActionPanel, Action, showToast, popToRoot, Icon } from "@raycast/api";
-import { setStorage, getStorage } from "./utils";
-import { StorageKey } from "./constants";
-import { Pin, Group } from "./types";
+import { setStorage, getStorage } from "./lib/utils";
+import { StorageKey } from "./lib/constants";
+import { Pin } from "./lib/Pins";
+import { Group } from "./lib/Groups";
 
 const reassignIDs = async (newItems: { id: number }[]) => {
   let currentID = 0;
@@ -10,7 +11,6 @@ const reassignIDs = async (newItems: { id: number }[]) => {
     item.id = currentID;
     currentID++;
   });
-  console.log([currentID]);
   await setStorage(StorageKey.NEXT_PIN_ID, [currentID]);
 };
 

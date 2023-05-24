@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Icon,
   Form,
@@ -6,91 +6,18 @@ import {
   useNavigation,
   Action,
   ActionPanel,
-  showToast,
-  confirmAlert,
-  clearSearchBar,
   getPreferenceValues,
   Application,
   getApplications,
+  open,
 } from "@raycast/api";
-import { iconMap, setStorage, getStorage, usePins, openPin, checkExpirations } from "./utils";
-import { StorageKey } from "./constants";
-import { Pin, Group, ExtensionPreferences } from "./types";
+import { iconMap, setStorage, getStorage, ExtensionPreferences } from "./lib/utils";
+import { StorageKey } from "./lib/constants";
 import { getFavicon, useCachedState } from "@raycast/utils";
+import { Pin, checkExpirations, deletePin, modifyPin, openPin, usePins } from "./lib/Pins";
+import { Group, useGroups } from "./lib/Groups";
 import * as os from "os";
-
-const useGetGroups = () => {
-  const [groups, setGroups] = useState<Group[]>([]);
-
-  useEffect(() => {
-    Promise.resolve(getStorage(StorageKey.LOCAL_GROUPS)).then((groups) => {
-      const allGroups = [...groups];
-      allGroups.push({
-        name: "None",
-        id: -1,
-        icon: "Minus",
-      });
-      setGroups(allGroups);
-    });
-  }, []);
-
-  return groups;
-};
-
-const modifyPin = async (
-  pin: Pin,
-  name: string,
-  url: string,
-  icon: string,
-  group: string,
-  application: string,
-  expireDate: Date | undefined,
-  pop: () => void,
-  setPins: React.Dispatch<React.SetStateAction<Pin[]>>
-) => {
-  const storedPins = await getStorage(StorageKey.LOCAL_PINS);
-
-  const newData: Pin[] = storedPins.map((oldPin: Pin) => {
-    // Update pin if it exists
-    if (pin.id != -1 && oldPin.id == pin.id) {
-      return {
-        name: name,
-        url: url,
-        icon: icon,
-        group: group,
-        id: pin.id,
-        application: application,
-        expireDate: expireDate,
-      };
-    } else {
-      return oldPin;
-    }
-  });
-
-  if (pin.id == -1) {
-    pin.id = (await getStorage(StorageKey.NEXT_PIN_ID))[0];
-    while (storedPins.some((storedPin: Pin) => storedPin.id == pin.id)) {
-      pin.id = pin.id + 1;
-    }
-    setStorage(StorageKey.NEXT_PIN_ID, [pin.id + 1]);
-
-    // Add new pin if it doesn't exist
-    newData.push({
-      name: name,
-      url: url,
-      icon: icon,
-      group: group,
-      id: pin.id,
-      application: application,
-      expireDate: expireDate,
-    });
-  }
-
-  setPins(newData);
-  await setStorage(StorageKey.LOCAL_PINS, newData);
-  await showToast({ title: `Updated pin!` });
-  pop();
-};
+import { useRecentApplications } from "./lib/LocalData";
 
 const EditPinView = (props: { pin: Pin; setPins: React.Dispatch<React.SetStateAction<Pin[]>> }) => {
   const pin = props.pin;
@@ -98,7 +25,7 @@ const EditPinView = (props: { pin: Pin; setPins: React.Dispatch<React.SetStateAc
   const [url, setURL] = useState<string | undefined>();
   const [urlError, setUrlError] = useState<string | undefined>();
   const [applications, setApplications] = useCachedState<Application[]>("applications", []);
-  const groups = useGetGroups();
+  const { groups } = useGroups();
   const { pop } = useNavigation();
 
   const iconList = Object.keys(Icon);
@@ -122,6 +49,7 @@ const EditPinView = (props: { pin: Pin; setPins: React.Dispatch<React.SetStateAc
                 values.groupField,
                 values.openWithField,
                 values.dateField,
+                values.execInBackgroundField,
                 pop,
                 setPins
               )
@@ -158,7 +86,7 @@ const EditPinView = (props: { pin: Pin; setPins: React.Dispatch<React.SetStateAc
           }
 
           const allApplications = await getApplications();
-          if (value.match(/.*?:.*/g)) {
+          if (value.match(/^[a-zA-Z0-9]*?:.*/g)) {
             const preferredBrowser = preferences.preferredBrowser ? preferences.preferredBrowser : "Safari";
             const browser = allApplications.find((app) => app.name == preferredBrowser);
             if (browser) {
@@ -184,12 +112,21 @@ const EditPinView = (props: { pin: Pin; setPins: React.Dispatch<React.SetStateAc
         defaultValue={pin.url}
       />
 
+      {!url?.startsWith("/") && !url?.startsWith("~") && !url?.match(/^[a-zA-Z0-9]*?:.*/g) ? (
+        <Form.Checkbox
+          label="Execute in Background"
+          id="execInBackgroundField"
+          defaultValue={false}
+          info="If checked, the pinned Terminal command will be executed in the background instead of in a new Terminal tab."
+        />
+      ) : null}
+
       <Form.Dropdown id="iconField" title="Icon" defaultValue={pin.icon}>
         {iconList.map((icon) => {
           const urlIcon = url
             ? url.startsWith("/") || url.startsWith("~")
               ? { fileIcon: url }
-              : url.match(/.*?:.*/g)
+              : url.match(/^[a-zA-Z0-9]*?:.*/g)
               ? getFavicon(url)
               : Icon.Terminal
             : iconMap["Minus"];
@@ -221,12 +158,18 @@ const EditPinView = (props: { pin: Pin; setPins: React.Dispatch<React.SetStateAc
         id="dateField"
         title="Expiration Date"
         info="The date and time at which the pin will be automatically removed"
-        defaultValue={pin.expireDate}
+        type={Form.DatePicker.Type.DateTime}
+        value={pin.expireDate == undefined ? undefined : new Date(pin.expireDate)}
+        onChange={(value) => {
+          if (value) {
+            pin.expireDate = value.toUTCString();
+          }
+        }}
       />
 
-      {groups.length > 0 ? (
+      {groups.concat({ name: "None", icon: "Minus", id: -1 }).length > 0 ? (
         <Form.Dropdown id="groupField" title="Group" defaultValue={pin.group}>
-          {groups.map((group) => {
+          {[{ name: "None", icon: "Minus", id: -1 }].concat(groups).map((group) => {
             return (
               <Form.Dropdown.Item key={group.id} title={group.name} value={group.name} icon={iconMap[group.icon]} />
             );
@@ -235,20 +178,6 @@ const EditPinView = (props: { pin: Pin; setPins: React.Dispatch<React.SetStateAc
       ) : null}
     </Form>
   );
-};
-
-const deletePin = async (pin: Pin, setPins: React.Dispatch<React.SetStateAction<Pin[]>>) => {
-  if (await confirmAlert({ title: "Are you sure?" })) {
-    const storedPins = await getStorage(StorageKey.LOCAL_PINS);
-
-    const filteredPins = storedPins.filter((oldPin: Pin) => {
-      return oldPin.id != pin.id;
-    });
-
-    setPins(filteredPins);
-    await setStorage(StorageKey.LOCAL_PINS, filteredPins);
-    await showToast({ title: `Removed pin!` });
-  }
 };
 
 const movePinUp = async (index: number, setPins: React.Dispatch<React.SetStateAction<Pin[]>>) => {
@@ -324,6 +253,7 @@ const CreateNewPinAction = (props: { setPins: React.Dispatch<React.SetStateActio
             id: -1,
             application: "None",
             expireDate: undefined,
+            execInBackground: undefined,
           }}
           setPins={setPins}
         />
@@ -337,8 +267,9 @@ interface CommandPreferences {
 }
 
 export default function Command() {
-  const { pins, setPins, isLoading } = usePins();
-  const groups = useGetGroups();
+  const { pins, setPins, loadingPins } = usePins();
+  const { groups, loadingGroups } = useGroups();
+  const { recentApplications, loadingRecentApplications } = useRecentApplications();
   const preferences = getPreferenceValues<ExtensionPreferences & CommandPreferences>();
 
   useEffect(() => {
@@ -358,8 +289,10 @@ export default function Command() {
             ? Icon.Minus
             : pin.url.startsWith("/") || pin.url.startsWith("~")
             ? { fileIcon: pin.url }
-            : pin.url.match(/.*?:.*/g)
+            : pin.url.match(/^[a-zA-Z0-9]*?:.*/g)
             ? getFavicon(pin.url)
+            : pin.icon.startsWith("/")
+            ? { fileIcon: pin.icon }
             : Icon.Terminal
         }
         actions={
@@ -403,9 +336,8 @@ export default function Command() {
               <Action
                 title="Delete Pin"
                 icon={Icon.Trash}
-                onAction={() => {
-                  deletePin(pin, setPins);
-                  clearSearchBar();
+                onAction={async () => {
+                  await deletePin(pin, setPins);
                 }}
                 shortcut={{ modifiers: ["cmd"], key: "d" }}
                 style={Action.Style.Destructive}
@@ -420,18 +352,38 @@ export default function Command() {
 
   return (
     <List
-      isLoading={isLoading}
+      isLoading={loadingPins || loadingGroups || loadingRecentApplications}
       searchBarPlaceholder="Search pins..."
       actions={<ActionPanel>{<CreateNewPinAction setPins={setPins} />}</ActionPanel>}
     >
       <List.EmptyView title="No Pins Found" icon="no-view.png" />
       {preferences.showGroups
-        ? groups.map((group) => (
+        ? [{ name: "None", icon: "Minus", id: -1 }].concat(groups).map((group) => (
             <List.Section title={group.name == "None" ? "Other" : group.name} key={group.id}>
               {getPinListItems(pins.filter((pin) => pin.group == group.name))}
             </List.Section>
           ))
         : getPinListItems(pins)}
+      {preferences.showRecentApplications && recentApplications.length > 0 ? (
+        <List.Section title="Recent Applications">
+          {recentApplications.map((app) => (
+            <List.Item
+              title={app.name}
+              subtitle="Recent Applications"
+              key={app.name}
+              icon={{ fileIcon: app.path }}
+              actions={
+                <ActionPanel>
+                  <ActionPanel.Section title="Pin Actions">
+                    <Action title="Open" icon={Icon.ChevronRight} onAction={() => open(app.path)} />
+                  </ActionPanel.Section>
+                  <CreateNewPinAction setPins={setPins} />
+                </ActionPanel>
+              }
+            />
+          ))}
+        </List.Section>
+      ) : null}
     </List>
   );
 }

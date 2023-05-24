@@ -85,7 +85,7 @@
       "title": "Check For Expirations",
       "description": "Check for expired pins and remove them",
       "mode": "no-view",
-      "interval": "10m"      
+      "interval": "1m"      
     }
   ],
   "preferences": [
@@ -99,6 +99,14 @@
       "required": false
     },
     {
+      "name": "showOpenAll",
+      "type": "checkbox",
+      "label": "Show \"Open All\" button in groups",
+      "description": "Whether to show an \"Open All\" item in group submenus.",
+      "default": true,
+      "required": false
+    },
+    {
       "name": "showPinShortcut",
       "type": "checkbox",
       "label": "Show \"Pin This\" shortcuts",
@@ -107,12 +115,30 @@
       "required": false
     },
     {
-      "name": "showOpenAll",
+      "name": "showRecentApplications",
       "type": "checkbox",
-      "label": "Show \"Open All\" button in groups",
-      "description": "Whether to show an \"Open All\" item in group submenus.",
-      "default": true,
+      "label": "Show \"Recent Applications\" group",
+      "description": "Whether to show a \"Recent Applications\" group in the menu dropdown.",
+      "default": false,
       "required": false
+    },
+    {
+      "name": "topSection",
+      "type": "dropdown",
+      "title": "Top Section",
+      "description": "Which section to show first in the menu dropdown.",
+      "default": "pins",
+      "required": false,
+      "data": [
+        {
+          "title": "Pins",
+          "value": "pins"
+        },
+        {
+          "title": "Groups",
+          "value": "groups"
+        }
+      ]
     },
     {
       "name": "preferredBrowser",

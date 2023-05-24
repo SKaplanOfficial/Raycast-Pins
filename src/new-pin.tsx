@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Form,
   Icon,
@@ -10,41 +10,22 @@ import {
   Application,
   getPreferenceValues,
 } from "@raycast/api";
-import { iconMap, getStorage, createNewPin } from "./utils";
-import { StorageKey } from "./constants";
-import { ExtensionPreferences, Group } from "./types";
+import { ExtensionPreferences, iconMap } from "./lib/utils";
 import { getFavicon } from "@raycast/utils";
 import * as os from "os";
-
-const useGetGroups = () => {
-  const [groups, setGroups] = useState<Group[]>([]);
-
-  useEffect(() => {
-    Promise.resolve(getStorage(StorageKey.LOCAL_GROUPS)).then((groups) => {
-      const allGroups = [...groups];
-      allGroups.push({
-        name: "None",
-        id: -1,
-        icon: "Minus",
-      });
-      setGroups(allGroups);
-    });
-  }, []);
-
-  return groups;
-};
+import { useGroups } from "./lib/Groups";
+import { createNewPin } from "./lib/Pins";
 
 const NewPinForm = () => {
   const [url, setURL] = useState<string | undefined>();
   const [urlError, setUrlError] = useState<string | undefined>();
   const [applications, setApplications] = useState<Application[]>([]);
+  const { groups } = useGroups();
+  const { pop } = useNavigation();
 
-  const groups = useGetGroups();
   const iconList = Object.keys(Icon);
   iconList.unshift("Favicon / File Icon");
   iconList.unshift("None");
-
-  const { pop } = useNavigation();
 
   const preferences = getPreferenceValues<ExtensionPreferences>();
 
@@ -61,7 +42,8 @@ const NewPinForm = () => {
                 values.iconField,
                 values.groupField,
                 values.openWithField,
-                values.dateField
+                values.dateField,
+                values.execInBackgroundField
               );
               await showToast({ title: `Added pin for "${values.nameField}"` });
               pop();
@@ -91,7 +73,7 @@ const NewPinForm = () => {
             setApplications(await getApplications(value));
           } catch (error) {
             const allApplications = await getApplications();
-            if (value.match(/.*?:.*/g)) {
+            if (value.match(/^[a-zA-Z0-9]*?:.*/g)) {
               const preferredBrowser = preferences.preferredBrowser ? preferences.preferredBrowser : "Safari";
               const browser = allApplications.find((app) => app.name == preferredBrowser);
               if (browser) {
@@ -117,12 +99,21 @@ const NewPinForm = () => {
         }}
       />
 
+      {!url?.startsWith("/") && !url?.startsWith("~") && !url?.match(/^[a-zA-Z0-9]*?:.*/g) ? (
+        <Form.Checkbox
+          label="Execute in Background"
+          id="execInBackgroundField"
+          defaultValue={false}
+          info="If checked, the pinned Terminal command will be executed in the background instead of in a new Terminal tab."
+        />
+      ) : null}
+
       <Form.Dropdown id="iconField" title="Icon" defaultValue="None">
         {iconList.map((icon) => {
           const urlIcon = url
             ? url.startsWith("/") || url.startsWith("~")
               ? { fileIcon: url }
-              : url.match(/.*?:.*/g)
+              : url.match(/^[a-zA-Z0-9]*?:.*/g)
               ? getFavicon(url)
               : Icon.Terminal
             : iconMap["Minus"];
@@ -153,7 +144,7 @@ const NewPinForm = () => {
 
       {groups?.length ? (
         <Form.Dropdown id="groupField" title="Group" defaultValue="None">
-          {groups.map((group) => {
+          {[{ name: "None", icon: "Minus", id: -1 }].concat(groups).map((group) => {
             return (
               <Form.Dropdown.Item key={group.name} title={group.name} value={group.name} icon={iconMap[group.icon]} />
             );

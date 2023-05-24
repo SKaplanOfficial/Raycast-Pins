@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Form, Icon, ActionPanel, Action, popToRoot } from "@raycast/api";
-import { iconMap, createNewGroup, useGroups } from "./utils";
+import { iconMap } from "./lib/utils";
+import { createNewGroup, useGroups } from "./lib/Groups";
 
 const checkNameField = (name: string, setNameError: (error: string | undefined) => void, groupNames: string[]) => {
   // Checks for non-empty (non-spaces-only) name
@@ -15,7 +16,7 @@ const checkNameField = (name: string, setNameError: (error: string | undefined) 
 
 const NewGroupForm = () => {
   const [nameError, setNameError] = useState<string | undefined>();
-  const [groups] = useGroups();
+  const { groups } = useGroups();
   const groupNames = groups?.map((group) => group.name);
 
   const iconList = Object.keys(Icon);

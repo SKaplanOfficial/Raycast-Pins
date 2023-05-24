@@ -1,5 +1,14 @@
 # Pins DevLog - A more detailed changelog
 
+### 2023-05-23
+
+- Added "Pin This/These Note(s)" menu item for pinning the selected note(s) in Notes
+    - When multiple notes are selected, a new group will be automatically created to contain the pins
+- Added "Pin This" menu items for various document-based apps, e.g. Pages and MS Word
+- Added setting to choose which section appears first in the menu bar dropdown
+    - Defaults to "Pins", which will show all non-grouped pins first, then groups second
+- Added setting to display "Recent Applications" group
+
 ### 2023-05-22
 
 - Added per-pin "Open With" setting to allow you to choose which application to open the pin in

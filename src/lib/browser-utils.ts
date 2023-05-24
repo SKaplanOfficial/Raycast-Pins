@@ -5,7 +5,7 @@ import { runAppleScript } from "run-applescript";
  *
  * @returns A promise which resolves to the URL of the active tab as a string.
  */
-const getCurrentSafariURL = async (): Promise<string[]> => {
+const getCurrentSafariURL = async (): Promise<{ name: string; url: string }> => {
   const data = await runAppleScript(`try
       set oldDelims to AppleScript's text item delimiters
       set AppleScript's text item delimiters to "\`\`\`"
@@ -16,7 +16,11 @@ const getCurrentSafariURL = async (): Promise<string[]> => {
               return theData
           end tell
       end try`);
-  return data.split("```");
+  const entries = data.split("```");
+  if (entries.length === 2) {
+    return { name: entries[0], url: entries[1] };
+  }
+  return { name: "", url: "" };
 };
 
 const getSafariTabs = async (): Promise<{ name: string; url: string }[]> => {
@@ -41,7 +45,7 @@ const getSafariTabs = async (): Promise<{ name: string; url: string }[]> => {
  *
  * @returns A promise which resolves to the URL of the active tab as a string.
  */
-const getArcURL = async (): Promise<string[]> => {
+const getArcURL = async (): Promise<{ name: string; url: string }> => {
   const data = await runAppleScript(`try
       set oldDelims to AppleScript's text item delimiters
       set AppleScript's text item delimiters to "\`\`\`"
@@ -52,7 +56,11 @@ const getArcURL = async (): Promise<string[]> => {
               return theData
           end tell
       end try`);
-  return data.split("```");
+  const entries = data.split("```");
+  if (entries.length === 2) {
+    return { name: entries[0], url: entries[1] };
+  }
+  return { name: "", url: "" };
 };
 
 const getArcTabs = async (): Promise<{ name: string; url: string }[]> => {
@@ -77,7 +85,7 @@ const getArcTabs = async (): Promise<{ name: string; url: string }[]> => {
  *
  * @returns A promise which resolves to the URL of the active tab as a string.
  */
-const getiCabURL = async (): Promise<string[]> => {
+const getiCabURL = async (): Promise<{ name: string; url: string }> => {
   const data = await runAppleScript(`try
       set oldDelims to AppleScript's text item delimiters
       set AppleScript's text item delimiters to "\`\`\`"
@@ -88,7 +96,11 @@ const getiCabURL = async (): Promise<string[]> => {
               return theData
           end tell
       end try`);
-  return data.split("```");
+  const entries = data.split("```");
+  if (entries.length === 2) {
+    return { name: entries[0], url: entries[1] };
+  }
+  return { name: "", url: "" };
 };
 
 const getiCabTabs = async (): Promise<{ name: string; url: string }[]> => {
@@ -114,7 +126,7 @@ const getiCabTabs = async (): Promise<{ name: string; url: string }[]> => {
  * @param browserName The name of the browser.
  * @returns A promise which resolves to the URL of the active tab as a string.
  */
-const getChromiumURL = async (browserName: string): Promise<string[]> => {
+const getChromiumURL = async (browserName: string): Promise<{ name: string; url: string }> => {
   const data = await runAppleScript(`try
       set oldDelims to AppleScript's text item delimiters
       set AppleScript's text item delimiters to "\`\`\`"
@@ -126,7 +138,11 @@ const getChromiumURL = async (browserName: string): Promise<string[]> => {
               return theData
           end tell
       end try`);
-  return data.split("```");
+  const entries = data.split("```");
+  if (entries.length === 2) {
+    return { name: entries[0], url: entries[1] };
+  }
+  return { name: "", url: "" };
 };
 
 const getChromiumTabs = async (browserName: string): Promise<{ name: string; url: string }[]> => {
@@ -172,7 +188,7 @@ export const SupportedBrowsers = [
  * @param browserName The name of the browser application. Must be a member of {@link SupportedBrowsers}.
  * @returns A promise which resolves to the URL of the active tab of the browser as a string.
  */
-export const getCurrentURL = async (browserName: string): Promise<string[]> => {
+export const getCurrentURL = async (browserName: string): Promise<{ name: string; url: string }> => {
   switch (browserName) {
     case "Safari":
       return getCurrentSafariURL();
@@ -192,9 +208,14 @@ export const getCurrentURL = async (browserName: string): Promise<string[]> => {
       return getiCabURL();
       break;
   }
-  return ["", ""];
+  return { name: "", url: "" };
 };
 
+/**
+ * Gets the current tabs of the specified browser.
+ * @param browserName The name of the browser application. Must be a member of {@link SupportedBrowsers}.
+ * @returns A promise which resolves to the tabs of the browser as an array of objects with `name` and `url` properties.
+ */
 export const getCurrentTabs = async (browserName: string): Promise<{ name: string; url: string }[]> => {
   switch (browserName) {
     case "Safari":
