@@ -5,6 +5,8 @@ import { StorageKey } from "./constants";
 import { getStorage, runCommand, runCommandInTerminal, setStorage } from "./utils";
 import * as fs from "fs";
 import * as os from "os";
+import { Placeholders } from "./placeholders";
+import path from "path";
 
 export type Pin = {
   name: string;
@@ -76,20 +78,21 @@ export const usePins = () => {
  */
 export const openPin = async (pin: Pin, preferences: { preferredBrowser: string }) => {
   try {
-    const target = pin.url.startsWith("~") ? pin.url.replace("~", os.homedir()) : pin.url;
+    const targetRaw = pin.url.startsWith("~") ? pin.url.replace("~", os.homedir()) : pin.url;
+    const target = await Placeholders.applyToString(targetRaw);
     const isPath = pin.url.startsWith("/") || pin.url.startsWith("~");
     const targetApplication = !pin.application || pin.application == "None" ? undefined : pin.application;
     if (isPath) {
       // Open the path in the target application (fallback to default application for the file type)
       if (fs.existsSync(target)) {
-        open(target, targetApplication);
+        open(path.resolve(target), targetApplication);
       } else {
         throw new Error("File does not exist.");
       }
     } else {
       if (target.match(/^[a-zA-Z0-9]*?:.*/g)) {
         // Open the URL in the target application (fallback to preferred browser, then default browser)
-        open(target, targetApplication || preferences.preferredBrowser);
+        open(encodeURI(target), targetApplication || preferences.preferredBrowser);
       } else {
         if (pin.execInBackground) {
           // Run the Terminal command in the background

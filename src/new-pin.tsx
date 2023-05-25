@@ -9,12 +9,14 @@ import {
   getApplications,
   Application,
   getPreferenceValues,
+  environment,
 } from "@raycast/api";
 import { ExtensionPreferences, iconMap } from "./lib/utils";
 import { getFavicon } from "@raycast/utils";
 import * as os from "os";
 import { useGroups } from "./lib/Groups";
 import { createNewPin } from "./lib/Pins";
+import path from "path";
 
 const NewPinForm = () => {
   const [url, setURL] = useState<string | undefined>();
@@ -48,6 +50,13 @@ const NewPinForm = () => {
               await showToast({ title: `Added pin for "${values.nameField}"` });
               pop();
             }}
+          />
+          <Action.Open
+            title="Open Placeholders Guide"
+            icon={Icon.Info}
+            target={path.resolve(environment.assetsPath, "placeholders_guide.txt")}
+            application="TextEdit"
+            shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
           />
         </ActionPanel>
       }

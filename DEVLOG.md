@@ -1,5 +1,12 @@
 # Pins DevLog - A more detailed changelog
 
+### 2023-05-25
+
+- Added placeholders system inspired by PromptLab
+    - Limited selection of placeholders for now
+- Added action to view placeholders guide while editing a pin
+- Added setting to hide pins with placeholders that are not currently valid, e.g. {{selectedText}} when no text selected
+
 ### 2023-05-24
 
 - Added action to install example pins on first launch

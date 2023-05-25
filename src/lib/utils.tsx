@@ -154,7 +154,7 @@ export const installExamples = async () => {
     {
       id: 5,
       name: "New Folder Here",
-      url: `osascript -e 'tell application "Finder"' -e 'set newFolder to make new folder at (the target of the front window) as alias' -e 'select newFolder' -e 'end tell'`,
+      url: `osascript -e 'tell application "Finder"' -e 'set newFolder to make new folder at (insertion location as alias)' -e 'select newFolder' -e 'end tell'`,
       icon: "NewFolder",
       group: "Scripts",
       application: "None",
@@ -163,7 +163,7 @@ export const installExamples = async () => {
     {
       id: 6,
       name: "New File Here",
-      url: `osascript -e 'tell application "Finder"' -e 'set newFile to make new file at (the target of the front window) as alias' -e 'select newFile' -e 'end tell'`,
+      url: `osascript -e 'tell application "Finder"' -e 'set newFile to make new file at (insertion location as alias)' -e 'select newFile' -e 'end tell'`,
       icon: "NewDocument",
       group: "Scripts",
       application: "None",
@@ -172,11 +172,10 @@ export const installExamples = async () => {
     {
       id: 7,
       name: "New Terminal Here",
-      url: `osascript -e 'tell application "Finder" to set currentDir to POSIX path of (target of front window as alias)' -e 'tell application "Terminal" to do script "cd " & currentDir'`,
+      url: `cd {{currentDirectory}}`,
       icon: "Terminal",
       group: "Scripts",
       application: "None",
-      execInBackground: true,
     },
     {
       id: 8,
@@ -190,6 +189,14 @@ export const installExamples = async () => {
       id: 9,
       name: "Random Duck",
       url: "https://random-d.uk",
+      icon: "Favicon / File Icon",
+      group: "None",
+      application: "None",
+    },
+    {
+      id: 10,
+      name: "Search On Google",
+      url: "https://www.google.com/search?q={{selectedText}}",
       icon: "Favicon / File Icon",
       group: "None",
       application: "None",

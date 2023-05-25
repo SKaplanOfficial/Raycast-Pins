@@ -12,6 +12,7 @@ import {
   open,
   LocalStorage,
   showToast,
+  environment,
 } from "@raycast/api";
 import { iconMap, setStorage, getStorage, ExtensionPreferences, installExamples } from "./lib/utils";
 import { StorageKey } from "./lib/constants";
@@ -20,6 +21,7 @@ import { Pin, checkExpirations, deletePin, modifyPin, openPin, usePins } from ".
 import { Group, useGroups } from "./lib/Groups";
 import * as os from "os";
 import { useRecentApplications } from "./lib/LocalData";
+import path from "path";
 
 const EditPinView = (props: { pin: Pin; setPins: React.Dispatch<React.SetStateAction<Pin[]>> }) => {
   const pin = props.pin;
@@ -65,6 +67,13 @@ const EditPinView = (props: { pin: Pin; setPins: React.Dispatch<React.SetStateAc
               deletePin(pin, setPins);
               pop();
             }}
+          />
+          <Action.Open
+            title="Open Placeholders Guide"
+            icon={Icon.Info}
+            target={path.resolve(environment.assetsPath, "placeholders_guide.txt")}
+            application="TextEdit"
+            shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
           />
         </ActionPanel>
       }

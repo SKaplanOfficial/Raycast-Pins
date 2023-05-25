@@ -16,17 +16,23 @@ import * as fs from "fs";
 import { useLocalData } from "./lib/LocalData";
 import { createNewGroup, useGroups } from "./lib/Groups";
 import { Pin, createNewPin, deletePin, openPin, usePins } from "./lib/Pins";
+import { useCachedState } from "@raycast/utils";
+import * as os from "os";
+import { Placeholders } from "./lib/placeholders";
 
 interface CommandPreferences {
   showCategories: boolean;
   showOpenAll: boolean;
   showCreateNewPin: boolean;
   showPinShortcut: boolean;
+  showInapplicablePins: boolean;
 }
 
 export default function Command() {
   const { groups, loadingGroups, revalidateGroups } = useGroups();
   const { pins, setPins, loadingPins, revalidatePins } = usePins();
+  const [relevantPins, setRelevantPins] = useCachedState<Pin[]>("relevant-pins", []);
+  const [irrelevantPins, setIrrelevantPins] = useCachedState<Pin[]>("irrelevant-pins", []);
   const { localData, loadingLocalData } = useLocalData();
   const preferences = getPreferenceValues<ExtensionPreferences & CommandPreferences>();
   const pinIcon = { source: { light: "pin-icon.svg", dark: "pin-icon@dark.svg" } };
@@ -45,21 +51,53 @@ export default function Command() {
       }
     });
 
-    Promise.resolve(revalidateGroups());
-    Promise.resolve(revalidatePins());
+    Promise.resolve(revalidateGroups())
+      .then(() => Promise.resolve(revalidatePins()))
+      .then(async () => {
+        if (!preferences.showInapplicablePins) {
+          const applicablePins = [];
+          const inapplicablePins = [];
+          for (const pin of pins) {
+            const targetRaw = pin.url.startsWith("~") ? pin.url.replace("~", os.homedir()) : pin.url;
+            const placeholders = Placeholders.allPlaceholders;
+            let containsPlaceholder = false;
+            let passesTests = true;
+            for (const [placeholderText, placeholderValue] of Object.entries(placeholders)) {
+              if (targetRaw.includes(placeholderText)) {
+                containsPlaceholder = true;
+                for (const rule of placeholderValue.rules) {
+                  if (!(await rule(targetRaw))) {
+                    passesTests = false;
+                  }
+                }
+              }
+            }
+            if (containsPlaceholder && passesTests) {
+              applicablePins.push(pin);
+            } else if (!passesTests) {
+              inapplicablePins.push(pin);
+            }
+          }
+          setRelevantPins(applicablePins);
+          setIrrelevantPins(inapplicablePins);
+        }
+      });
   }, []);
 
   // If there are pins to display, then display them
+  const pinsToShow = preferences.showInapplicablePins
+    ? pins
+    : pins.filter((pin) => irrelevantPins.find((p) => p.id == pin.id) == undefined);
   const usedGroups = groups
     ?.filter((group) => {
-      return pins.some((pin) => pin.group == group.name);
+      return pinsToShow.some((pin) => pin.group == group.name);
     })
     .reduce(
       (obj: { [index: string]: Pin[] }, group) => {
-        obj[group.name] = pins.filter((pin) => pin.group == group.name);
+        obj[group.name] = pinsToShow.filter((pin) => pin.group == group.name);
         return obj;
       },
-      { None: pins.filter((pin) => pin.group == "None") }
+      { None: pinsToShow.filter((pin) => pin.group == "None") }
     );
 
   if (preferences.showRecentApplications) {
@@ -96,7 +134,8 @@ export default function Command() {
   }
 
   const selectedFiles = localData.selectedFiles.filter(
-    (file) => file.path && (fs.statSync(file.path).isFile() || file.path.endsWith(".app/"))
+    (file) =>
+      file.path && ((fs.existsSync(file.path) && fs.statSync(file.path).isFile()) || file.path.endsWith(".app/"))
   );
 
   // Display the menu
@@ -116,6 +155,9 @@ export default function Command() {
                         : getIcon(pin.url)
                     }
                     title={pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url)}
+                    subtitle={
+                      !preferences.showInapplicablePins && relevantPins.find((p) => p.id == pin.id) ? "  ✧" : ""
+                    }
                     onAction={async (event) => {
                       if (event.type == "left-click") {
                         await openPin(pin, preferences);
@@ -132,7 +174,13 @@ export default function Command() {
           <MenuBarExtra.Section title={preferences.showCategories ? "Groups" : undefined} key="groups">
             {Object.keys(usedGroups).map((key) => (
               <MenuBarExtra.Submenu
-                title={key}
+                title={
+                  key +
+                  (!preferences.showInapplicablePins &&
+                  usedGroups[key].some((pin) => relevantPins.find((p) => p.id == pin.id))
+                    ? "  ✧"
+                    : "")
+                }
                 key={key}
                 icon={
                   key == "Recent Applications"
@@ -149,6 +197,9 @@ export default function Command() {
                         : getIcon(pin.url)
                     }
                     title={pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url)}
+                    subtitle={
+                      !preferences.showInapplicablePins && relevantPins.find((p) => p.id == pin.id) ? "  ✧" : ""
+                    }
                     onAction={async (event) => {
                       if (event.type == "left-click" || key == "Recent Applications") {
                         await openPin(pin, preferences);

@@ -20,7 +20,7 @@ export const useGroups = () => {
   const [loading, setLoading] = useState<boolean>(true);
 
   const revalidateGroups = async () => {
-    const storedGroups: Group[] = await getStorage(StorageKey.LOCAL_GROUPS)
+    const storedGroups: Group[] = await getStorage(StorageKey.LOCAL_GROUPS);
     setGroups(storedGroups || []);
     setLoading(false);
   };

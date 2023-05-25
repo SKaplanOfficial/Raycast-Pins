@@ -253,7 +253,7 @@ export const useLocalData = () => {
   const [localData, setLocalData] = useCachedState<LocalDataObject>("--local-data", dummyData());
   const [loadingLocalData, setLoadingLocalData] = useState(true);
 
-  const preferences = getPreferenceValues<ExtensionPreferences>();
+  const preferences = getPreferenceValues<ExtensionPreferences & { showPinShortcut: boolean }>();
 
   useEffect(() => {
     const getLocalData = async () => {
