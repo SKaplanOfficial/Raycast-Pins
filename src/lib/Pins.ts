@@ -50,17 +50,22 @@ export const usePins = () => {
   const [pins, setPins] = useCachedState<Pin[]>("pins", []);
   const [loading, setLoading] = useState<boolean>(true);
 
+  const revalidatePins = async () => {
+    setLoading(true);
+    const storedPins: Pin[] = await getStorage(StorageKey.LOCAL_PINS);
+    setPins(storedPins);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    Promise.resolve(getStorage(StorageKey.LOCAL_PINS)).then((storedPins) => {
-      setPins(storedPins);
-      setLoading(false);
-    });
+    Promise.resolve(revalidatePins());
   }, []);
 
   return {
     pins: pins,
     setPins: setPins,
     loadingPins: loading,
+    revalidatePins: revalidatePins,
   };
 };
 

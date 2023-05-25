@@ -1,5 +1,14 @@
 import { useEffect } from "react";
-import { MenuBarExtra, openExtensionPreferences, getPreferenceValues, Icon } from "@raycast/api";
+import {
+  MenuBarExtra,
+  openExtensionPreferences,
+  getPreferenceValues,
+  Icon,
+  Clipboard,
+  showHUD,
+  launchCommand,
+  LaunchType,
+} from "@raycast/api";
 import { setStorage, getStorage, iconMap, copyPinData, ExtensionPreferences, getIcon } from "./lib/utils";
 import { StorageKey } from "./lib/constants";
 import { SupportedBrowsers } from "./lib/browser-utils";
@@ -8,11 +17,18 @@ import { useLocalData } from "./lib/LocalData";
 import { createNewGroup, useGroups } from "./lib/Groups";
 import { Pin, createNewPin, deletePin, openPin, usePins } from "./lib/Pins";
 
+interface CommandPreferences {
+  showCategories: boolean;
+  showOpenAll: boolean;
+  showCreateNewPin: boolean;
+  showPinShortcut: boolean;
+}
+
 export default function Command() {
-  const { groups, loadingGroups } = useGroups();
-  const { pins, setPins, loadingPins } = usePins();
+  const { groups, loadingGroups, revalidateGroups } = useGroups();
+  const { pins, setPins, loadingPins, revalidatePins } = usePins();
   const { localData, loadingLocalData } = useLocalData();
-  const preferences = getPreferenceValues<ExtensionPreferences>();
+  const preferences = getPreferenceValues<ExtensionPreferences & CommandPreferences>();
   const pinIcon = { source: { light: "pin-icon.svg", dark: "pin-icon@dark.svg" } };
 
   useEffect(() => {
@@ -28,135 +44,138 @@ export default function Command() {
         setStorage(StorageKey.NEXT_GROUP_ID, [0]);
       }
     });
+
+    Promise.resolve(revalidateGroups());
+    Promise.resolve(revalidatePins());
   }, []);
 
   // If there are pins to display, then display them
-  if (pins.length) {
-    const usedGroups = groups
-      ?.filter((group) => {
-        return pins.some((pin) => pin.group == group.name);
-      })
-      .reduce(
-        (obj: { [index: string]: Pin[] }, group) => {
-          obj[group.name] = pins.filter((pin) => pin.group == group.name);
-          return obj;
-        },
-        { None: pins.filter((pin) => pin.group == "None") }
-      );
-
-    if (preferences.showRecentApplications) {
-      let pseudoPinID = Math.max(...pins.map((pin) => pin.id));
-      usedGroups["Recent Applications"] = localData.recentApplications.map((app) => {
-        pseudoPinID++;
-        return {
-          id: pseudoPinID,
-          name: app.name,
-          url: app.path,
-          icon: app.path,
-          group: "Recent Applications",
-          application: "None",
-          date: undefined,
-          execInBackground: false,
-        };
-      });
-    }
-
-    const pinGroups = Object.values(usedGroups).reduce((obj: { [index: string]: Pin[] }, pins) => {
-      pins.forEach((pin) => {
-        if (pin.group in obj) {
-          obj[pin.group].push(pin);
-        } else {
-          obj[pin.group] = [pin];
-        }
-      });
-      return obj;
-    }, {});
-
-    // Remove the "None" group since it is redundant at this point
-    if ("None" in usedGroups) {
-      delete usedGroups["None"];
-    }
-
-    const selectedFiles = localData.selectedFiles.filter(
-      (file) => file.path && (fs.statSync(file.path).isFile() || file.path.endsWith(".app/"))
+  const usedGroups = groups
+    ?.filter((group) => {
+      return pins.some((pin) => pin.group == group.name);
+    })
+    .reduce(
+      (obj: { [index: string]: Pin[] }, group) => {
+        obj[group.name] = pins.filter((pin) => pin.group == group.name);
+        return obj;
+      },
+      { None: pins.filter((pin) => pin.group == "None") }
     );
 
-    // Display the menu
-    return (
-      <MenuBarExtra icon={pinIcon} isLoading={loadingPins || loadingGroups || loadingLocalData}>
-        {[
-          "None" in pinGroups ? (
-            <MenuBarExtra.Section title={preferences.showCategories ? "Pins" : undefined} key="pins">
-              {"None" in pinGroups
-                ? pinGroups["None"].map((pin: Pin) => (
-                    <MenuBarExtra.Item
-                      key={pin.id}
-                      icon={
-                        pin.icon in iconMap || pin.icon == "None" || pin.icon.startsWith("/")
-                          ? getIcon(pin.icon)
-                          : getIcon(pin.url)
-                      }
-                      title={pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url)}
-                      onAction={async (event) => {
-                        if (event.type == "left-click") {
-                          await openPin(pin, preferences);
-                        } else {
-                          await deletePin(pin, setPins);
-                        }
-                      }}
-                    />
-                  ))
-                : null}
-            </MenuBarExtra.Section>
-          ) : null,
-          groups?.length && Object.keys(usedGroups).length ? (
-            <MenuBarExtra.Section title={preferences.showCategories ? "Groups" : undefined} key="groups">
-              {Object.keys(usedGroups).map((key) => (
-                <MenuBarExtra.Submenu
-                  title={key}
-                  key={key}
-                  icon={
-                    key == "Recent Applications"
-                      ? Icon.Clock
-                      : getIcon(groups.find((group) => group.name == key)?.icon || "")
-                  }
-                >
-                  {usedGroups[key].map((pin) => (
-                    <MenuBarExtra.Item
-                      key={pin.id}
-                      icon={
-                        pin.icon in iconMap || pin.icon == "None" || pin.icon.startsWith("/")
-                          ? getIcon(pin.icon)
-                          : getIcon(pin.url)
-                      }
-                      title={pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url)}
-                      onAction={async (event) => {
-                        if (event.type == "left-click" || key == "Recent Applications") {
-                          await openPin(pin, preferences);
-                        } else {
-                          await deletePin(pin, setPins);
-                        }
-                      }}
-                    />
-                  ))}
+  if (preferences.showRecentApplications) {
+    let pseudoPinID = Math.max(...pins.map((pin) => pin.id));
+    usedGroups["Recent Applications"] = localData.recentApplications.map((app) => {
+      pseudoPinID++;
+      return {
+        id: pseudoPinID,
+        name: app.name,
+        url: app.path,
+        icon: app.path,
+        group: "Recent Applications",
+        application: "None",
+        date: undefined,
+        execInBackground: false,
+      };
+    });
+  }
 
-                  <MenuBarExtra.Section>
-                    {preferences.showOpenAll ? (
-                      <MenuBarExtra.Item
-                        title="Open All"
-                        onAction={() => usedGroups[key].forEach((pin: Pin) => openPin(pin, preferences))}
-                      />
-                    ) : null}
-                  </MenuBarExtra.Section>
-                </MenuBarExtra.Submenu>
-              ))}
-            </MenuBarExtra.Section>
-          ) : null,
-        ].sort(() => (preferences.topSection == "pins" ? 1 : -1))}
+  const pinGroups = Object.values(usedGroups).reduce((obj: { [index: string]: Pin[] }, pins) => {
+    pins.forEach((pin) => {
+      if (pin.group in obj) {
+        obj[pin.group].push(pin);
+      } else {
+        obj[pin.group] = [pin];
+      }
+    });
+    return obj;
+  }, {});
 
-        <MenuBarExtra.Section>
-          {preferences.showPinShortcut &&
-          localData.currentApplication.name.length > 0 &&
+  // Remove the "None" group since it is redundant at this point
+  if ("None" in usedGroups) {
+    delete usedGroups["None"];
+  }
+
+  const selectedFiles = localData.selectedFiles.filter(
+    (file) => file.path && (fs.statSync(file.path).isFile() || file.path.endsWith(".app/"))
+  );
+
+  // Display the menu
+  return (
+    <MenuBarExtra icon={pinIcon} isLoading={loadingPins || loadingGroups || loadingLocalData}>
+      {pins.length == 0 ? <MenuBarExtra.Item title="No pins yet!" /> : null}
+      {[
+        "None" in pinGroups ? (
+          <MenuBarExtra.Section title={preferences.showCategories ? "Pins" : undefined} key="pins">
+            {"None" in pinGroups
+              ? pinGroups["None"].map((pin: Pin) => (
+                  <MenuBarExtra.Item
+                    key={pin.id}
+                    icon={
+                      pin.icon in iconMap || pin.icon == "None" || pin.icon.startsWith("/")
+                        ? getIcon(pin.icon)
+                        : getIcon(pin.url)
+                    }
+                    title={pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url)}
+                    onAction={async (event) => {
+                      if (event.type == "left-click") {
+                        await openPin(pin, preferences);
+                      } else {
+                        await deletePin(pin, setPins);
+                      }
+                    }}
+                  />
+                ))
+              : null}
+          </MenuBarExtra.Section>
+        ) : null,
+        groups?.length && Object.keys(usedGroups).length ? (
+          <MenuBarExtra.Section title={preferences.showCategories ? "Groups" : undefined} key="groups">
+            {Object.keys(usedGroups).map((key) => (
+              <MenuBarExtra.Submenu
+                title={key}
+                key={key}
+                icon={
+                  key == "Recent Applications"
+                    ? Icon.Clock
+                    : getIcon(groups.find((group) => group.name == key)?.icon || "")
+                }
+              >
+                {usedGroups[key].map((pin) => (
+                  <MenuBarExtra.Item
+                    key={pin.id}
+                    icon={
+                      pin.icon in iconMap || pin.icon == "None" || pin.icon.startsWith("/")
+                        ? getIcon(pin.icon)
+                        : getIcon(pin.url)
+                    }
+                    title={pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url)}
+                    onAction={async (event) => {
+                      if (event.type == "left-click" || key == "Recent Applications") {
+                        await openPin(pin, preferences);
+                      } else {
+                        await deletePin(pin, setPins);
+                      }
+                    }}
+                  />
+                ))}
+
+                <MenuBarExtra.Section>
+                  {preferences.showOpenAll ? (
+                    <MenuBarExtra.Item
+                      title="Open All"
+                      onAction={() => usedGroups[key].forEach((pin: Pin) => openPin(pin, preferences))}
+                    />
+                  ) : null}
+                </MenuBarExtra.Section>
+              </MenuBarExtra.Submenu>
+            ))}
+          </MenuBarExtra.Section>
+        ) : null,
+      ].sort(() => (preferences.topSection == "pins" ? 1 : -1))}
+
+      {preferences.showPinShortcut ? (
+        <MenuBarExtra.Section title="Quick Pins">
+          {localData.currentApplication.name.length > 0 &&
           (localData.currentApplication.name != "Finder" || localData.currentDirectory.name != "Desktop") ? (
             <MenuBarExtra.Item
               title={`Pin This App (${localData.currentApplication.name.substring(0, 20)})`}
@@ -175,7 +194,7 @@ export default function Command() {
               }}
             />
           ) : null}
-          {preferences.showPinShortcut && SupportedBrowsers.includes(localData.currentApplication.name) ? (
+          {SupportedBrowsers.includes(localData.currentApplication.name) ? (
             <MenuBarExtra.Item
               title={`Pin This Tab (${localData.currentTab.name.substring(0, 20).trim()}${
                 localData.currentTab.name.length > 20 ? "..." : ""
@@ -195,9 +214,7 @@ export default function Command() {
               }}
             />
           ) : null}
-          {preferences.showPinShortcut &&
-          SupportedBrowsers.includes(localData.currentApplication.name) &&
-          localData.tabs.length > 1 ? (
+          {SupportedBrowsers.includes(localData.currentApplication.name) && localData.tabs.length > 1 ? (
             <MenuBarExtra.Item
               title={`Pin All Tabs (${localData.tabs.length})`}
               icon={Icon.AppWindowGrid3x3}
@@ -227,7 +244,7 @@ export default function Command() {
               }}
             />
           ) : null}
-          {preferences.showPinShortcut && localData.currentApplication.name == "Finder" && selectedFiles.length > 0 ? (
+          {localData.currentApplication.name == "Finder" && selectedFiles.length > 0 ? (
             <MenuBarExtra.Item
               title={`Pin ${
                 selectedFiles.length > 1
@@ -275,9 +292,7 @@ export default function Command() {
               }}
             />
           ) : null}
-          {preferences.showPinShortcut &&
-          localData.currentApplication.name == "Finder" &&
-          localData.currentDirectory.name != "Desktop" ? (
+          {localData.currentApplication.name == "Finder" && localData.currentDirectory.name != "Desktop" ? (
             <MenuBarExtra.Item
               title={`Pin This Directory (${localData.currentDirectory.name.substring(0, 20).trim()}${
                 localData.currentDirectory.name.length > 20 ? "..." : ""
@@ -297,8 +312,7 @@ export default function Command() {
               }}
             />
           ) : null}
-          {preferences.showPinShortcut &&
-          [
+          {[
             "TextEdit",
             "Pages",
             "Numbers",
@@ -307,8 +321,7 @@ export default function Command() {
             "Microsoft Excel",
             "Microsoft PowerPoint",
             "Script Editor",
-          ].includes(localData.currentApplication.name) &&
-          localData.currentDocument.path != "" ? (
+          ].includes(localData.currentApplication.name) && localData.currentDocument.path != "" ? (
             <MenuBarExtra.Item
               title={`Pin This Document (${localData.currentDocument.name.substring(0, 20).trim()}${
                 localData.currentDocument.name.length > 20 ? "..." : ""
@@ -328,9 +341,7 @@ export default function Command() {
               }}
             />
           ) : null}
-          {preferences.showPinShortcut &&
-          localData.currentApplication.name == "Notes" &&
-          localData.selectedNotes.length > 0 ? (
+          {localData.currentApplication.name == "Notes" && localData.selectedNotes.length > 0 ? (
             <MenuBarExtra.Item
               title={`Pin ${
                 localData.selectedNotes.length > 1
@@ -377,22 +388,33 @@ export default function Command() {
               }}
             />
           ) : null}
+        </MenuBarExtra.Section>
+      ) : null}
+      <MenuBarExtra.Section>
+        {preferences.showCreateNewPin ? (
+          <MenuBarExtra.Item
+            title="Create New Pin..."
+            icon={Icon.PlusSquare}
+            tooltip="Create a new pin"
+            onAction={() => launchCommand({ name: "new-pin", type: LaunchType.UserInitiated })}
+          />
+        ) : null}
+        {pins.length > 0 ? (
           <MenuBarExtra.Item
             title="Copy Pin Data"
             icon={Icon.CopyClipboard}
             tooltip="Copy the JSON data for all of your pins"
-            onAction={() => copyPinData()}
+            onAction={async () => {
+              const data = await copyPinData();
+              const text = await Clipboard.readText();
+              if (text == data) {
+                await showHUD("Copied pin data to clipboard!");
+              } else {
+                await showHUD("Failed to copy pins to clipboard.");
+              }
+            }}
           />
-          <MenuBarExtra.Item title="Preferences..." icon={Icon.Gear} onAction={() => openExtensionPreferences()} />
-        </MenuBarExtra.Section>
-      </MenuBarExtra>
-    );
-  }
-
-  return (
-    <MenuBarExtra icon={pinIcon} isLoading={loadingPins || loadingGroups || loadingLocalData}>
-      <MenuBarExtra.Item title="No pins yet!" />
-      <MenuBarExtra.Section>
+        ) : null}
         <MenuBarExtra.Item title="Preferences..." icon={Icon.Gear} onAction={() => openExtensionPreferences()} />
       </MenuBarExtra.Section>
     </MenuBarExtra>

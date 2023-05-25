@@ -1,5 +1,13 @@
 # Pins DevLog - A more detailed changelog
 
+### 2023-05-24
+
+- Added action to install example pins on first launch
+- Added setting to show "Create New Pin" item in menu bar dropdown
+- Improved keyword search to include group names and sub-words of pin targets
+- Moved "Pin This/These File(s)" menus into their own "Quick Pins" section, which can be hidden via settings
+- Fixed bug where menu bar dropdown would not update after adding pins for the first time
+
 ### 2023-05-23
 
 - Added "Pin This/These Note(s)" menu item for pinning the selected note(s) in Notes

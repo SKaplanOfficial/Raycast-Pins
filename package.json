@@ -31,7 +31,42 @@
       "name": "index",
       "title": "Show Pins",
       "description": "Show pinned items in the menu bar",
-      "mode": "menu-bar"
+      "mode": "menu-bar",
+      "preferences": [
+        {
+          "name": "showCategories",
+          "type": "checkbox",
+          "title": "General Settings",
+          "label": "Show Section Labels (i.e. Pins, Groups)",
+          "description": "Whether to show high-level categories in the menu dropdown.",
+          "default": true,
+          "required": false
+        },
+        {
+          "name": "showOpenAll",
+          "type": "checkbox",
+          "label": "Show \"Open All\" button in groups",
+          "description": "Whether to show an \"Open All\" item in group submenus.",
+          "default": true,
+          "required": false
+        },
+        {
+          "name": "showPinShortcut",
+          "type": "checkbox",
+          "label": "Show \"Quick Pins\" section",
+          "description": "Whether to show the \"Quick Pins\" section in the menu dropdown. Quick Pins enable one-click creation of pins for active tabs, documents, folders, and more.",
+          "default": true,
+          "required": false
+        },
+        {
+          "name": "showCreateNewPin",
+          "type": "checkbox",
+          "label": "Show \"Create New Pin\" item",
+          "description": "Whether to show a \"Create New Pin\" item in the menu dropdown.",
+          "default": true,
+          "required": false
+        }
+      ]
     },
     {
       "name": "new-pin",
@@ -90,31 +125,6 @@
   ],
   "preferences": [
     {
-      "name": "showCategories",
-      "type": "checkbox",
-      "title": "General Settings",
-      "label": "Show categories (i.e. Pins, Groups)",
-      "description": "Whether to show high-level categories in the menu dropdown.",
-      "default": true,
-      "required": false
-    },
-    {
-      "name": "showOpenAll",
-      "type": "checkbox",
-      "label": "Show \"Open All\" button in groups",
-      "description": "Whether to show an \"Open All\" item in group submenus.",
-      "default": true,
-      "required": false
-    },
-    {
-      "name": "showPinShortcut",
-      "type": "checkbox",
-      "label": "Show \"Pin This\" shortcuts",
-      "description": "Whether to show a \"Pin This\" item in the menu dropdown.",
-      "default": true,
-      "required": false
-    },
-    {
       "name": "showRecentApplications",
       "type": "checkbox",
       "label": "Show \"Recent Applications\" group",
@@ -125,17 +135,17 @@
     {
       "name": "topSection",
       "type": "dropdown",
-      "title": "Top Section",
-      "description": "Which section to show first in the menu dropdown.",
+      "title": "Section Order",
+      "description": "Specifies which section to display first in lists. \"Pins First\" will show ungrouped pins first, followed by groups. \"Groups First\" will show groups first, followed by ungrouped pins.",
       "default": "pins",
       "required": false,
       "data": [
         {
-          "title": "Pins",
+          "title": "Pins First",
           "value": "pins"
         },
         {
-          "title": "Groups",
+          "title": "Groups First",
           "value": "groups"
         }
       ]

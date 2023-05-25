@@ -10,8 +10,10 @@ import {
   Application,
   getApplications,
   open,
+  LocalStorage,
+  showToast,
 } from "@raycast/api";
-import { iconMap, setStorage, getStorage, ExtensionPreferences } from "./lib/utils";
+import { iconMap, setStorage, getStorage, ExtensionPreferences, installExamples } from "./lib/utils";
 import { StorageKey } from "./lib/constants";
 import { getFavicon, useCachedState } from "@raycast/utils";
 import { Pin, checkExpirations, deletePin, modifyPin, openPin, usePins } from "./lib/Pins";
@@ -262,25 +264,58 @@ const CreateNewPinAction = (props: { setPins: React.Dispatch<React.SetStateActio
   );
 };
 
+const InstallExamplesAction = (props: {
+  setExamplesInstalled: React.Dispatch<React.SetStateAction<LocalStorage.Value | undefined>>;
+  revalidatePins: () => Promise<void>;
+  revalidateGroups: () => Promise<void>;
+}) => {
+  const { setExamplesInstalled, revalidatePins, revalidateGroups } = props;
+  return (
+    <Action
+      title="Install Example Pins"
+      icon={Icon.Download}
+      shortcut={{ modifiers: ["cmd"], key: "e" }}
+      onAction={async () => {
+        await installExamples();
+        setExamplesInstalled(true);
+        await revalidatePins();
+        await revalidateGroups();
+        await showToast({ title: "Examples Installed!" });
+      }}
+    />
+  );
+};
+
 interface CommandPreferences {
   showGroups: boolean;
 }
 
 export default function Command() {
-  const { pins, setPins, loadingPins } = usePins();
-  const { groups, loadingGroups } = useGroups();
+  const { pins, setPins, loadingPins, revalidatePins } = usePins();
+  const { groups, loadingGroups, revalidateGroups } = useGroups();
   const { recentApplications, loadingRecentApplications } = useRecentApplications();
+  const [examplesInstalled, setExamplesInstalled] = useState<LocalStorage.Value | undefined>(true);
   const preferences = getPreferenceValues<ExtensionPreferences & CommandPreferences>();
 
   useEffect(() => {
+    Promise.resolve(LocalStorage.getItem(StorageKey.EXAMPLES_INSTALLED)).then((examplesInstalled) => {
+      setExamplesInstalled(examplesInstalled);
+    });
     Promise.resolve(checkExpirations());
-  });
+  }, []);
 
   const getPinListItems = (pins: Pin[]) => {
     return pins.map((pin, index) => (
       <List.Item
         title={pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url)}
-        subtitle={pin.group != "None" ? pin.group : ""}
+        subtitle={pin.url.substring(0, 30) + (pin.url.length > 30 ? "..." : "")}
+        keywords={[
+          ...(pin.group == "None" ? "Other" : pin.group.split(" ")),
+          ...pin.url
+            .replaceAll(/([ /:.'"-])(.+?)(?=\b|[ /:.'"-])/gs, " $1 $1$2 $2")
+            .split(" ")
+            .filter((term) => term.trim().length > 0),
+        ]}
         key={pin.id}
         icon={
           pin.icon in iconMap
@@ -354,9 +389,25 @@ export default function Command() {
     <List
       isLoading={loadingPins || loadingGroups || loadingRecentApplications}
       searchBarPlaceholder="Search pins..."
-      actions={<ActionPanel>{<CreateNewPinAction setPins={setPins} />}</ActionPanel>}
+      filtering={{ keepSectionOrder: true }}
+      actions={
+        <ActionPanel>
+          <CreateNewPinAction setPins={setPins} />
+          {!examplesInstalled && pins.length == 0 ? (
+            <InstallExamplesAction
+              setExamplesInstalled={setExamplesInstalled}
+              revalidatePins={revalidatePins}
+              revalidateGroups={revalidateGroups}
+            />
+          ) : null}
+        </ActionPanel>
+      }
     >
-      <List.EmptyView title="No Pins Found" icon="no-view.png" />
+      <List.EmptyView
+        title="No Pins Yet!"
+        description="Add a custom pin (⌘N)  or install some examples (⌘E)"
+        icon="no-view.png"
+      />
       {preferences.showGroups
         ? [{ name: "None", icon: "Minus", id: -1 }].concat(groups).map((group) => (
             <List.Section title={group.name == "None" ? "Other" : group.name} key={group.id}>

@@ -19,17 +19,21 @@ export const useGroups = () => {
   const [groups, setGroups] = useCachedState<Group[]>("pin-groups", []);
   const [loading, setLoading] = useState<boolean>(true);
 
+  const revalidateGroups = async () => {
+    const storedGroups: Group[] = await getStorage(StorageKey.LOCAL_GROUPS)
+    setGroups(storedGroups || []);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    Promise.resolve(getStorage(StorageKey.LOCAL_GROUPS)).then((storedGroups: Group[]) => {
-      setGroups(storedGroups || []);
-      setLoading(false);
-    });
+    revalidateGroups();
   }, []);
 
   return {
     groups: groups,
     setGroups: setGroups,
     loadingGroups: loading,
+    revalidateGroups: revalidateGroups,
   };
 };
 

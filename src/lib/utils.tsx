@@ -1,14 +1,13 @@
-import { LocalStorage, Icon, Clipboard } from "@raycast/api";
+import { LocalStorage, Icon, Clipboard, showToast, Toast } from "@raycast/api";
 import { runAppleScript } from "run-applescript";
 import { exec, execSync } from "child_process";
 import { StorageKey } from "./constants";
 import { getFavicon } from "@raycast/utils";
+import { Pin } from "./Pins";
+import { Group } from "./Groups";
 
 export interface ExtensionPreferences {
-  showCategories: boolean;
-  showOpenAll: boolean;
   preferredBrowser: string;
-  showPinShortcut: boolean;
   topSection: string;
   showRecentApplications: boolean;
 }
@@ -116,4 +115,102 @@ export const getIcon = (iconRef: string) => {
     return "";
   }
   return Icon.Terminal;
+};
+
+export const installExamples = async () => {
+  const examplePins: Pin[] = [
+    {
+      id: 1,
+      name: "Google",
+      url: "https://google.com",
+      icon: "Favicon / File Icon",
+      group: "None",
+      application: "None",
+    },
+    {
+      id: 2,
+      name: "GitHub",
+      url: "https://github.com",
+      icon: "Favicon / File Icon",
+      group: "Dev Utils",
+      application: "None",
+    },
+    {
+      id: 3,
+      name: "Regex 101",
+      url: "https://regex101.com",
+      icon: "Favicon / File Icon",
+      group: "Dev Utils",
+      application: "None",
+    },
+    {
+      id: 4,
+      name: "Terminal",
+      url: "/System/Applications/Utilities/Terminal.app",
+      icon: "Favicon / File Icon",
+      group: "Dev Utils",
+      application: "None",
+    },
+    {
+      id: 5,
+      name: "New Folder Here",
+      url: `osascript -e 'tell application "Finder"' -e 'set newFolder to make new folder at (the target of the front window) as alias' -e 'select newFolder' -e 'end tell'`,
+      icon: "NewFolder",
+      group: "Scripts",
+      application: "None",
+      execInBackground: true,
+    },
+    {
+      id: 6,
+      name: "New File Here",
+      url: `osascript -e 'tell application "Finder"' -e 'set newFile to make new file at (the target of the front window) as alias' -e 'select newFile' -e 'end tell'`,
+      icon: "NewDocument",
+      group: "Scripts",
+      application: "None",
+      execInBackground: true,
+    },
+    {
+      id: 7,
+      name: "New Terminal Here",
+      url: `osascript -e 'tell application "Finder" to set currentDir to POSIX path of (target of front window as alias)' -e 'tell application "Terminal" to do script "cd " & currentDir'`,
+      icon: "Terminal",
+      group: "Scripts",
+      application: "None",
+      execInBackground: true,
+    },
+    {
+      id: 8,
+      name: "ChatGPT",
+      url: "https://chat.openai.com",
+      icon: "Favicon / File Icon",
+      group: "None",
+      application: "None",
+    },
+    {
+      id: 9,
+      name: "Random Duck",
+      url: "https://random-d.uk",
+      icon: "Favicon / File Icon",
+      group: "None",
+      application: "None",
+    },
+  ];
+
+  const exampleGroups: Group[] = [
+    {
+      id: 1,
+      name: "Dev Utils",
+      icon: "CodeBlock",
+    },
+    {
+      id: 2,
+      name: "Scripts",
+      icon: "Text",
+    },
+  ];
+
+  await setStorage(StorageKey.LOCAL_PINS, examplePins);
+  await setStorage(StorageKey.LOCAL_GROUPS, exampleGroups);
+  await LocalStorage.setItem(StorageKey.EXAMPLES_INSTALLED, true);
+  await showToast({ title: "Examples Installed!", style: Toast.Style.Success });
 };
