@@ -1,5 +1,15 @@
 # Pins DevLog - A more detailed changelog
 
+### 2023-06-16
+
+- Added "Copy Pin Name" and "Copy Pin URL" actions in the "View Pins" command
+- Added "Copy Group Name" action in the "View Groups" command
+- Remade Placeholders Guide in Markdown, now opens in default Markdown viewer
+- "Open Placeholders Guide" action can now be used even if pins have been created, not just on first launch
+- Fixed bug where opening a pin would attempt to apply all placeholders, even if they were not used in the pin, due to not checking for absence of aliases
+    - Results in a significant speedup when opening pins
+- Significantly improve inline documentation in case someone wants to fork the repo
+
 ### 2023-05-25
 
 - Added placeholders system inspired by PromptLab

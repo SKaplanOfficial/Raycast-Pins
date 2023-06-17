@@ -5,6 +5,12 @@ import { StorageKey } from "./lib/constants";
 import { Group, deleteGroup, modifyGroup, useGroups } from "./lib/Groups";
 import { Pin, usePins } from "./lib/Pins";
 
+/**
+ * Form view for editing a group.
+ * @param props.group The group to edit.
+ * @param props.setGroups The function to call to update the list of groups.
+ * @returns A form view.
+ */
 const EditGroupView = (props: { group: Group; setGroups: (groups: Group[]) => void }) => {
   const group = props.group;
   const setGroups = props.setGroups;
@@ -57,6 +63,11 @@ const EditGroupView = (props: { group: Group; setGroups: (groups: Group[]) => vo
   );
 };
 
+/**
+ * Action to create a new group. Opens a form view with blank/default fields.
+ * @param props.setGroups The function to call to update the list of groups.
+ * @returns An action component.
+ */
 const CreateNewGroupAction = (props: { setGroups: (groups: Group[]) => void }) => {
   const { setGroups } = props;
   return (
@@ -78,6 +89,11 @@ const CreateNewGroupAction = (props: { setGroups: (groups: Group[]) => void }) =
   );
 };
 
+/**
+ * Moves a group up in the list of groups.
+ * @param index The current index of the group.
+ * @param setGroups The function to call to update the list of groups.
+ */
 const moveGroupUp = async (index: number, setGroups: React.Dispatch<React.SetStateAction<Group[]>>) => {
   const storedGroups: Group[] = await getStorage(StorageKey.LOCAL_GROUPS);
   if (storedGroups.length > index) {
@@ -87,6 +103,11 @@ const moveGroupUp = async (index: number, setGroups: React.Dispatch<React.SetSta
   }
 };
 
+/**
+ * Moves a group down in the list of groups.
+ * @param index The current index of the group.
+ * @param setGroups The function to call to update the list of groups.
+ */
 const moveGroupDown = async (index: number, setGroups: React.Dispatch<React.SetStateAction<Group[]>>) => {
   const storedGroups: Group[] = await getStorage(StorageKey.LOCAL_GROUPS);
   if (storedGroups.length > index + 1) {
@@ -133,6 +154,13 @@ export default function Command() {
                       push(<EditGroupView group={group} setGroups={setGroups as (groups: Group[]) => void} />)
                     }
                   />
+
+                  <Action.CopyToClipboard
+                    title="Copy Group Name"
+                    content={group.name}
+                    shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
+                  />
+
                   <Action
                     title="Delete Group"
                     icon={Icon.Trash}

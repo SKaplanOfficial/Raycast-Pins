@@ -3,6 +3,12 @@ import { Form, Icon, ActionPanel, Action, popToRoot } from "@raycast/api";
 import { iconMap } from "./lib/utils";
 import { createNewGroup, useGroups } from "./lib/Groups";
 
+/**
+ * Checks that the name field is not empty and that the name is not already taken.
+ * @param name The value of the name field.
+ * @param setNameError A function to set the name error.
+ * @param groupNames The names of the existing groups.
+ */
 const checkNameField = (name: string, setNameError: (error: string | undefined) => void, groupNames: string[]) => {
   // Checks for non-empty (non-spaces-only) name
   if (name.trim().length == 0) {
@@ -14,6 +20,10 @@ const checkNameField = (name: string, setNameError: (error: string | undefined) 
   }
 };
 
+/**
+ * Form view for creating a new group.
+ * @returns A form view.
+ */
 const NewGroupForm = () => {
   const [nameError, setNameError] = useState<string | undefined>();
   const { groups } = useGroups();

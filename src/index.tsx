@@ -20,11 +20,33 @@ import { useCachedState } from "@raycast/utils";
 import * as os from "os";
 import { Placeholders } from "./lib/placeholders";
 
+/**
+ * Preferences for the menu bar extra.
+ */
 interface CommandPreferences {
+  /**
+   * Whether to show category labels (e.g. "Pins", "Groups", "Quick Pins") in the menu bar dropdown.
+   */
   showCategories: boolean;
+
+  /**
+   * Whether to show the "Open All" button within group submenus.
+   */
   showOpenAll: boolean;
+
+  /**
+   * Whether to show the "Create New Pin" button.
+   */
   showCreateNewPin: boolean;
+
+  /**
+   * Whether to show the "Quick Pins" section.
+   */
   showPinShortcut: boolean;
+
+  /**
+   * Whether to display pins that are not applicable to the current context. For example, if this is disabled, pins requiring selected text will not be shown if no text is selected.
+   */
   showInapplicablePins: boolean;
 }
 
@@ -63,7 +85,7 @@ export default function Command() {
             let containsPlaceholder = false;
             let passesTests = true;
             for (const [placeholderText, placeholderValue] of Object.entries(placeholders)) {
-              if (targetRaw.includes(placeholderText)) {
+              if (targetRaw.includes(placeholderText) || placeholderValue.aliases?.some((alias) => targetRaw.includes(alias))) {
                 containsPlaceholder = true;
                 for (const rule of placeholderValue.rules) {
                   if (!(await rule(targetRaw))) {
@@ -100,9 +122,9 @@ export default function Command() {
       { None: pinsToShow.filter((pin) => pin.group == "None") }
     );
 
-  if (preferences.showRecentApplications) {
+  if (preferences.showRecentApplications && localData.recentApplications.length > 1) {
     let pseudoPinID = Math.max(...pins.map((pin) => pin.id));
-    usedGroups["Recent Applications"] = localData.recentApplications.map((app) => {
+    usedGroups["Recent Applications"] = localData.recentApplications.slice(1).map((app) => {
       pseudoPinID++;
       return {
         id: pseudoPinID,
@@ -224,7 +246,7 @@ export default function Command() {
         ) : null,
       ].sort(() => (preferences.topSection == "pins" ? 1 : -1))}
 
-      {preferences.showPinShortcut ? (
+      {preferences.showPinShortcut && !(localData.currentApplication.name == "Finder" && localData.currentDirectory.name == "Desktop") ? (
         <MenuBarExtra.Section title="Quick Pins">
           {localData.currentApplication.name.length > 0 &&
           (localData.currentApplication.name != "Finder" || localData.currentDirectory.name != "Desktop") ? (

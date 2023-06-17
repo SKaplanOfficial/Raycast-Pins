@@ -84,6 +84,10 @@ const getSelectedNotes = async (): Promise<{ name: string; id: string }[]> => {
   return JSON.parse(selection);
 };
 
+/**
+ * Gets the name and path of the active TextEdit document.
+ * @returns A promise resolving to an object containing the document's name and path. If no document is open, the name and path will be empty strings.
+ */
 const getActiveTextEditDocument = async (): Promise<{ name: string; path: string }> => {
   const data = await runAppleScript(`try
     tell application "TextEdit"
@@ -102,6 +106,11 @@ const getActiveTextEditDocument = async (): Promise<{ name: string; path: string
   return { name: "", path: "" };
 };
 
+/**
+ * Gets the name and path of the active document in iWork apps (Pages, Numbers, Keynote).
+ * @param appName The name of the iWork app to get the active document from.
+ * @returns A promise resolving to an object containing the document's name and path. If no document is open, the name and path will be empty strings.
+ */
 const getActiveiWorkDocument = async (appName: string): Promise<{ name: string; path: string }> => {
   const data = await runAppleScript(`try
       tell application "${appName}"
@@ -123,9 +132,13 @@ const getActiveiWorkDocument = async (appName: string): Promise<{ name: string; 
   return { name: "", path: "" };
 };
 
-const getActiveWordDocument = async (appName: string): Promise<{ name: string; path: string }> => {
+/**
+ * Gets the name and path of the active document in Microsoft Word.
+ * @returns A promise resolving to an object containing the document's name and path. If no document is open, the name and path will be empty strings.
+ */
+const getActiveWordDocument = async (): Promise<{ name: string; path: string }> => {
   const data = await runAppleScript(`try
-      tell application "${appName}"
+      tell application "Microsoft Word"
         set oldDelims to AppleScript's text item delimiters
         set AppleScript's text item delimiters to "\`\`\`"
         set {theName, theFile} to {name, path} of document 1
@@ -144,9 +157,13 @@ const getActiveWordDocument = async (appName: string): Promise<{ name: string; p
   return { name: "", path: "" };
 };
 
-const getActivePowerPointDocument = async (appName: string): Promise<{ name: string; path: string }> => {
+/**
+ * Gets the name and path of the active document in Microsoft PowerPoint.
+ * @returns A promise resolving to an object containing the document's name and path. If no document is open, the name and path will be empty strings.
+ */
+const getActivePowerPointDocument = async (): Promise<{ name: string; path: string }> => {
   const data = await runAppleScript(`try
-      tell application "${appName}"
+      tell application "Microsoft PowerPoint"
         set oldDelims to AppleScript's text item delimiters
         set AppleScript's text item delimiters to "\`\`\`"
         set {theName, theFile} to {name, path} of presentation 1
@@ -165,9 +182,13 @@ const getActivePowerPointDocument = async (appName: string): Promise<{ name: str
   return { name: "", path: "" };
 };
 
-const getActiveExcelDocument = async (appName: string): Promise<{ name: string; path: string }> => {
+/**
+ * Gets the name and path of the active document in Microsoft Excel.
+ * @returns A promise resolving to an object containing the document's name and path. If no document is open, the name and path will be empty strings.
+ */
+const getActiveExcelDocument = async (): Promise<{ name: string; path: string }> => {
   const data = await runAppleScript(`try
-      tell application "${appName}"
+      tell application "Microsoft Excel"
         set oldDelims to AppleScript's text item delimiters
         set AppleScript's text item delimiters to "\`\`\`"
         set {theName, theFile} to {name, path} of workbook 1
@@ -186,6 +207,11 @@ const getActiveExcelDocument = async (appName: string): Promise<{ name: string; 
   return { name: "", path: "" };
 };
 
+/**
+ * Gets the name and path of the active document in generic document-based apps.
+ * @param appName The name of the app to get the active document from.
+ * @returns A promise resolving to an object containing the document's name and path. If no document is open, the name and path will be empty strings.
+ */
 const getActiveDocument = async (appName: string): Promise<{ name: string; path: string }> => {
   const data = await runAppleScript(`try
       tell application "${appName}"
@@ -207,6 +233,9 @@ const getActiveDocument = async (appName: string): Promise<{ name: string; path:
   return { name: "", path: "" };
 };
 
+/**
+ * Tracks recently used applications (if enabled in the extension's settings).
+ */
 export const updateRecentApplications = async () => {
   const app = await getFrontmostApplication();
   const recentApps = await getStorage(StorageKey.RECENT_APPS);
@@ -223,12 +252,20 @@ export const updateRecentApplications = async () => {
   await setStorage(StorageKey.RECENT_APPS, newRecentApps);
 };
 
+/**
+ * Gets the list of recently used applications.
+ * @returns A promise resolving to an array of recently used applications as Application objects (name, path, bundleId).
+ */
 export const getRecentApplications = async (): Promise<Application[]> => {
   await updateRecentApplications();
   const recentApps = await getStorage(StorageKey.RECENT_APPS);
   return recentApps;
 };
 
+/**
+ * Hook to get the list of recently used applications.
+ * @returns An object containing the list of recently used applications and a boolean indicating whether the list is still loading.
+ */
 export const useRecentApplications = () => {
   const [recentApplications, setRecentApplications] = useState<Application[]>([]);
   const [loadingRecentApplications, setLoadingRecentApplications] = useState(true);
@@ -249,6 +286,10 @@ export const useRecentApplications = () => {
   return { recentApplications: recentApplications, loadingRecentApplications: loadingRecentApplications };
 };
 
+/**
+ * Hook to get the local data object, see {@link LocalDataObject}.
+ * @returns An object containing the local data object and a boolean indicating whether the object is still loading.
+ */
 export const useLocalData = () => {
   const [localData, setLocalData] = useCachedState<LocalDataObject>("--local-data", dummyData());
   const [loadingLocalData, setLoadingLocalData] = useState(true);
@@ -285,11 +326,11 @@ export const useLocalData = () => {
       } else if (app.name == "Keynote") {
         newData.currentDocument = await getActiveiWorkDocument("Keynote");
       } else if (app.name == "Microsoft Word") {
-        newData.currentDocument = await getActiveWordDocument("Microsoft Word");
+        newData.currentDocument = await getActiveWordDocument();
       } else if (app.name == "Microsoft Excel") {
-        newData.currentDocument = await getActiveExcelDocument("Microsoft Excel");
+        newData.currentDocument = await getActiveExcelDocument();
       } else if (app.name == "Microsoft PowerPoint") {
-        newData.currentDocument = await getActivePowerPointDocument("Microsoft PowerPoint");
+        newData.currentDocument = await getActivePowerPointDocument();
       } else if (app.name == "Script Editor") {
         newData.currentDocument = await getActiveDocument("Script Editor");
       }

@@ -18,6 +18,10 @@ import { useGroups } from "./lib/Groups";
 import { createNewPin } from "./lib/Pins";
 import path from "path";
 
+/**
+ * Form view for creating a new pin.
+ * @returns A form view.
+ */
 const NewPinForm = () => {
   const [url, setURL] = useState<string | undefined>();
   const [urlError, setUrlError] = useState<string | undefined>();

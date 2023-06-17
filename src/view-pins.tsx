@@ -23,6 +23,12 @@ import * as os from "os";
 import { useRecentApplications } from "./lib/LocalData";
 import path from "path";
 
+/**
+ * The form view for editing a pin.
+ * @param props.pin The pin to edit.
+ * @param props.setPins The function to update the list of pins.
+ * @returns A form view.
+ */
 const EditPinView = (props: { pin: Pin; setPins: React.Dispatch<React.SetStateAction<Pin[]>> }) => {
   const pin = props.pin;
   const setPins = props.setPins;
@@ -68,13 +74,7 @@ const EditPinView = (props: { pin: Pin; setPins: React.Dispatch<React.SetStateAc
               pop();
             }}
           />
-          <Action.Open
-            title="Open Placeholders Guide"
-            icon={Icon.Info}
-            target={path.resolve(environment.assetsPath, "placeholders_guide.txt")}
-            application="TextEdit"
-            shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
-          />
+          <PlaceholdersGuideAction />
         </ActionPanel>
       }
     >
@@ -127,7 +127,7 @@ const EditPinView = (props: { pin: Pin; setPins: React.Dispatch<React.SetStateAc
         <Form.Checkbox
           label="Execute in Background"
           id="execInBackgroundField"
-          defaultValue={false}
+          defaultValue={pin.execInBackground}
           info="If checked, the pinned Terminal command will be executed in the background instead of in a new Terminal tab."
         />
       ) : null}
@@ -191,6 +191,11 @@ const EditPinView = (props: { pin: Pin; setPins: React.Dispatch<React.SetStateAc
   );
 };
 
+/**
+ * Move a pin up in the list. If the pin is in a group, it will be moved up within the group. Otherwise, it will be moved up in the overall list of pins.
+ * @param index The current index of the pin.
+ * @param setPins The function to set the list of pins.
+ */
 const movePinUp = async (index: number, setPins: React.Dispatch<React.SetStateAction<Pin[]>>) => {
   const storedPins: Pin[] = await getStorage(StorageKey.LOCAL_PINS);
   const storedGroups: Group[] = await getStorage(StorageKey.LOCAL_GROUPS);
@@ -219,6 +224,11 @@ const movePinUp = async (index: number, setPins: React.Dispatch<React.SetStateAc
   }
 };
 
+/**
+ * Moves a pin down in the list of pins. If the pin is in a group, it will be moved down within its group. Otherwise, it will be moved down in the overall list of pins.
+ * @param index The current index of the pin.
+ * @param setPins The function to set the list of pins.
+ */
 const movePinDown = async (index: number, setPins: React.Dispatch<React.SetStateAction<Pin[]>>) => {
   const storedPins: Pin[] = await getStorage(StorageKey.LOCAL_PINS);
   const storedGroups: Group[] = await getStorage(StorageKey.LOCAL_GROUPS);
@@ -247,6 +257,11 @@ const movePinDown = async (index: number, setPins: React.Dispatch<React.SetState
   }
 };
 
+/**
+ * Action to create a new pin. Opens the EditPinView with a blank pin.
+ * @param props.setPins The function to set the pins state.
+ * @returns An action component.
+ */
 const CreateNewPinAction = (props: { setPins: React.Dispatch<React.SetStateAction<Pin[]>> }) => {
   const { setPins } = props;
   return (
@@ -273,6 +288,13 @@ const CreateNewPinAction = (props: { setPins: React.Dispatch<React.SetStateActio
   );
 };
 
+/**
+ * Action to install example pins. Only shows if examples are not installed and no pins have been created.
+ * @param props.setExamplesInstalled The function to set the examples installed state.
+ * @param props.revalidatePins The function to revalidate the pins.
+ * @param props.revalidateGroups The function to revalidate the groups.
+ * @returns An action component.
+ */
 const InstallExamplesAction = (props: {
   setExamplesInstalled: React.Dispatch<React.SetStateAction<LocalStorage.Value | undefined>>;
   revalidatePins: () => Promise<void>;
@@ -295,8 +317,34 @@ const InstallExamplesAction = (props: {
   );
 };
 
+/**
+ * Action to open the Placeholders Guide in the default markdown viewer (might be TextEdit).
+ * @returns An action component.
+ */
+const PlaceholdersGuideAction = () => {
+  return (
+    <Action.Open
+      title="Open Placeholders Guide"
+      icon={Icon.Info}
+      target={path.resolve(environment.assetsPath, "placeholders_guide.md")}
+      shortcut={{ modifiers: ["cmd"], key: "g" }}
+    />
+  );
+};
+
+/**
+ * Preferences for the View Pins command.
+ */
 interface CommandPreferences {
+  /**
+   * Whether to display groups as separate sections.
+   */
   showGroups: boolean;
+
+  /**
+   * Whether to display subtitles for pins.
+   */
+  showSubtitles: boolean;
 }
 
 export default function Command() {
@@ -317,7 +365,7 @@ export default function Command() {
     return pins.map((pin, index) => (
       <List.Item
         title={pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url)}
-        subtitle={pin.url.substring(0, 30) + (pin.url.length > 30 ? "..." : "")}
+        subtitle={preferences.showSubtitles ? pin.url.substring(0, 30) + (pin.url.length > 30 ? "..." : "") : undefined}
         keywords={[
           ...(pin.group == "None" ? "Other" : pin.group.split(" ")),
           ...pin.url
@@ -343,6 +391,19 @@ export default function Command() {
           <ActionPanel>
             <ActionPanel.Section title="Pin Actions">
               <Action title="Open" icon={Icon.ChevronRight} onAction={() => openPin(pin, preferences)} />
+
+              <Action.CopyToClipboard
+                title="Copy Pin Name"
+                content={pin.name}
+                shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
+              />
+
+              <Action.CopyToClipboard
+                title="Copy Pin URL"
+                content={pin.url}
+                shortcut={{ modifiers: ["cmd", "shift"], key: "u" }}
+              />
+
               <Action.Push
                 title="Edit"
                 icon={Icon.Pencil}
@@ -388,6 +449,7 @@ export default function Command() {
               />
             </ActionPanel.Section>
             <CreateNewPinAction setPins={setPins} />
+            <PlaceholdersGuideAction />
           </ActionPanel>
         }
       />
@@ -424,9 +486,9 @@ export default function Command() {
             </List.Section>
           ))
         : getPinListItems(pins)}
-      {preferences.showRecentApplications && recentApplications.length > 0 ? (
+      {preferences.showRecentApplications && recentApplications.length > 1 ? (
         <List.Section title="Recent Applications">
-          {recentApplications.map((app) => (
+          {recentApplications.slice(1).map((app) => (
             <List.Item
               title={app.name}
               subtitle="Recent Applications"

@@ -238,3 +238,58 @@ export const getCurrentTabs = async (browserName: string): Promise<{ name: strin
   }
   return [];
 };
+
+/**
+ * Gets the raw HTML of a URL.
+ *
+ * @param URL The URL to get the HTML of.
+ * @returns The HTML as a string.
+ */
+export const getURLHTML = async (URL: string): Promise<string> => {
+  return await runAppleScript(`use framework "Foundation"
+    set theResult to ""
+    on getURLHTML(theURL)
+        global theResult
+        set theURL to current application's NSURL's URLWithString:theURL
+        set theSessionConfiguration to current application's NSURLSessionConfiguration's defaultSessionConfiguration()
+        set theSession to current application's NSURLSession's sessionWithConfiguration:(theSessionConfiguration) delegate:(me) delegateQueue:(missing value)
+        set theRequest to current application's NSURLRequest's requestWithURL:theURL
+        set theTask to theSession's dataTaskWithRequest:theRequest
+        theTask's resume()
+        
+        set completedState to current application's NSURLSessionTaskStateCompleted
+        set canceledState to current application's NSURLSessionTaskStateCanceling
+        
+        repeat while theTask's state() is not completedState and theTask's state() is not canceledState
+            delay 0.1
+        end repeat
+        
+        return theResult
+    end getURLHTML
+    
+    on URLSession:tmpSession dataTask:tmpTask didReceiveData:tmpData
+        global theResult
+        set theText to (current application's NSString's alloc()'s initWithData:tmpData encoding:(current application's NSASCIIStringEncoding)) as string
+
+        set theResult to theResult & theText
+    end URLSession:dataTask:didReceiveData:
+    return getURLHTML("${URL}")`);
+};
+
+/**
+ * Gets the visible text of a URL.
+ *
+ * @param URL The URL to get the visible text of.
+ * @returns A promise resolving to the visible text as a string.
+ */
+export const getTextOfWebpage = async (URL: string): Promise<string> => {
+  const html = await getURLHTML(URL);
+  const filteredString = html
+    .replaceAll(
+      /(<script[\s\S\n\r]+?<\/script>|<style[\s\S\n\r]+?<\/style>|<nav[\s\S\n\r]+?<\/nav>|<link[\s\S\n\r]+?<\/link>|<form[\s\S\n\r]+?<\/form>|<button[\s\S\n\r]+?<\/button>|<!--[\s\S\n\r]+?-->|<select[\s\S\n\r]+?<\/select>|<[\s\n\r\S]+?>)/g,
+      " "
+    )
+    .replaceAll(/[\s\n\r]+/g, " ")
+    .replaceAll(/(\([^A-Za-z0-9]*\)|(?<=[,.!?%*])[,.!?%*]*?\s*[,.!?%*])/g, " ");
+  return filteredString;
+};

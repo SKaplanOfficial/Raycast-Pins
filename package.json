@@ -102,6 +102,14 @@
           "description": "Whether to sort pins into group sections.",
           "default": true,
           "required": false
+        },
+        {
+          "name": "showSubtitles",
+          "type": "checkbox",
+          "label": "Show Subtitles",
+          "description": "Whether to pin targets (e.g. URLs) as subtitles in the list view.",
+          "default": true,
+          "required": false
         }
       ]
     },

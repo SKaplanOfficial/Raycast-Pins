@@ -6,9 +6,23 @@ import { getFavicon } from "@raycast/utils";
 import { Pin } from "./Pins";
 import { Group } from "./Groups";
 
+/**
+ * Preferences for the entire extension.
+ */
 export interface ExtensionPreferences {
+  /**
+   * The user's preferred browser. This is used to open URL pins.
+   */
   preferredBrowser: string;
+
+  /**
+   * The first section displayed in lists of pins, e.g. grouped-pins-first or ungrouped-pins-first.
+   */
   topSection: string;
+
+  /**
+   * Whether or not to show the recent applications section in lists of pins.
+   */
   showRecentApplications: boolean;
 }
 

@@ -1,5 +1,5 @@
 import { useCachedState } from "@raycast/utils";
-import { LaunchType, confirmAlert, environment, open, showHUD, showToast } from "@raycast/api";
+import { LaunchType, Toast, confirmAlert, environment, open, showHUD, showToast } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { StorageKey } from "./constants";
 import { getStorage, runCommand, runCommandInTerminal, setStorage } from "./utils";
@@ -107,6 +107,8 @@ export const openPin = async (pin: Pin, preferences: { preferredBrowser: string 
     if (environment.commandName == "view-pins") {
       await showToast({
         title: "Failed to open " + (pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url)),
+        message: (error as Error).message,
+        style: Toast.Style.Failure,
       });
     } else {
       await showHUD(`Failed to open ${pin.name || pin.url}: ${(error as Error).message}`);
