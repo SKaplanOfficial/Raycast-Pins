@@ -6,8 +6,19 @@ import { showToast } from "@raycast/api";
 import { Pin } from "./Pins";
 
 export type Group = {
+  /**
+   * The name of the group.
+   */
   name: string;
+
+  /**
+   * A reference to the icon for the group, either a valid Raycast icon, a URL, a file path, or an empty icon placeholder.
+   */
   icon: string;
+
+  /**
+   * The unique ID of the group.
+   */
   id: number;
 };
 

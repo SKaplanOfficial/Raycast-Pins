@@ -5,6 +5,10 @@ import { StorageKey } from "./lib/constants";
 import { Pin } from "./lib/Pins";
 import { Group } from "./lib/Groups";
 
+/**
+ * Updates the ID of each pin/group such that there are no duplicates. The first item will have ID 0, the second 1, etc.
+ * @param newItems The list of pins or groups to reassign IDs to.
+ */
 const reassignIDs = async (newItems: { id: number }[]) => {
   let currentID = 0;
   newItems.forEach((item: { id: number }) => {
@@ -14,6 +18,12 @@ const reassignIDs = async (newItems: { id: number }[]) => {
   await setStorage(StorageKey.NEXT_PIN_ID, [currentID]);
 };
 
+/**
+ * Merges the existing pins/groups with the imported pins/groups, removing any duplicate entries. Duplicate entries are determined by the name of the pin. The ID of each pin is updated to ensure that there are no duplicates.
+ * @param dataItems The pins/groups to be imported.
+ * @param oldItems The existing pins/groups.
+ * @returns The merged list of pins/groups.
+ */
 const mergeRemovingDuplicates = async (
   dataItems: { name: string; id: number }[],
   oldItems: { name: string; id: number }[]
@@ -37,6 +47,11 @@ const mergeRemovingDuplicates = async (
   return newItems;
 };
 
+/**
+ * Imports pins and pin groups from JSON-parsed data.
+ * @param data The JSON-parsed data to import.
+ * @param importMethod The method to use when importing the data, e.g. Merge1 (maintain duplicates), Merge2 (remove duplicates), or Replace (replace all existing data).
+ */
 const importData = async (data: { groups: Group[]; pins: Pin[] }, importMethod: string) => {
   if (importMethod == "Merge1") {
     // Maintain duplicates
@@ -85,6 +100,11 @@ const importData = async (data: { groups: Group[]; pins: Pin[] }, importMethod: 
   popToRoot();
 };
 
+/**
+ * Checks if the JSON string is properly formatted. If not, displays an error message.
+ * @param jsonString The JSON string to check.
+ * @param setJSONError The function to call to set the error message.
+ */
 const checkJSONFormat = (jsonString: string, setJSONError: (error: string | undefined) => void) => {
   // Check for properly formatted pin data JSON string
   let error = null;
@@ -108,6 +128,10 @@ const checkJSONFormat = (jsonString: string, setJSONError: (error: string | unde
   }
 };
 
+/**
+ * Form view for importing pin data from a JSON string.
+ * @returns A form view.
+ */
 const ImportDataForm = () => {
   const [jsonError, setJSONError] = useState<string | undefined>();
 

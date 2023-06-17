@@ -9,13 +9,44 @@ import { Placeholders } from "./placeholders";
 import path from "path";
 
 export type Pin = {
+  /**
+   * The name of the pin. This should generally be unique.
+   */
   name: string;
+
+  /**
+   * The target URL or Terminal command to run when the pin is opened.
+   */
   url: string;
+
+  /**
+   * A reference to the icon for the pin, either a valid Raycast icon, a URL, a file path, or an empty icon placeholder.
+   */
   icon: string;
+
+  /**
+   * The name of the group that the pin belongs to, or "None" if the pin is not in a group.
+   */
   group: string;
+
+  /**
+   * The unique ID of the pin.
+   */
   id: number;
+
+  /**
+   * The application to open the pin in.
+   */
   application: string;
+
+  /**
+   * The date that the pin expires and will be automatically removed. If undefined, the pin will never expire.
+   */
   expireDate?: string;
+
+  /**
+   * Whether or not the pin's target should be executed in the background. Only applies to pins with a Terminal command target.
+   */
   execInBackground?: boolean;
 };
 

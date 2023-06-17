@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */ // Disable since many placeholder functions have unused parameters that are kept for consistency.
 import { getFrontmostApplication, getSelectedText } from "@raycast/api";
 import { Clipboard } from "@raycast/api";
 import { runAppleScript } from "run-applescript";
@@ -7,17 +7,36 @@ import * as os from "os";
 import { getStorage } from "./utils";
 import { StorageKey } from "./constants";
 
+type Placeholder = {
+  [key: string]: {
+    /**
+     * The detailed name of the placeholder.
+     */
+    name: string;
+
+    /**
+     * The aliases for the placeholder. Any of these aliases can be used in place of the placeholder to achieve the same result.
+     */
+    aliases?: string[];
+
+    /**
+     * The rules that determine whether or not the placeholder should be replaced. If any of these rules return true, the placeholder will be replaced. If no rules are provided, the placeholder will always be replaced.
+     */
+    rules: ((str: string) => Promise<boolean>)[];
+
+    /**
+     * The function that applies the placeholder to a string.
+     * @param str The string to apply the placeholder to.
+     * @returns The string with the placeholder applied.
+     */
+    apply: (str: string) => Promise<string>;
+  };
+};
+
 /**
  * Placeholder specification.
  */
-const placeholders: {
-  [key: string]: {
-    name: string;
-    aliases?: string[];
-    rules: ((str: string) => Promise<boolean>)[];
-    apply: (str: string) => Promise<string>;
-  };
-} = {
+const placeholders: Placeholder = {
   /**
    * Placeholder for the text currently stored in the clipboard. If the clipboard is empty, this placeholder will not be replaced. Most clipboard content supplies a string format, such as file names when copying files in Finder.
    */
@@ -63,7 +82,11 @@ const placeholders: {
     name: "Current Application",
     rules: [],
     apply: async (str: string) => {
-      return (await getFrontmostApplication()).name || "";
+      try {
+        return (await getFrontmostApplication()).name || "";
+      } catch (e) {
+        return "";
+      }
     },
   },
 
@@ -74,7 +97,11 @@ const placeholders: {
     name: "Current Application Path",
     rules: [],
     apply: async (str: string) => {
-      return (await getFrontmostApplication()).path || "";
+      try {
+        return (await getFrontmostApplication()).path || "";
+      } catch (e) {
+        return "";
+      }
     },
   },
 
@@ -112,8 +139,12 @@ const placeholders: {
       },
     ],
     apply: async (str: string) => {
-      const appName = (await getFrontmostApplication()).name;
-      return (await getCurrentURL(appName)).url;
+      try {
+        const appName = (await getFrontmostApplication()).name;
+        return (await getCurrentURL(appName)).url;
+      } catch (e) {
+        return "";
+      }
     },
   },
 
@@ -154,7 +185,7 @@ const placeholders: {
 
   /**
    * Placeholder for the current date in the format "Month Day, Year". Barring any issues, this should always be replaced.
-   * 
+   *
    * @todo Add support for custom date formats similar to Raycast's snippets date placeholder.
    */
   "{{date}}": {
@@ -168,7 +199,7 @@ const placeholders: {
 
   /**
    * Placeholder for the current time in the format "Hour:Minute". Barring any issues, this should always be replaced.
-   * 
+   *
    * @todo Add support for custom time formats.
    */
   "{{time}}": {
@@ -195,10 +226,14 @@ const placeholders: {
       },
     ],
     apply: async (str: string) => {
-      const appName = (await getFrontmostApplication()).name;
-      const URL = (await getCurrentURL(appName)).url;
-      const URLText = await getTextOfWebpage(URL);
-      return URLText;
+      try {
+        const appName = (await getFrontmostApplication()).name;
+        const URL = (await getCurrentURL(appName)).url;
+        const URLText = await getTextOfWebpage(URL);
+        return URLText;
+      } catch (e) {
+        return "";
+      }
     },
   },
 
@@ -233,7 +268,7 @@ const placeholders: {
         } catch (e) {
           return false;
         }
-      }
+      },
     ],
     apply: async (str: string) => {
       const recents = getStorage(StorageKey.RECENT_APPS);
@@ -241,8 +276,8 @@ const placeholders: {
         return recents[1];
       }
       return "";
-    }
-  }
+    },
+  },
 };
 
 /**
@@ -254,7 +289,11 @@ const applyToString = async (str: string) => {
   let subbedStr = str;
   const placeholderDefinition = Object.entries(placeholders);
   for (const [key, placeholder] of placeholderDefinition) {
-    if (subbedStr.indexOf(key) == -1 && (placeholder.aliases?.every((alias) => subbedStr.indexOf(alias) == -1) || !placeholder.aliases?.length)) continue;
+    if (
+      subbedStr.indexOf(key) == -1 &&
+      (placeholder.aliases?.every((alias) => subbedStr.indexOf(alias) == -1) || !placeholder.aliases?.length)
+    )
+      continue;
     if (placeholder.aliases && placeholder.aliases.some((alias) => subbedStr.indexOf(alias) != -1)) {
       for (const alias of placeholder.aliases) {
         subbedStr = subbedStr.replace(new RegExp(alias, "g"), await placeholder.apply(str));

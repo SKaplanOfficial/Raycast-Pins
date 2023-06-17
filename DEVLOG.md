@@ -4,6 +4,8 @@
 
 - Added "Copy Pin Name" and "Copy Pin URL" actions in the "View Pins" command
 - Added "Copy Group Name" action in the "View Groups" command
+- Added {{previousApp}} placeholder, which inserts the name of the last focused application before the current one
+    - Supports several aliases: {{previousAppName}}, {{lastApp}}, and {{lastAppName}}
 - Remade Placeholders Guide in Markdown, now opens in default Markdown viewer
 - "Open Placeholders Guide" action can now be used even if pins have been created, not just on first launch
 - Fixed bug where opening a pin would attempt to apply all placeholders, even if they were not used in the pin, due to not checking for absence of aliases

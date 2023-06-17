@@ -1,8 +1,8 @@
 # Pins
 
-A Raycast extension for pinning anything with a path or URL to the menu bar, with support for pinning Terminal commands and AppleScripts as well. Quickly navigate to your favorite sites, folders, and files, conveniently execute Terminal commands, and intuitively manage pins and groups from within Raycast.
+A Raycast extension for pinning anything with a path or URL to the menu bar, with support for pinning Terminal commands as well. Quickly navigate to your favorite sites, folders, and files, conveniently execute Terminal commands, and intuitively manage pins and groups from within Raycast.
 
-<img src="./assets/pins-5.png" alt="Example of the Pins menu bar extra in action, showing pinned sites, folders, Terminal commands, and groups." width="600" />
+<img src="https://github.com/SKaplanOfficial/Raycast-Pins/blob/main/assets/pins-5.png?raw=true" alt="Example of the Pins menu bar extra in action, showing pinned sites, folders, Terminal commands, and groups." width="500" />
 
 ## Feature Overview:
 
@@ -27,3 +27,9 @@ A Raycast extension for pinning anything with a path or URL to the menu bar, wit
 - New Group - Creates a new group with a given name and icon
 - Copy Pins - Copies a JSON representation of your pins and groups to the clipboard
 - Import Data - Imports a JSON string containing pins and groups
+
+## Resources:
+
+- [Main Repository](https://github.com/SKaplanOfficial/Raycast-Pins) - The main repository for the Pins extension, containing the latest release and all documentation
+- [Placeholders Guide](https://github.com/SKaplanOfficial/Raycast-Pins/blob/main/assets/placeholders_guide.md) - A guide to the placeholders system used in Pins
+- [Development Log](https://github.com/SKaplanOfficial/Raycast-Pins/blob/main/DEVLOG.md) - Detailed changelog of all updates to Pins
