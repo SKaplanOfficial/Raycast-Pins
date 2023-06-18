@@ -251,9 +251,9 @@ const placeholders: Placeholder = {
   /**
    * Placeholder for the current date supporting an optional format argument. Defaults to "Month Day, Year". Barring any issues, this should always be replaced.
    */
-  '{{date( format=("|\').*?("|\'))?}}': {
+  "{{date( format=(\"|').*?(\"|'))?}}": {
     name: "Date",
-    aliases: ['{{currentDate( format=("|\').*?("|\'))?}}'],
+    aliases: ["{{currentDate( format=(\"|').*?(\"|'))?}}"],
     rules: [],
     apply: async (str: string) => {
       const format = str.match(/(?<=format=("|')).*?(?=("|'))/)?.[0] || "MMMM d, yyyy";
@@ -273,9 +273,9 @@ const placeholders: Placeholder = {
   /**
    * Placeholder for the current day of the week, e.g. "Monday", using en-US as the default locale. Supports an optional locale argument. Barring any issues, this should always be replaced.
    */
-  '{{day( locale=("|\').*?("|\'))?}}': {
+  "{{day( locale=(\"|').*?(\"|'))?}}": {
     name: "Day of the Week",
-    aliases: ['{{dayName( locale=("|\').*?("|\'))?}}'],
+    aliases: ["{{dayName( locale=(\"|').*?(\"|'))?}}"],
     rules: [],
     apply: async (str: string) => {
       const locale = str.match(/(?<=locale=("|')).*?(?=("|'))/)?.[0] || "en-US";
@@ -286,9 +286,9 @@ const placeholders: Placeholder = {
   /**
    * Placeholder for the current time supporting an optional format argument. Defaults to "Hour:Minute:Second AM/PM". Barring any issues, this should always be replaced.
    */
-  '{{time( format=("|\').*?("|\'))?}}': {
+  "{{time( format=(\"|').*?(\"|'))?}}": {
     name: "Time",
-    aliases: ['{{currentTime( format=("|\').*?("|\'))?}}'],
+    aliases: ["{{currentTime( format=(\"|').*?(\"|'))?}}"],
     rules: [],
     apply: async (str: string) => {
       const format = str.match(/(?<=format=("|')).*?(?=("|'))/)?.[0] || "HH:mm:s a";
