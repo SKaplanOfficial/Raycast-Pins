@@ -66,7 +66,7 @@ export const checkExpirations = async () => {
     return true;
   });
   if (numExpired > 0) {
-    if (environment.launchType != LaunchType.Background) {
+    if (environment.launchType == LaunchType.Background) {
       await showHUD(`Removed ${numExpired} expired pin${numExpired == 1 ? "" : "s"}`);
     } else {
       await showToast({ title: `Removed ${numExpired} expired pin${numExpired == 1 ? "" : "s"}` });
@@ -222,7 +222,6 @@ export const modifyPin = async (
   setPins: React.Dispatch<React.SetStateAction<Pin[]>>
 ) => {
   const storedPins = await getStorage(StorageKey.LOCAL_PINS);
-
   const newData: Pin[] = storedPins.map((oldPin: Pin) => {
     // Update pin if it exists
     if (pin.id != -1 && oldPin.id == pin.id) {

@@ -284,7 +284,7 @@ export default function Command() {
                   localData.currentTab.url,
                   "Favicon / File Icon",
                   "None",
-                  "None",
+                  localData.currentApplication.name,
                   undefined,
                   undefined
                 );
@@ -313,7 +313,7 @@ export default function Command() {
                     tab.url,
                     "Favicon / File Icon",
                     newGroupName,
-                    "None",
+                    localData.currentApplication.name,
                     undefined,
                     undefined
                   );

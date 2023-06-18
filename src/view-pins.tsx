@@ -500,6 +500,13 @@ export default function Command() {
                     <Action title="Open" icon={Icon.ChevronRight} onAction={() => open(app.path)} />
                   </ActionPanel.Section>
                   <CreateNewPinAction setPins={setPins} />
+                  {!examplesInstalled && pins.length == 0 ? (
+                    <InstallExamplesAction
+                      setExamplesInstalled={setExamplesInstalled}
+                      revalidatePins={revalidatePins}
+                      revalidateGroups={revalidateGroups}
+                    />
+                  ) : null}
                 </ActionPanel>
               }
             />

@@ -92,7 +92,7 @@ const getCurrentDirectory = async (): Promise<{ name: string; path: string }> =>
  * Gets the selected Finder items.
  * @returns A promise resolving to an array of objects containing the name and path of each selected item.
  */
-const getFinderSelection = async (): Promise<{ name: string; path: string }[]> => {
+export const getFinderSelection = async (): Promise<{ name: string; path: string }[]> => {
   const data = await runAppleScript(
     `tell application "Finder"
     set theSelection to selection

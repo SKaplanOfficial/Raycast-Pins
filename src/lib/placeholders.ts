@@ -10,6 +10,7 @@ import { getStorage, setStorage } from "./utils";
 import { StorageKey } from "./constants";
 import { execSync } from "child_process";
 import { getPreviousPin } from "./Pins";
+import { getFinderSelection } from "./LocalData";
 
 /**
  * A placeholder type that associates Regex patterns with functions that applies the placeholder to a string, rules that determine whether or not the placeholder should be replaced, and aliases that can be used to achieve the same result.
@@ -91,6 +92,29 @@ const placeholders: Placeholder = {
   },
 
   /**
+   * Placeholder for the paths of the currently selected files in Finder as a comma-separated list. If no files are selected, this placeholder will not be replaced.
+   */
+  "{{selectedFiles}}": {
+    name: "Selected Files",
+    rules: [
+      async (str: string) => {
+        try {
+          return (await getFinderSelection()).length > 0;
+        } catch (e) {
+          return false;
+        }
+      },
+    ],
+    apply: async (str: string) => {
+      try {
+        return (await getFinderSelection()).map((file) => file.path).join(", ");
+      } catch (e) {
+        return "";
+      }
+    },
+  },
+
+  /**
    * Placeholder for the name of the current application. Barring any issues, this should always be replaced.
    */
   "{{currentAppName}}": {
@@ -164,6 +188,32 @@ const placeholders: Placeholder = {
   },
 
   /**
+   * Placeholder for the visible text of the current tab in any supported browser. See {@link SupportedBrowsers} for the list of supported browsers. If the current application is not a supported browser, this placeholder will not be replaced.
+   */
+  "{{currentTabText}}": {
+    name: "Current Tab Text",
+    rules: [
+      async (str: string) => {
+        try {
+          return SupportedBrowsers.includes((await getFrontmostApplication()).name);
+        } catch (e) {
+          return false;
+        }
+      },
+    ],
+    apply: async (str: string) => {
+      try {
+        const appName = (await getFrontmostApplication()).name;
+        const URL = (await getCurrentURL(appName)).url;
+        const URLText = await getTextOfWebpage(URL);
+        return URLText;
+      } catch (e) {
+        return "";
+      }
+    },
+  },
+
+  /**
    * Placeholder for the username of the currently logged-in user. Barring any issues, this should always be replaced.
    */
   "{{user}}": {
@@ -201,12 +251,12 @@ const placeholders: Placeholder = {
   /**
    * Placeholder for the current date supporting an optional format argument. Defaults to "Month Day, Year". Barring any issues, this should always be replaced.
    */
-  '{{date( format=".*")?}}': {
+  '{{date( format=("|\').*?("|\'))?}}': {
     name: "Date",
-    aliases: ['{{currentDate( format=".*")?}}'],
+    aliases: ['{{currentDate( format=("|\').*?("|\'))?}}'],
     rules: [],
     apply: async (str: string) => {
-      const format = str.match(/(?<=format=").*?(?=")/)?.[0] || "MMMM d, yyyy";
+      const format = str.match(/(?<=format=("|')).*?(?=("|'))/)?.[0] || "MMMM d, yyyy";
       return await runAppleScript(`use framework "Foundation"
         set currentDate to current application's NSDate's alloc()'s init()
         try
@@ -223,12 +273,12 @@ const placeholders: Placeholder = {
   /**
    * Placeholder for the current day of the week, e.g. "Monday", using en-US as the default locale. Supports an optional locale argument. Barring any issues, this should always be replaced.
    */
-  '{{day( locale=".*?")?}}': {
+  '{{day( locale=("|\').*?("|\'))?}}': {
     name: "Day of the Week",
-    aliases: ['{{dayName( locale=".*?")?}}'],
+    aliases: ['{{dayName( locale=("|\').*?("|\'))?}}'],
     rules: [],
     apply: async (str: string) => {
-      const locale = str.match(/(?<=locale=").*?(?=")/)?.[0] || "en-US";
+      const locale = str.match(/(?<=locale=("|')).*?(?=("|'))/)?.[0] || "en-US";
       return new Date().toLocaleDateString(locale, { weekday: "long" });
     },
   },
@@ -236,12 +286,12 @@ const placeholders: Placeholder = {
   /**
    * Placeholder for the current time supporting an optional format argument. Defaults to "Hour:Minute:Second AM/PM". Barring any issues, this should always be replaced.
    */
-  '{{time( format=".*")?}}': {
+  '{{time( format=("|\').*?("|\'))?}}': {
     name: "Time",
-    aliases: ['{{currentTime( format=".*")?}}'],
+    aliases: ['{{currentTime( format=("|\').*?("|\'))?}}'],
     rules: [],
     apply: async (str: string) => {
-      const format = str.match(/(?<=format=").*?(?=")/)?.[0] || "HH:mm:s a";
+      const format = str.match(/(?<=format=("|')).*?(?=("|'))/)?.[0] || "HH:mm:s a";
       return await runAppleScript(`use framework "Foundation"
         set currentDate to current application's NSDate's alloc()'s init()
         try
@@ -256,32 +306,6 @@ const placeholders: Placeholder = {
   },
 
   /**
-   * Placeholder for the visible text of the current tab in any supported browser. See {@link SupportedBrowsers} for the list of supported browsers. If the current application is not a supported browser, this placeholder will not be replaced.
-   */
-  "{{currentTabText}}": {
-    name: "Current Tab Text",
-    rules: [
-      async (str: string) => {
-        try {
-          return SupportedBrowsers.includes((await getFrontmostApplication()).name);
-        } catch (e) {
-          return false;
-        }
-      },
-    ],
-    apply: async (str: string) => {
-      try {
-        const appName = (await getFrontmostApplication()).name;
-        const URL = (await getCurrentURL(appName)).url;
-        const URLText = await getTextOfWebpage(URL);
-        return URLText;
-      } catch (e) {
-        return "";
-      }
-    },
-  },
-
-  /**
    * Placeholder for the default language for the current user. Barring any issues, this should always be replaced.
    */
   "{{systemLanguage}}": {
@@ -292,7 +316,7 @@ const placeholders: Placeholder = {
       return await runAppleScript(`use framework "Foundation"
                 set locale to current application's NSLocale's autoupdatingCurrentLocale()
                 set langCode to locale's languageCode()
-                return locale's localizedStringForLanguageCode:langCode`);
+                return (locale's localizedStringForLanguageCode:langCode) as text`);
     },
   },
 
@@ -438,7 +462,7 @@ const placeholders: Placeholder = {
     rules: [],
     apply: async (str: string) => {
       try {
-        const script = str.match(/(?<=as:)(.|[ \n\r\s])*?(?=}})/)?.[0];
+        const script = str.match(/(?<=(as|AS):)(.|[ \n\r\s])*?(?=}})/)?.[0];
         if (!script) return "";
         return await runAppleScript(`try
           ${script}
@@ -514,9 +538,12 @@ const placeholders: Placeholder = {
           user: async () => await Placeholders.allPlaceholders["{{user}}"].apply("{{user}}"),
           homedir: async () => await Placeholders.allPlaceholders["{{homedir}}"].apply("{{homedir}}"),
           hostname: async () => await Placeholders.allPlaceholders["{{hostname}}"].apply("{{hostname}}"),
-          date: async () => await Placeholders.allPlaceholders[`{{date( format=".*")?}}`].apply("{{date}}"),
-          time: async () => await Placeholders.allPlaceholders[`{{time( format=".*")?}}`].apply("{{time}}"),
-          day: async () => await Placeholders.allPlaceholders[`{{day( locale=".*")?}}`].apply("{{day}}"),
+          date: async (format?: string) =>
+            await Placeholders.allPlaceholders[`{{date( format=("|').*?("|'))?}}`].apply(
+              `{{date${format ? ` format="${format}"` : ""}}}`
+            ),
+          time: async () => await Placeholders.allPlaceholders[`{{time( format=("|').*?("|'))?}}`].apply("{{time}}"),
+          day: async () => await Placeholders.allPlaceholders[`{{day( locale=("|').*?("|'))?}}`].apply("{{day}}"),
           currentTabText: async () =>
             await Placeholders.allPlaceholders["{{currentTabText}}"].apply("{{currentTabText}}"),
           systemLanguage: async () =>

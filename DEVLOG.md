@@ -1,5 +1,9 @@
 # Pins DevLog - A more detailed changelog
 
+### 2023-06-18
+
+- Added {{selectedFiles}} placeholder, which inserts the paths of the selected files in Finder as a comma-separated list
+
 ### 2023-06-17
 
 - Added {{url:...}} placeholder, which inserts the visible text content at the specified URL
@@ -9,6 +13,7 @@
 - Added {{usedUUIDs}} placeholder, which inserts the list of UUIDs used by the {{uuid}} placeholder since Pins' LocalStorage was last reset
 - Added {{as:...}} and {{shell:...}} placeholders for executing AppleScript and shell scripts, respectively
 - Added {{js:...}} placeholder, which inserts the result of executing the specified JavaScript code
+    - Alias: {{JS:...}}
 - Added {{previousPinName}} and {{previousPinTarget}} placeholders, which insert the URL-encoded name and target of the last pin opened
 - Added {{jxa:...}} placeholder, which inserts the result of executing the specified JavaScript for Automation code
     - Alias: {{JXA:...}}
