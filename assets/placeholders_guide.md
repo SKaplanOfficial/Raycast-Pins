@@ -18,7 +18,7 @@ All placeholders are evaluated at runtime — when you open/execute a pin — an
 
 ### Why would I use placeholders?
 
-Placeholders allow pins to be more dynamic and context-aware. In sense, you can use placeholders to pin common *workflows* rather than static items. For example, you can create a pin that saves the current webpage to a specific folder in Finder, or a pin that uploads selected text to GitHub Gist.
+Placeholders allow pins to be more dynamic and context-aware. You can use placeholders to pin common *workflows* rather than static items. For example, you can create a pin that saves the current webpage to a specific folder in Finder, or a pin that uploads selected text to GitHub Gist.
 
 ------------------------
 
