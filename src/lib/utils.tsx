@@ -131,6 +131,9 @@ export const getIcon = (iconRef: string) => {
   return Icon.Terminal;
 };
 
+/**
+ * Imports default pins and groups into local storage.
+ */
 export const installExamples = async () => {
   const examplePins: Pin[] = [
     {
@@ -168,7 +171,7 @@ export const installExamples = async () => {
     {
       id: 5,
       name: "New Folder Here",
-      url: `osascript -e 'tell application "Finder"' -e 'set newFolder to make new folder at (insertion location as alias)' -e 'select newFolder' -e 'end tell'`,
+      url: `osascript -e 'tell application "Finder"' -e 'set dirPath to folder (POSIX file "{{currentDirectory}}" as alias)' -e 'set newFolder to make new folder at dirPath' -e 'select newFolder' -e 'end tell'`,
       icon: "NewFolder",
       group: "Scripts",
       application: "None",
@@ -177,7 +180,7 @@ export const installExamples = async () => {
     {
       id: 6,
       name: "New File Here",
-      url: `osascript -e 'tell application "Finder"' -e 'set newFile to make new file at (insertion location as alias)' -e 'select newFile' -e 'end tell'`,
+      url: `osascript -e 'tell application "Finder"' -e 'set dirPath to folder (POSIX file "{{currentDirectory}}" as alias)' -e 'set newFile to make new file at dirPath' -e 'select newFile' -e 'end tell'`,
       icon: "NewDocument",
       group: "Scripts",
       application: "None",

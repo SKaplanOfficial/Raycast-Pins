@@ -6,17 +6,55 @@ import { runAppleScript } from "run-applescript";
 import { ExtensionPreferences, getStorage, runCommand, setStorage } from "./utils";
 import { StorageKey } from "./constants";
 
+/**
+ * Local data object that stores various contextual information for use in placeholders, recent apps list, etc.
+ */
 interface LocalDataObject {
+  /**
+   * The current frontmost application. The application is represented as an object with a name, path, and bundle ID.
+   */
   currentApplication: { name: string; path: string; bundleId: string };
+
+  /**
+   * The list of the last 10 most recently used applications. Applications are represented as objects with a name, path, and bundle ID.
+   */
   recentApplications: Application[];
+
+  /**
+   * The list of currently open tabs in the frontmost browser. The browser must be a member of {@link SupportedBrowsers}. Tabs are represented as objects with a name and URL.
+   */
   tabs: { name: string; url: string }[];
+
+  /**
+   * The name and URL of the currently active tab in the frontmost browser. The browser must be a member of {@link SupportedBrowsers}.
+   */
   currentTab: { name: string; url: string };
+
+  /**
+   * The name and path of the current Finder directory.
+   */
   currentDirectory: { name: string; path: string };
+
+  /**
+   * The list of currently selected files in Finder. Files are represented as objects with a name and path.
+   */
   selectedFiles: { name: string; path: string }[];
+
+  /**
+   * The list of currently selected notes in Notes. Notes are represented as objects with a name and ID. The ID is the AppleScript ID of the note (not the ID used by the notes:// URL scheme).
+   */
   selectedNotes: { name: string; id: string }[];
+
+  /**
+   * The name and path of the current document in the frontmost application. The application must be a document-based application such as iWork apps, Office apps, etc.
+   */
   currentDocument: { name: string; path: string };
 }
 
+/**
+ * A placeholder for the local data object to be populated by the {@link useLocalData} hook.
+ * @returns An empty {@link LocalDataObject}.
+ */
 const dummyData = (): LocalDataObject => {
   return {
     currentApplication: { name: "", path: "", bundleId: "" },
@@ -237,19 +275,23 @@ const getActiveDocument = async (appName: string): Promise<{ name: string; path:
  * Tracks recently used applications (if enabled in the extension's settings).
  */
 export const updateRecentApplications = async () => {
-  const app = await getFrontmostApplication();
-  const recentApps = await getStorage(StorageKey.RECENT_APPS);
-  const newRecentApps = recentApps.filter(
-    (recentApp: Application) => recentApp.name != app.name && recentApp.name != "Raycast"
-  );
+  try {
+    const app = await getFrontmostApplication();
+    const recentApps = await getStorage(StorageKey.RECENT_APPS);
+    const newRecentApps = recentApps.filter(
+      (recentApp: Application) => recentApp.name != app.name && recentApp.name != "Raycast"
+    );
 
-  if (app.name != "Raycast") {
-    newRecentApps.unshift(app);
+    if (app.name != "Raycast") {
+      newRecentApps.unshift(app);
+    }
+    while (newRecentApps.length > 10) {
+      newRecentApps.pop();
+    }
+    await setStorage(StorageKey.RECENT_APPS, newRecentApps);
+  } catch (error) {
+    console.error(error);
   }
-  while (newRecentApps.length > 10) {
-    newRecentApps.pop();
-  }
-  await setStorage(StorageKey.RECENT_APPS, newRecentApps);
 };
 
 /**

@@ -85,7 +85,7 @@ const EditPinView = (props: { pin: Pin; setPins: React.Dispatch<React.SetStateAc
         defaultValue={pin.name}
       />
 
-      <Form.TextField
+      <Form.TextArea
         id="urlField"
         title="Target"
         placeholder="Enter the filepath, URL, or Terminal command to pin"

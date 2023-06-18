@@ -1,11 +1,31 @@
 # Pins DevLog - A more detailed changelog
 
+### 2023-06-17
+
+- Added {{url:...}} placeholder, which inserts the visible text content at the specified URL
+    - Alias: {{URL:...}}
+- Added {{uuid}} placeholder, which inserts a unique UUID generated at runtime
+    - Alias: {{UUID}}
+- Added {{usedUUIDs}} placeholder, which inserts the list of UUIDs used by the {{uuid}} placeholder since Pins' LocalStorage was last reset
+- Added {{as:...}} and {{shell:...}} placeholders for executing AppleScript and shell scripts, respectively
+- Added {{js:...}} placeholder, which inserts the result of executing the specified JavaScript code
+- Added {{previousPinName}} and {{previousPinTarget}} placeholders, which insert the URL-encoded name and target of the last pin opened
+- Added {{jxa:...}} placeholder, which inserts the result of executing the specified JavaScript for Automation code
+    - Alias: {{JXA:...}}
+- Added {{day}} placeholder, which inserts the name of the current weekday
+    - Alias: {{dayName}}
+    - Supports specifying a locale via optional argument, e.g. {{day locale="nl-NL"}}
+- Added support for custom date and time formats in {{date}} and {{time}} placeholders
+    - Supports specifying a custom format via optional argument, e.g. {{date format="yyyy-MM-dd"}} or {{time format="HH:mm:ss"}}
+
 ### 2023-06-16
 
+- Added setting to show/hide Pin subtitles in the "View Pins" command
 - Added "Copy Pin Name" and "Copy Pin URL" actions in the "View Pins" command
 - Added "Copy Group Name" action in the "View Groups" command
 - Added {{previousApp}} placeholder, which inserts the name of the last focused application before the current one
-    - Supports several aliases: {{previousAppName}}, {{lastApp}}, and {{lastAppName}}
+    - Aliases: {{previousAppName}}, {{lastApp}}, and {{lastAppName}}
+- Added support for Orion browser
 - Remade Placeholders Guide in Markdown, now opens in default Markdown viewer
 - "Open Placeholders Guide" action can now be used even if pins have been created, not just on first launch
 - Fixed bug where opening a pin would attempt to apply all placeholders, even if they were not used in the pin, due to not checking for absence of aliases

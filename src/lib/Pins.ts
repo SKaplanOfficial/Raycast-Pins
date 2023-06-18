@@ -116,15 +116,18 @@ export const openPin = async (pin: Pin, preferences: { preferredBrowser: string 
     if (isPath) {
       // Open the path in the target application (fallback to default application for the file type)
       if (fs.existsSync(target)) {
-        open(path.resolve(target), targetApplication);
+        await open(path.resolve(target), targetApplication);
+        await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
       } else {
         throw new Error("File does not exist.");
       }
     } else {
       if (target.match(/^[a-zA-Z0-9]*?:.*/g)) {
         // Open the URL in the target application (fallback to preferred browser, then default browser)
-        open(encodeURI(target), targetApplication || preferences.preferredBrowser);
+        await open(encodeURI(target), targetApplication || preferences.preferredBrowser);
+        await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
       } else {
+        await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
         if (pin.execInBackground) {
           // Run the Terminal command in the background
           await runCommand(target);
@@ -193,6 +196,19 @@ export const createNewPin = async (
   await setStorage(StorageKey.LOCAL_PINS, newData);
 };
 
+/**
+ * Updates a pin; updates local storage.
+ * @param pin The pin to update.
+ * @param name The new name of the pin.
+ * @param url The new URL, path, or Terminal command to pin.
+ * @param icon The new icon for the pin.
+ * @param group The new group the pin belongs to.
+ * @param application The new application to open the pin in.
+ * @param expireDate The new date the pin expires.
+ * @param execInBackground Whether to run the specified command, if any, in the background.
+ * @param pop The function to close the pin editor.
+ * @param setPins The function to update the list of pins.
+ */
 export const modifyPin = async (
   pin: Pin,
   name: string,
@@ -251,6 +267,11 @@ export const modifyPin = async (
   pop();
 };
 
+/**
+ * Deletes a pin; updates local storage.
+ * @param pin The pin to delete.
+ * @param setPins The function to update the list of pins.
+ */
 export const deletePin = async (pin: Pin, setPins: React.Dispatch<React.SetStateAction<Pin[]>>) => {
   if (await confirmAlert({ title: "Are you sure?" })) {
     const storedPins = await getStorage(StorageKey.LOCAL_PINS);
@@ -263,4 +284,15 @@ export const deletePin = async (pin: Pin, setPins: React.Dispatch<React.SetState
     await setStorage(StorageKey.LOCAL_PINS, filteredPins);
     await showToast({ title: `Removed pin!` });
   }
+};
+
+/**
+ * Gets the last opened pin.
+ * @returns The {@link Pin} that was last opened.
+ */
+export const getPreviousPin = async (): Promise<Pin | undefined> => {
+  const previousPin = await getStorage(StorageKey.LAST_OPENED_PIN);
+  if (previousPin == undefined || parseInt(previousPin) == undefined) return undefined;
+  const pins = await getStorage(StorageKey.LOCAL_PINS);
+  return pins.find((pin: Pin) => pin.id == previousPin);
 };

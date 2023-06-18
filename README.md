@@ -1,4 +1,6 @@
-# Pins
+<img src="https://github.com/SKaplanOfficial/Raycast-Pins/blob/main/assets/pins-logo.png?raw=true" alt="Logo for the Pins extension." width="256" />
+
+---
 
 A Raycast extension for pinning anything with a path or URL to the menu bar, with support for pinning Terminal commands as well. Quickly navigate to your favorite sites, folders, and files, conveniently execute Terminal commands, and intuitively manage pins and groups from within Raycast.
 
@@ -16,6 +18,7 @@ A Raycast extension for pinning anything with a path or URL to the menu bar, wit
 - Move/rearrange pins and groups as desired
 - View pins and groups in the menu bar or within Raycast
 - Import/Export JSON data
+- Utilize placeholders to dynamically insert data into your pins
 - Highly configurable
 
 ## Commands:

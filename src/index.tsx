@@ -85,7 +85,10 @@ export default function Command() {
             let containsPlaceholder = false;
             let passesTests = true;
             for (const [placeholderText, placeholderValue] of Object.entries(placeholders)) {
-              if (targetRaw.includes(placeholderText) || placeholderValue.aliases?.some((alias) => targetRaw.includes(alias))) {
+              if (
+                targetRaw.includes(placeholderText) ||
+                placeholderValue.aliases?.some((alias) => targetRaw.includes(alias))
+              ) {
                 containsPlaceholder = true;
                 for (const rule of placeholderValue.rules) {
                   if (!(await rule(targetRaw))) {
@@ -246,7 +249,8 @@ export default function Command() {
         ) : null,
       ].sort(() => (preferences.topSection == "pins" ? 1 : -1))}
 
-      {preferences.showPinShortcut && !(localData.currentApplication.name == "Finder" && localData.currentDirectory.name == "Desktop") ? (
+      {preferences.showPinShortcut &&
+      !(localData.currentApplication.name == "Finder" && localData.currentDirectory.name == "Desktop") ? (
         <MenuBarExtra.Section title="Quick Pins">
           {localData.currentApplication.name.length > 0 &&
           (localData.currentApplication.name != "Finder" || localData.currentDirectory.name != "Desktop") ? (

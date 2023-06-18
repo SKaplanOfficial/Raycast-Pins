@@ -31,4 +31,14 @@ export enum StorageKey {
    * Whether or not the user has installed the example pins.
    */
   EXAMPLES_INSTALLED = "examplesInstalled",
+
+  /**
+   * UUID placeholders used thus far.
+   */
+  USED_UUIDS = "usedUUIDs",
+
+  /**
+   * The ID of the pin that was most recently opened.
+   */
+  LAST_OPENED_PIN = "lastOpenedPin",
 }

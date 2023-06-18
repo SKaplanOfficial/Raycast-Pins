@@ -23,6 +23,10 @@ const getCurrentSafariURL = async (): Promise<{ name: string; url: string }> => 
   return { name: "", url: "" };
 };
 
+/**
+ * Gets the name and URL of each tab in Safari.
+ * @returns A promise which resolves to an array of objects containing the name and URL of each tab.
+ */
 const getSafariTabs = async (): Promise<{ name: string; url: string }[]> => {
   const data = await runAppleScript(`try
     set oldDelims to AppleScript's text item delimiters
@@ -63,6 +67,10 @@ const getArcURL = async (): Promise<{ name: string; url: string }> => {
   return { name: "", url: "" };
 };
 
+/**
+ * Gets the name and URL of each tab in Arc.
+ * @returns A promise which resolves to an array of objects containing the name and URL of each tab.
+ */
 const getArcTabs = async (): Promise<{ name: string; url: string }[]> => {
   const data = await runAppleScript(`try
     set oldDelims to AppleScript's text item delimiters
@@ -103,6 +111,10 @@ const getiCabURL = async (): Promise<{ name: string; url: string }> => {
   return { name: "", url: "" };
 };
 
+/**
+ * Gets the name and URL of each tab in iCab.
+ * @returns A promise which resolves to an array of objects containing the name and URL of each tab.
+ */
 const getiCabTabs = async (): Promise<{ name: string; url: string }[]> => {
   const data = await runAppleScript(`try
     set oldDelims to AppleScript's text item delimiters
@@ -145,12 +157,61 @@ const getChromiumURL = async (browserName: string): Promise<{ name: string; url:
   return { name: "", url: "" };
 };
 
+/**
+ * Gets the name and URL of each tab in a Chromium-based browser.
+ * @param browserName The name of the browser.
+ * @returns A promise which resolves to an array of objects containing the name and URL of each tab.
+ */
 const getChromiumTabs = async (browserName: string): Promise<{ name: string; url: string }[]> => {
   const data = await runAppleScript(`try
     set oldDelims to AppleScript's text item delimiters
     set AppleScript's text item delimiters to "\`\`\`"
       tell application "${browserName}"
         set theData to {title, URL} of tabs of window 1
+        set theData to theData as string
+        set AppleScript's text item delimiters to oldDelims
+        return theData
+      end tell
+    end try`);
+  const entries = data.split("```");
+  const names = entries.slice(0, entries.length / 2);
+  const urls = entries.slice(entries.length / 2);
+  return names.map((name, i) => ({ name: name, url: urls[i] }));
+};
+
+/**
+ * Gets the URL of the active tab in Orion.
+ * @returns A promise which resolves to the URL of the active tab as a string.
+ */
+const getOrionURL = async (): Promise<{ name: string; url: string }> => {
+  const data = await runAppleScript(`try
+    set oldDelims to AppleScript's text item delimiters
+    set AppleScript's text item delimiters to "\`\`\`"
+    tell application "Orion"
+      set theData to {name, URL} of current tab of window 1
+      set theData to theData as string
+      set AppleScript's text item delimiters to oldDelims
+      return theData
+    end tell
+  end try`);
+  const entries = data.split("```");
+  if (entries.length === 2) {
+    return { name: entries[0], url: entries[1] };
+  }
+  return { name: "", url: "" };
+};
+
+/**
+ * Gets the name and URL of each tab in a Chromium-based browser.
+ * @param browserName The name of the browser.
+ * @returns A promise which resolves to an array of objects containing the name and URL of each tab.
+ */
+const getOrionTabs = async (): Promise<{ name: string; url: string }[]> => {
+  const data = await runAppleScript(`try
+    set oldDelims to AppleScript's text item delimiters
+    set AppleScript's text item delimiters to "\`\`\`"
+      tell application "Orion"
+        set theData to {name, URL} of tabs of window 1
         set theData to theData as string
         set AppleScript's text item delimiters to oldDelims
         return theData
@@ -180,6 +241,7 @@ export const SupportedBrowsers = [
   "Epic",
   "Arc",
   "iCab",
+  "Orion",
 ];
 
 /**
@@ -206,6 +268,9 @@ export const getCurrentURL = async (browserName: string): Promise<{ name: string
       break;
     case "iCab":
       return getiCabURL();
+      break;
+    case "Orion":
+      return getOrionURL();
       break;
   }
   return { name: "", url: "" };
@@ -234,6 +299,9 @@ export const getCurrentTabs = async (browserName: string): Promise<{ name: strin
       break;
     case "iCab":
       return getiCabTabs();
+      break;
+    case "Orion":
+      return getOrionTabs();
       break;
   }
   return [];
@@ -270,7 +338,6 @@ export const getURLHTML = async (URL: string): Promise<string> => {
     on URLSession:tmpSession dataTask:tmpTask didReceiveData:tmpData
         global theResult
         set theText to (current application's NSString's alloc()'s initWithData:tmpData encoding:(current application's NSASCIIStringEncoding)) as string
-
         set theResult to theResult & theText
     end URLSession:dataTask:didReceiveData:
     return getURLHTML("${URL}")`);
@@ -285,11 +352,12 @@ export const getURLHTML = async (URL: string): Promise<string> => {
 export const getTextOfWebpage = async (URL: string): Promise<string> => {
   const html = await getURLHTML(URL);
   const filteredString = html
+    .replaceAll(/(<br ?\/?>|[\n\r]+)/g, "\n")
     .replaceAll(
       /(<script[\s\S\n\r]+?<\/script>|<style[\s\S\n\r]+?<\/style>|<nav[\s\S\n\r]+?<\/nav>|<link[\s\S\n\r]+?<\/link>|<form[\s\S\n\r]+?<\/form>|<button[\s\S\n\r]+?<\/button>|<!--[\s\S\n\r]+?-->|<select[\s\S\n\r]+?<\/select>|<[\s\n\r\S]+?>)/g,
-      " "
+      "\n"
     )
-    .replaceAll(/[\s\n\r]+/g, " ")
-    .replaceAll(/(\([^A-Za-z0-9]*\)|(?<=[,.!?%*])[,.!?%*]*?\s*[,.!?%*])/g, " ");
+    .replaceAll(/[\n\r]{2,}/g, "\r")
+    .replaceAll(/(\([^A-Za-z0-9\n]*\)|(?<=[,.!?%*])[,.!?%*]*?\s*[,.!?%*])/g, " ");
   return filteredString;
 };
