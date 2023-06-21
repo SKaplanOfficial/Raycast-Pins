@@ -1,4 +1,4 @@
-import { Application, getFrontmostApplication, getPreferenceValues } from "@raycast/api";
+import { Application, getFrontmostApplication, getPreferenceValues, getSelectedText } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { SupportedBrowsers, getCurrentTabs, getCurrentURL } from "./browser-utils";
 import { useCachedState } from "@raycast/utils";
@@ -9,7 +9,7 @@ import { StorageKey } from "./constants";
 /**
  * Local data object that stores various contextual information for use in placeholders, recent apps list, etc.
  */
-interface LocalDataObject {
+export interface LocalDataObject {
   /**
    * The current frontmost application. The application is represented as an object with a name, path, and bundle ID.
    */
@@ -46,6 +46,11 @@ interface LocalDataObject {
   selectedNotes: { name: string; id: string }[];
 
   /**
+   * The currently selected text in the frontmost application.
+   */
+  selectedText: string;
+
+  /**
    * The name and path of the current document in the frontmost application. The application must be a document-based application such as iWork apps, Office apps, etc.
    */
   currentDocument: { name: string; path: string };
@@ -64,6 +69,7 @@ const dummyData = (): LocalDataObject => {
     currentDirectory: { name: "", path: "" },
     selectedFiles: [] as { name: string; path: string }[],
     selectedNotes: [] as { name: string; id: string }[],
+    selectedText: "",
     currentDocument: { name: "", path: "" },
   };
 };
@@ -328,6 +334,20 @@ export const useRecentApplications = () => {
   return { recentApplications: recentApplications, loadingRecentApplications: loadingRecentApplications };
 };
 
+export const getTextSelection = async (): Promise<string> => {
+  const oldVolume = await runAppleScript(`set oldVolume to output volume of (get volume settings)
+    set volume output volume 0
+    return oldVolume`);
+  let text = ""
+  try {
+    text = await getSelectedText();
+  } catch (error) {
+    console.error(error);
+  }
+  runAppleScript(`set volume output volume ${oldVolume}`);
+  return text;
+};
+
 /**
  * Hook to get the local data object, see {@link LocalDataObject}.
  * @returns An object containing the local data object and a boolean indicating whether the object is still loading.
@@ -350,6 +370,8 @@ export const useLocalData = () => {
 
       const app = newData.recentApplications[0];
       newData.currentApplication = { name: app.name, path: app.path, bundleId: app.bundleId || "" };
+
+      newData.selectedText = await getTextSelection();
 
       if (app.name == "Finder") {
         newData.currentDirectory = await getCurrentDirectory();

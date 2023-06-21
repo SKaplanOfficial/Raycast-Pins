@@ -91,7 +91,7 @@ export default function Command() {
               ) {
                 containsPlaceholder = true;
                 for (const rule of placeholderValue.rules) {
-                  if (!(await rule(targetRaw))) {
+                  if (!(await rule(targetRaw, localData))) {
                     passesTests = false;
                   }
                 }
@@ -185,7 +185,7 @@ export default function Command() {
                     }
                     onAction={async (event) => {
                       if (event.type == "left-click") {
-                        await openPin(pin, preferences);
+                        await openPin(pin, preferences, localData);
                       } else {
                         await deletePin(pin, setPins);
                       }
@@ -227,7 +227,7 @@ export default function Command() {
                     }
                     onAction={async (event) => {
                       if (event.type == "left-click" || key == "Recent Applications") {
-                        await openPin(pin, preferences);
+                        await openPin(pin, preferences, localData);
                       } else {
                         await deletePin(pin, setPins);
                       }
@@ -239,7 +239,7 @@ export default function Command() {
                   {preferences.showOpenAll ? (
                     <MenuBarExtra.Item
                       title="Open All"
-                      onAction={() => usedGroups[key].forEach((pin: Pin) => openPin(pin, preferences))}
+                      onAction={() => usedGroups[key].forEach((pin: Pin) => openPin(pin, preferences, localData))}
                     />
                   ) : null}
                 </MenuBarExtra.Section>
@@ -266,7 +266,29 @@ export default function Command() {
                   "None",
                   "None",
                   undefined,
-                  undefined
+                  undefined,
+                  false
+                );
+              }}
+            />
+          ) : null}
+          {localData.selectedText.length > 0 ? (
+            <MenuBarExtra.Item
+              title={`Pin Selected Text (${localData.selectedText.substring(0, 20).trim()}${
+                localData.selectedText.length > 20 ? "..." : ""
+              })`}
+              icon={ Icon.Text }
+              tooltip="Pin the currently selected text as a text fragment"
+              onAction={async () => {
+                await createNewPin(
+                  localData.selectedText.substring(0, 50).trim(),
+                  localData.selectedText,
+                  "text-16",
+                  "None",
+                  "None",
+                  undefined,
+                  undefined,
+                  true
                 );
               }}
             />
@@ -286,7 +308,8 @@ export default function Command() {
                   "None",
                   localData.currentApplication.name,
                   undefined,
-                  undefined
+                  undefined,
+                  false
                 );
               }}
             />
@@ -315,7 +338,8 @@ export default function Command() {
                     newGroupName,
                     localData.currentApplication.name,
                     undefined,
-                    undefined
+                    undefined,
+                    false
                   );
                 }
               }}
@@ -341,7 +365,8 @@ export default function Command() {
                     "None",
                     "None",
                     undefined,
-                    undefined
+                    undefined,
+                    false
                   );
                 } else {
                   let newGroupName = "New File Group";
@@ -362,7 +387,8 @@ export default function Command() {
                       newGroupName,
                       "None",
                       undefined,
-                      undefined
+                      undefined,
+                      false
                     );
                   }
                 }
@@ -384,7 +410,8 @@ export default function Command() {
                   "None",
                   "None",
                   undefined,
-                  undefined
+                  undefined,
+                  false
                 );
               }}
             />
@@ -413,7 +440,8 @@ export default function Command() {
                   "None",
                   "None",
                   undefined,
-                  undefined
+                  undefined,
+                  false
                 );
               }}
             />
@@ -439,7 +467,8 @@ export default function Command() {
                     "None",
                     "None",
                     undefined,
-                    true
+                    true,
+                    false
                   );
                 } else {
                   let newGroupName = "New Note Group";
@@ -458,7 +487,8 @@ export default function Command() {
                       newGroupName,
                       "None",
                       undefined,
-                      true
+                      true,
+                      false
                     );
                   }
                 }

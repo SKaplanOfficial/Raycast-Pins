@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */ // Disable since many placeholder functions have unused parameters that are kept for consistency.
-import { getFrontmostApplication, getSelectedText } from "@raycast/api";
+import { getFrontmostApplication } from "@raycast/api";
 import { Clipboard } from "@raycast/api";
 import { runAppleScript } from "run-applescript";
 import { SupportedBrowsers, getCurrentURL, getTextOfWebpage } from "./browser-utils";
+import * as fs from "fs";
 import * as os from "os";
 import * as crypto from "crypto";
 import * as vm from "vm";
@@ -10,7 +11,8 @@ import { getStorage, setStorage } from "./utils";
 import { StorageKey } from "./constants";
 import { execSync } from "child_process";
 import { getPreviousPin } from "./Pins";
-import { getFinderSelection } from "./LocalData";
+import { LocalDataObject, getFinderSelection, getTextSelection } from "./LocalData";
+import path from "path";
 
 /**
  * A placeholder type that associates Regex patterns with functions that applies the placeholder to a string, rules that determine whether or not the placeholder should be replaced, and aliases that can be used to achieve the same result.
@@ -30,14 +32,14 @@ type Placeholder = {
     /**
      * The rules that determine whether or not the placeholder should be replaced. If any of these rules return true, the placeholder will be replaced. If no rules are provided, the placeholder will always be replaced.
      */
-    rules: ((str: string) => Promise<boolean>)[];
+    rules: ((str: string, context?: LocalDataObject) => Promise<boolean>)[];
 
     /**
      * The function that applies the placeholder to a string.
      * @param str The string to apply the placeholder to.
      * @returns The string with the placeholder applied.
      */
-    apply: (str: string) => Promise<string>;
+    apply: (str: string, context?: LocalDataObject) => Promise<string>;
   };
 };
 
@@ -51,7 +53,7 @@ const placeholders: Placeholder = {
   "{{clipboardText}}": {
     name: "Clipboard Text",
     rules: [
-      async (str: string) => {
+      async (str: string, context?: LocalDataObject) => {
         try {
           return (await Clipboard.readText()) !== "";
         } catch (e) {
@@ -59,7 +61,7 @@ const placeholders: Placeholder = {
         }
       },
     ],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       try {
         return (await Clipboard.readText()) || "";
       } catch (e) {
@@ -74,17 +76,18 @@ const placeholders: Placeholder = {
   "{{selectedText}}": {
     name: "Selected Text",
     rules: [
-      async (str: string) => {
+      async (str: string, context?: LocalDataObject) => {
         try {
-          return (await getSelectedText()) !== "";
+          const text = context?.selectedText || "";
+          return text !== "";
         } catch (e) {
           return false;
         }
       },
     ],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       try {
-        return (await getSelectedText()) || "";
+        return context?.selectedText || "";
       } catch (e) {
         return "";
       }
@@ -97,7 +100,7 @@ const placeholders: Placeholder = {
   "{{selectedFiles}}": {
     name: "Selected Files",
     rules: [
-      async (str: string) => {
+      async (str: string, context?: LocalDataObject) => {
         try {
           return (await getFinderSelection()).length > 0;
         } catch (e) {
@@ -105,7 +108,7 @@ const placeholders: Placeholder = {
         }
       },
     ],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       try {
         return (await getFinderSelection()).map((file) => file.path).join(", ");
       } catch (e) {
@@ -120,7 +123,7 @@ const placeholders: Placeholder = {
   "{{currentAppName}}": {
     name: "Current Application",
     rules: [],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       try {
         return (await getFrontmostApplication()).name || "";
       } catch (e) {
@@ -135,7 +138,7 @@ const placeholders: Placeholder = {
   "{{currentAppPath}}": {
     name: "Current Application Path",
     rules: [],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       try {
         return (await getFrontmostApplication()).path || "";
       } catch (e) {
@@ -150,7 +153,7 @@ const placeholders: Placeholder = {
   "{{currentDirectory}}": {
     name: "Current Directory",
     rules: [
-      async (str: string) => {
+      async (str: string, context?: LocalDataObject) => {
         try {
           return (await getFrontmostApplication()).name == "Finder";
         } catch (e) {
@@ -158,7 +161,7 @@ const placeholders: Placeholder = {
         }
       },
     ],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       return await runAppleScript(`tell application "Finder" to return POSIX path of (insertion location as alias)`);
     },
   },
@@ -169,7 +172,7 @@ const placeholders: Placeholder = {
   "{{currentURL}}": {
     name: "Current URL",
     rules: [
-      async (str: string) => {
+      async (str: string, context?: LocalDataObject) => {
         try {
           return SupportedBrowsers.includes((await getFrontmostApplication()).name);
         } catch (e) {
@@ -177,7 +180,7 @@ const placeholders: Placeholder = {
         }
       },
     ],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       try {
         const appName = (await getFrontmostApplication()).name;
         return (await getCurrentURL(appName)).url;
@@ -193,7 +196,7 @@ const placeholders: Placeholder = {
   "{{currentTabText}}": {
     name: "Current Tab Text",
     rules: [
-      async (str: string) => {
+      async (str: string, context?: LocalDataObject) => {
         try {
           return SupportedBrowsers.includes((await getFrontmostApplication()).name);
         } catch (e) {
@@ -201,7 +204,7 @@ const placeholders: Placeholder = {
         }
       },
     ],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       try {
         const appName = (await getFrontmostApplication()).name;
         const URL = (await getCurrentURL(appName)).url;
@@ -220,7 +223,7 @@ const placeholders: Placeholder = {
     name: "User",
     aliases: ["{{username}}"],
     rules: [],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       return os.userInfo().username;
     },
   },
@@ -232,7 +235,7 @@ const placeholders: Placeholder = {
     name: "Home Directory",
     aliases: ["{{homeDirectory}}"],
     rules: [],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       return os.homedir();
     },
   },
@@ -243,7 +246,7 @@ const placeholders: Placeholder = {
   "{{hostname}}": {
     name: "Hostname",
     rules: [],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       return os.hostname();
     },
   },
@@ -255,7 +258,7 @@ const placeholders: Placeholder = {
     name: "Date",
     aliases: ["{{currentDate( format=(\"|').*?(\"|'))?}}"],
     rules: [],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       const format = str.match(/(?<=format=("|')).*?(?=("|'))/)?.[0] || "MMMM d, yyyy";
       return await runAppleScript(`use framework "Foundation"
         set currentDate to current application's NSDate's alloc()'s init()
@@ -277,7 +280,7 @@ const placeholders: Placeholder = {
     name: "Day of the Week",
     aliases: ["{{dayName( locale=(\"|').*?(\"|'))?}}"],
     rules: [],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       const locale = str.match(/(?<=locale=("|')).*?(?=("|'))/)?.[0] || "en-US";
       return new Date().toLocaleDateString(locale, { weekday: "long" });
     },
@@ -290,7 +293,7 @@ const placeholders: Placeholder = {
     name: "Time",
     aliases: ["{{currentTime( format=(\"|').*?(\"|'))?}}"],
     rules: [],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       const format = str.match(/(?<=format=("|')).*?(?=("|'))/)?.[0] || "HH:mm:s a";
       return await runAppleScript(`use framework "Foundation"
         set currentDate to current application's NSDate's alloc()'s init()
@@ -312,7 +315,7 @@ const placeholders: Placeholder = {
     name: "System Language",
     aliases: ["{{language}}"],
     rules: [],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       return await runAppleScript(`use framework "Foundation"
                 set locale to current application's NSLocale's autoupdatingCurrentLocale()
                 set langCode to locale's languageCode()
@@ -327,7 +330,7 @@ const placeholders: Placeholder = {
     name: "Previous Application",
     aliases: ["{{previousAppName}}", "{{lastApp}}", "{{lastAppName}}"],
     rules: [
-      async (str: string) => {
+      async (str: string, context?: LocalDataObject) => {
         try {
           const recents = await getStorage(StorageKey.RECENT_APPS);
           if (!recents) return false;
@@ -338,7 +341,7 @@ const placeholders: Placeholder = {
         }
       },
     ],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       const recents = await getStorage(StorageKey.RECENT_APPS);
       if (Array.isArray(recents)) {
         return recents[1].name;
@@ -354,7 +357,7 @@ const placeholders: Placeholder = {
     name: "UUID",
     aliases: ["{{UUID}}"],
     rules: [],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       let newUUID = crypto.randomUUID();
       const usedUUIDs = await getStorage(StorageKey.USED_UUIDS);
       if (Array.isArray(usedUUIDs)) {
@@ -376,7 +379,7 @@ const placeholders: Placeholder = {
   "{{usedUUIDs}}": {
     name: "Previously Used UUIDs",
     rules: [],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       const usedUUIDs = await getStorage(StorageKey.USED_UUIDS);
       if (Array.isArray(usedUUIDs)) {
         return usedUUIDs.join(", ");
@@ -391,7 +394,7 @@ const placeholders: Placeholder = {
   "{{previousPinName}}": {
     name: "Last Opened Pin Name",
     rules: [
-      async (str: string) => {
+      async (str: string, context?: LocalDataObject) => {
         try {
           const previousPin = getStorage(StorageKey.LAST_OPENED_PIN);
           if (!previousPin) return false;
@@ -401,7 +404,7 @@ const placeholders: Placeholder = {
         }
       },
     ],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       try {
         const previousPinTarget = (await getPreviousPin())?.name || "";
         return encodeURI(previousPinTarget);
@@ -417,7 +420,7 @@ const placeholders: Placeholder = {
   "{{previousPinTarget}}": {
     name: "Last Opened Pin Target",
     rules: [
-      async (str: string) => {
+      async (str: string, context?: LocalDataObject) => {
         try {
           const previousPin = getStorage(StorageKey.LAST_OPENED_PIN);
           if (!previousPin) return false;
@@ -427,7 +430,7 @@ const placeholders: Placeholder = {
         }
       },
     ],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       try {
         const previousPinTarget = (await getPreviousPin())?.url || "";
         return encodeURI(previousPinTarget);
@@ -443,7 +446,7 @@ const placeholders: Placeholder = {
   "{{(url|URL):.*?}}": {
     name: "Visible Text Content of URL",
     rules: [],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       try {
         const URL = str.match(/(?<=(url|URL):).*?(?=}})/)?.[0];
         if (!URL) return "";
@@ -455,12 +458,37 @@ const placeholders: Placeholder = {
   },
 
   /**
+   * Placeholder for the raw text of a file at the given path. The path can be absolute or relative to the user's home directory (e.g. `~/Desktop/file.txt`). The file must be readable as UTF-8 text, or the placeholder will be replaced with an empty string.
+   */
+  "{{file:(.|^[\\s\\n\\r])*?}}": {
+    name: "File Contents",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      const target = str.match(/(?<=(file:)).*?(?=}})/)?.[0];
+      if (!target) return "";
+
+      const filePath = target.startsWith("~") ? target.replace("~", os.homedir()) : target;
+      if (filePath == "") return "";
+  
+      if (!filePath.startsWith("/")) return "";
+
+      try {
+        const text = fs.readFileSync(filePath, "utf-8");
+        return text;
+      } catch (e) {
+        return "";
+      }
+    },
+  },
+        
+
+  /**
    * Placeholder for output of an AppleScript script. If the script fails, this placeholder will be replaced with an empty string. No sanitization is done in the script input; the expectation is that users will only use this placeholder with trusted scripts.
    */
   "{{(as|AS):(.|[ \\n\\r\\s])*?}}": {
     name: "AppleScript",
     rules: [],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       try {
         const script = str.match(/(?<=(as|AS):)(.|[ \n\r\s])*?(?=}})/)?.[0];
         if (!script) return "";
@@ -479,15 +507,16 @@ const placeholders: Placeholder = {
   "{{(jxa|JXA):(.|[ \\n\\r\\s])*?}}": {
     name: "JavaScript for Automation",
     rules: [],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       try {
         const script = str.match(/(?<=(jxa|JXA):)(.|[ \n\r\s])*?(?=}})/)?.[0];
         if (!script) return "";
         return execSync(
           `osascript -l JavaScript -e "${script
             .replaceAll('"', '\\"')
+            .replaceAll("`", "\\`")
             .replaceAll("$", "\\$")
-            .replaceAll(new RegExp(/[\n\r]/, "g"), "; ")}"`
+            .replaceAll(new RegExp(/[\n\r]/, "g"), " \\\n\n")}"`
         ).toString();
       } catch (e) {
         return "";
@@ -501,7 +530,7 @@ const placeholders: Placeholder = {
   "{{shell( .*)?:(.|[ \\n\\r\\s])*?}}": {
     name: "Shell Script",
     rules: [],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       try {
         const script = str.match(/(?<=shell( .*)?:)(.|[ \n\r\s])*?(?=}})/)?.[0];
         if (!script) return "";
@@ -524,7 +553,7 @@ const placeholders: Placeholder = {
   "{{(js|JS):(.|[ \\n\\r\\s])*?}}": {
     name: "JavaScript",
     rules: [],
-    apply: async (str: string) => {
+    apply: async (str: string, context?: LocalDataObject) => {
       try {
         const script = str.match(/(?<=(js|JS):)(.|[ \n\r\s])*?(?=}})/)?.[0];
         if (!script) return "";
@@ -579,7 +608,7 @@ const placeholders: Placeholder = {
  * @param str The string to apply placeholders to.
  * @returns The string with placeholders applied.
  */
-const applyToString = async (str: string) => {
+const applyToString = async (str: string, context?: LocalDataObject) => {
   let subbedStr = str;
   const placeholderDefinition = Object.entries(placeholders);
   for (const [key, placeholder] of placeholderDefinition) {
@@ -591,12 +620,12 @@ const applyToString = async (str: string) => {
     if (placeholder.aliases && placeholder.aliases.some((alias) => subbedStr.indexOf(alias) != -1)) {
       for (const alias of placeholder.aliases) {
         while (subbedStr.match(new RegExp(alias, "g")) != undefined) {
-          subbedStr = subbedStr.replace(new RegExp(alias), await placeholder.apply(subbedStr));
+          subbedStr = subbedStr.replace(new RegExp(alias), await placeholder.apply(subbedStr, context));
         }
       }
     } else {
       while (subbedStr.match(new RegExp(key, "g")) != undefined) {
-        subbedStr = subbedStr.replace(new RegExp(key), await placeholder.apply(subbedStr));
+        subbedStr = subbedStr.replace(new RegExp(key), await placeholder.apply(subbedStr, context));
       }
     }
   }
@@ -608,7 +637,7 @@ const applyToString = async (str: string) => {
  * @param strs The array of strings to apply placeholders to.
  * @returns The array of strings with placeholders applied.
  */
-const applyToStrings = async (strs: string[]) => {
+const applyToStrings = async (strs: string[], context?: LocalDataObject) => {
   const subbedStrs: string[] = [];
   for (const str of strs) {
     subbedStrs.push(await applyToString(str));
@@ -622,7 +651,7 @@ const applyToStrings = async (strs: string[]) => {
  * @param key The key of the value to apply placeholders to.
  * @returns The object with placeholders applied.
  */
-const applyToObjectValueWithKey = async (obj: { [key: string]: unknown }, key: string) => {
+const applyToObjectValueWithKey = async (obj: { [key: string]: unknown }, key: string, context?: LocalDataObject) => {
   const value = obj[key];
   if (typeof value === "string") {
     return await applyToString(value);
@@ -644,7 +673,7 @@ const applyToObjectValueWithKey = async (obj: { [key: string]: unknown }, key: s
  * @param keys The keys of the object to apply placeholders to.
  * @returns The object with placeholders applied.
  */
-const applyToObjectValuesWithKeys = async (obj: { [key: string]: unknown }, keys: string[]) => {
+const applyToObjectValuesWithKeys = async (obj: { [key: string]: unknown }, keys: string[], context?: LocalDataObject) => {
   const subbedObj: { [key: string]: unknown } = {};
   for (const key of keys) {
     subbedObj[key] = await applyToObjectValueWithKey(obj, key);

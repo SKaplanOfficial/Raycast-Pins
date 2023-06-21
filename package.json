@@ -110,6 +110,14 @@
           "description": "Whether to pin targets (e.g. URLs) as subtitles in the list view.",
           "default": true,
           "required": false
+        },
+        {
+          "name": "showApplication",
+          "type": "checkbox",
+          "label": "Show Application Icon",
+          "description": "Whether to show the icon for the application that a pin opens with.",
+          "default": true,
+          "required": false
         }
       ]
     },
@@ -179,7 +187,8 @@
   "dependencies": {
     "@raycast/api": "^1.53.4",
     "@raycast/utils": "^1.8.0",
-    "run-applescript": "^6.1.0"
+    "run-applescript": "^6.1.0",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "@types/node": "16.10.3",

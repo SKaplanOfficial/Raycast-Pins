@@ -1,5 +1,71 @@
 # Pins DevLog - A more detailed changelog
 
+## 1.4.0 (Asteria) Release, TBD
+
+### Planned
+
+- AST0: New Features
+    - AST0a: Text fragment pins
+    - AST0b: Directives
+        - AST0b1: {{copy:…}}
+        - AST0b2: {{paste:…}}
+        - AST0b3: {{write to [file]:...}}
+        - AST0b4: {{open in [app]:…}}? Maybe not
+        - AST0b5: {{askAI:…}}
+        - AST0b6: {{delay for [interval]:…}}
+            - Delays execution of the content of the directive for the specified interval.
+            - Content must be one of: script placeholder | directive
+            - <30s No diff from AppleScript
+            - >30s: Called on update interval, command not kept active
+        - AST0b7 / AST0c1: {{set x:...}}
+        - AST0b8 / AST0c2: {{delete x}}
+        - AST0b9 / AST0c4: {{reset x}}
+        - AST0b10: {{ignore:...}}
+            - Ignore the result of the specified value (substitute the value with an empty string)
+        - AST0b11 / AST0c3: {{get x}}
+    - AST0c: Persistent Variables
+        - AST0c1 / AST0b7: {{set x:...}}
+            - Set a persistent variable x to the value specified by ...
+        - AST0c2 / AST0b8: {{delete x}}
+            - Delete the persistent variable x
+        - AST0c3 / AST1a1: {{get x}}
+        - AST0c4 / AST0b9: {{reset x}}?
+            - Reset the persistent variable x to its initial value
+    - AST0d: Fine-grained preferences for which Quick Pins to display
+- AST1: New Placeholders
+    - AST1a: New Information Placeholders:
+        - AST1a2: {{file:...}}
+        - AST1a3: {{}}
+    - AST1b: Script Placeholders:
+        - AST1b1: {{py:…}}?
+        - AST1b2: {{rust:…}}?
+        - AST1b3: {{go:…}}?
+        - AST1b4: {{perl:…}}
+        - AST1b5: {{php:…}}
+        - AST1b7: {{lua:…}}
+- AST2: Bug Fixes
+    - AST2a: Non-url targets that resemble URLs are sometimes treated as URLs, e.g. "button%20returned:ok" is treated as a URL (RESOLVED)
+    - AST2b: Leaving pin name blank does not use the target as the pin name (RESOLVED)
+    - AST2c: {{selectedText}} placeholder causes alert sound to play when no text is selected (RESOLVED)
+- AST3: UI enhancements
+    - AST3a: Show icon for application that Pins launch with as an accessory
+    - AST3b: Show date that pin expires on as an accessory
+    - AST3c: Show accessory icon for whether a Terminal command pin executes in the background or foreground
+- AST4: New Quick Pins
+    - AST4a: Pin selected text as text fragment (COMPLETE)
+
+### 2023-06-20
+
+- Added setting to treat pin target as a text fragment. "Opening" a text fragment pin will copy the raw text of the target, without applying any placeholders, executing any scripts, or opening any URLs.
+- Added Quick Pin to pin selected text as a text fragment
+- Added {{file:...}} placeholder, which inserts the text contents of the file at the specified path
+    - The path can be absolute or relative to the user's home directory using the ~ character
+- Fixed bug where non-url targets that resemble URLs are sometimes treated as URLs (e.g. "button%20returned:ok" was treated as a URL, now it is not)
+- Fixed bug where leaving pin name blank did not use the target as the pin name, despite saying it would
+- Fixed bug where the {{selectedText}} placeholder caused an alert sound to play if no text was selected
+
+## 1.3.0 Release, 2023-06-19
+
 ### 2023-06-18
 
 - Added {{selectedFiles}} placeholder, which inserts the paths of the selected files in Finder as a comma-separated list
@@ -77,3 +143,7 @@
 - Fixed bug where NEXT_PIN_ID would not be set upon importing data, causing repeated pin IDs
 - Fixed bug where pins would attempt to fetch favicons for non-URL targets, causing endless warnings in the console
 - Fixed bug where "Pin This Tab" would fail if the tab name contained commas
+
+## 1.2.0 Release, 2023-05-20
+
+- Start of developer log.

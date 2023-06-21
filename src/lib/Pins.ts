@@ -1,5 +1,5 @@
 import { useCachedState } from "@raycast/utils";
-import { LaunchType, Toast, confirmAlert, environment, open, showHUD, showToast } from "@raycast/api";
+import { Clipboard, LaunchType, Toast, confirmAlert, environment, open, showHUD, showToast } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { StorageKey } from "./constants";
 import { getStorage, runCommand, runCommandInTerminal, setStorage } from "./utils";
@@ -7,6 +7,7 @@ import * as fs from "fs";
 import * as os from "os";
 import { Placeholders } from "./placeholders";
 import path from "path";
+import { LocalDataObject } from "./LocalData";
 
 export type Pin = {
   /**
@@ -45,6 +46,11 @@ export type Pin = {
   expireDate?: string;
 
   /**
+   * Whether to treat the pin's target as a text fragment, regardless of its contents.
+   */
+  fragment?: boolean;
+
+  /**
    * Whether or not the pin's target should be executed in the background. Only applies to pins with a Terminal command target.
    */
   execInBackground?: boolean;
@@ -73,6 +79,14 @@ export const checkExpirations = async () => {
     }
   }
   await setStorage(StorageKey.LOCAL_PINS, newPins);
+};
+
+/**
+ * Gets the stored pins.
+ * @returns The list of pin objects.
+ */
+export const getPins = async () => {
+  return await getStorage(StorageKey.LOCAL_PINS);
 };
 
 /**
@@ -107,10 +121,23 @@ export const usePins = () => {
  * @param pin The pin to open.
  * @param preferences The extension preferences object.
  */
-export const openPin = async (pin: Pin, preferences: { preferredBrowser: string }) => {
+export const openPin = async (pin: Pin, preferences: { preferredBrowser: string }, context?: LocalDataObject) => {
   try {
+    if (pin.fragment) {
+      // Copy the text fragment to the clipboard
+      await Clipboard.copy(pin.url);
+
+      if (environment.commandName == "index") {
+        await showHUD("Copied To Clipboard");
+      } else {
+        await showToast({ title: "Copied To Clipboard" });
+      }
+      await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
+      return;
+    }
+
     const targetRaw = pin.url.startsWith("~") ? pin.url.replace("~", os.homedir()) : pin.url;
-    const target = await Placeholders.applyToString(targetRaw);
+    const target = await Placeholders.applyToString(targetRaw, context);
     if (target == "") return;
 
     const isPath = pin.url.startsWith("/") || pin.url.startsWith("~");
@@ -124,11 +151,12 @@ export const openPin = async (pin: Pin, preferences: { preferredBrowser: string 
         throw new Error("File does not exist.");
       }
     } else {
-      if (target.match(/[a-zA-Z0-9]+?:.*/g)) {
+      if (target.match(/^[a-zA-Z](?![%])[a-zA-Z0-9+.-]+?:.*/g)) {
         // Open the URL in the target application (fallback to preferred browser, then default browser)
         await open(encodeURI(target), targetApplication || preferences.preferredBrowser);
         await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
       } else {
+        // Open Terminal command in the default Terminal application
         await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
         if (pin.execInBackground) {
           // Run the Terminal command in the background
@@ -169,7 +197,8 @@ export const createNewPin = async (
   group: string,
   application: string,
   expireDate: Date | undefined,
-  execInBackground: boolean | undefined
+  execInBackground: boolean | undefined,
+  fragment: boolean | undefined,
 ) => {
   // Get the stored pins
   const storedPins = await getStorage(StorageKey.LOCAL_PINS);
@@ -192,6 +221,7 @@ export const createNewPin = async (
     application: application,
     expireDate: expireDate?.toUTCString(),
     execInBackground: execInBackground,
+    fragment: fragment,
   });
 
   // Update the stored pins
@@ -220,6 +250,7 @@ export const modifyPin = async (
   application: string,
   expireDate: Date | undefined,
   execInBackground: boolean | undefined,
+  fragment: boolean | undefined,
   pop: () => void,
   setPins: React.Dispatch<React.SetStateAction<Pin[]>>
 ) => {
@@ -236,6 +267,7 @@ export const modifyPin = async (
         application: application,
         expireDate: expireDate?.toUTCString(),
         execInBackground: execInBackground,
+        fragment: fragment,
       };
     } else {
       return oldPin;
@@ -259,6 +291,7 @@ export const modifyPin = async (
       application: application,
       expireDate: expireDate?.toUTCString(),
       execInBackground: execInBackground,
+      fragment: fragment,
     });
   }
 

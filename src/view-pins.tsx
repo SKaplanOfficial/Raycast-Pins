@@ -1,195 +1,22 @@
 import { useEffect, useState } from "react";
 import {
   Icon,
-  Form,
   List,
-  useNavigation,
   Action,
   ActionPanel,
   getPreferenceValues,
-  Application,
-  getApplications,
   open,
   LocalStorage,
   showToast,
   environment,
 } from "@raycast/api";
-import { iconMap, setStorage, getStorage, ExtensionPreferences, installExamples } from "./lib/utils";
+import { iconMap, setStorage, getStorage, ExtensionPreferences, installExamples, PinForm } from "./lib/utils";
 import { StorageKey } from "./lib/constants";
-import { getFavicon, useCachedState } from "@raycast/utils";
-import { Pin, checkExpirations, deletePin, modifyPin, openPin, usePins } from "./lib/Pins";
+import { getFavicon } from "@raycast/utils";
+import { Pin, checkExpirations, deletePin, openPin, usePins } from "./lib/Pins";
 import { Group, useGroups } from "./lib/Groups";
-import * as os from "os";
 import { useRecentApplications } from "./lib/LocalData";
 import path from "path";
-
-/**
- * The form view for editing a pin.
- * @param props.pin The pin to edit.
- * @param props.setPins The function to update the list of pins.
- * @returns A form view.
- */
-const EditPinView = (props: { pin: Pin; setPins: React.Dispatch<React.SetStateAction<Pin[]>> }) => {
-  const pin = props.pin;
-  const setPins = props.setPins;
-  const [url, setURL] = useState<string | undefined>();
-  const [urlError, setUrlError] = useState<string | undefined>();
-  const [applications, setApplications] = useCachedState<Application[]>("applications", []);
-  const { groups } = useGroups();
-  const { pop } = useNavigation();
-
-  const iconList = Object.keys(Icon);
-  iconList.unshift("Favicon / File Icon");
-  iconList.unshift("None");
-
-  const preferences = getPreferenceValues<ExtensionPreferences>();
-
-  return (
-    <Form
-      isLoading={applications.length == 0}
-      actions={
-        <ActionPanel>
-          <Action.SubmitForm
-            onSubmit={async (values) =>
-              await modifyPin(
-                pin,
-                values.nameField,
-                values.urlField,
-                values.iconField,
-                values.groupField,
-                values.openWithField,
-                values.dateField,
-                values.execInBackgroundField,
-                pop,
-                setPins
-              )
-            }
-          />
-          <Action
-            title="Delete Pin"
-            icon={Icon.Trash}
-            style={Action.Style.Destructive}
-            onAction={() => {
-              deletePin(pin, setPins);
-              pop();
-            }}
-          />
-          <PlaceholdersGuideAction />
-        </ActionPanel>
-      }
-    >
-      <Form.TextField
-        id="nameField"
-        title="Pin Name"
-        placeholder="Enter pin name, e.g. Google, or leave blank to use URL"
-        defaultValue={pin.name}
-      />
-
-      <Form.TextArea
-        id="urlField"
-        title="Target"
-        placeholder="Enter the filepath, URL, or Terminal command to pin"
-        error={urlError}
-        onChange={async (value) => {
-          setURL(value);
-          if (value.startsWith("~")) {
-            value = value.replace("~", os.homedir());
-          }
-
-          const allApplications = await getApplications();
-          if (value.match(/^[a-zA-Z0-9]*?:.*/g)) {
-            const preferredBrowser = preferences.preferredBrowser ? preferences.preferredBrowser : "Safari";
-            const browser = allApplications.find((app) => app.name == preferredBrowser);
-            if (browser) {
-              setApplications([browser, ...allApplications.filter((app) => app.name != preferredBrowser)]);
-            }
-          } else {
-            setApplications(allApplications);
-          }
-
-          if (urlError !== undefined) {
-            setUrlError(undefined);
-          } else {
-            null;
-          }
-        }}
-        onBlur={(event) => {
-          if (event.target.value?.length == 0) {
-            setUrlError("URL cannot be empty!");
-          } else if (urlError !== undefined) {
-            setUrlError(undefined);
-          }
-        }}
-        defaultValue={pin.url}
-      />
-
-      {!url?.startsWith("/") && !url?.startsWith("~") && !url?.match(/^[a-zA-Z0-9]*?:.*/g) ? (
-        <Form.Checkbox
-          label="Execute in Background"
-          id="execInBackgroundField"
-          defaultValue={pin.execInBackground}
-          info="If checked, the pinned Terminal command will be executed in the background instead of in a new Terminal tab."
-        />
-      ) : null}
-
-      <Form.Dropdown id="iconField" title="Icon" defaultValue={pin.icon}>
-        {iconList.map((icon) => {
-          const urlIcon = url
-            ? url.startsWith("/") || url.startsWith("~")
-              ? { fileIcon: url }
-              : url.match(/^[a-zA-Z0-9]*?:.*/g)
-              ? getFavicon(url)
-              : Icon.Terminal
-            : iconMap["Minus"];
-
-          return (
-            <Form.Dropdown.Item
-              key={icon}
-              title={icon}
-              value={icon}
-              icon={icon in iconMap ? iconMap[icon] : icon == "Favicon / File Icon" ? urlIcon : iconMap["Minus"]}
-            />
-          );
-        })}
-      </Form.Dropdown>
-
-      <Form.Dropdown
-        title="Open With"
-        id="openWithField"
-        info="The application to open the pin with"
-        defaultValue={pin.application}
-      >
-        <Form.Dropdown.Item key="None" title="None" value="None" icon={Icon.Minus} />
-        {applications.map((app) => {
-          return <Form.Dropdown.Item key={app.name} title={app.name} value={app.name} icon={{ fileIcon: app.path }} />;
-        })}
-      </Form.Dropdown>
-
-      <Form.DatePicker
-        id="dateField"
-        title="Expiration Date"
-        info="The date and time at which the pin will be automatically removed"
-        type={Form.DatePicker.Type.DateTime}
-        value={pin.expireDate == undefined ? undefined : new Date(pin.expireDate)}
-        onChange={(value) => {
-          if (value) {
-            pin.expireDate = value.toUTCString();
-          }
-        }}
-      />
-
-      {groups.concat({ name: "None", icon: "Minus", id: -1 }).length > 0 ? (
-        <Form.Dropdown id="groupField" title="Group" defaultValue={pin.group}>
-          {[{ name: "None", icon: "Minus", id: -1 }].concat(groups).map((group) => {
-            return (
-              <Form.Dropdown.Item key={group.id} title={group.name} value={group.name} icon={iconMap[group.icon]} />
-            );
-          })}
-        </Form.Dropdown>
-      ) : null}
-    </Form>
-  );
-};
 
 /**
  * Move a pin up in the list. If the pin is in a group, it will be moved up within the group. Otherwise, it will be moved up in the overall list of pins.
@@ -258,7 +85,7 @@ const movePinDown = async (index: number, setPins: React.Dispatch<React.SetState
 };
 
 /**
- * Action to create a new pin. Opens the EditPinView with a blank pin.
+ * Action to create a new pin. Opens the PinForm view with a blank pin.
  * @param props.setPins The function to set the pins state.
  * @returns An action component.
  */
@@ -270,17 +97,7 @@ const CreateNewPinAction = (props: { setPins: React.Dispatch<React.SetStateActio
       icon={Icon.PlusCircle}
       shortcut={{ modifiers: ["cmd"], key: "n" }}
       target={
-        <EditPinView
-          pin={{
-            name: "",
-            url: "",
-            icon: "None",
-            group: "None",
-            id: -1,
-            application: "None",
-            expireDate: undefined,
-            execInBackground: undefined,
-          }}
+        <PinForm
           setPins={setPins}
         />
       }
@@ -345,6 +162,11 @@ interface CommandPreferences {
    * Whether to display subtitles for pins.
    */
   showSubtitles: boolean;
+
+  /**
+   * Whether to display icons for applications that pins open with, if one is specified.
+   */
+  showApplication: boolean;
 }
 
 export default function Command() {
@@ -362,7 +184,13 @@ export default function Command() {
   }, []);
 
   const getPinListItems = (pins: Pin[]) => {
-    return pins.map((pin, index) => (
+    return pins.map((pin, index) => {
+      const accessories: List.Item.Accessory[] = [];
+      if (preferences.showApplication && pin.application != "None") {
+        accessories.push({ icon: { fileIcon: pin.application }, tooltip: `Opens with ${pin.application}` });
+      }
+
+      return (
       <List.Item
         title={pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url)}
         subtitle={preferences.showSubtitles ? pin.url.substring(0, 30) + (pin.url.length > 30 ? "..." : "") : undefined}
@@ -387,6 +215,7 @@ export default function Command() {
             ? { fileIcon: pin.icon }
             : Icon.Terminal
         }
+        accessories={accessories}
         actions={
           <ActionPanel>
             <ActionPanel.Section title="Pin Actions">
@@ -408,13 +237,13 @@ export default function Command() {
                 title="Edit"
                 icon={Icon.Pencil}
                 shortcut={{ modifiers: ["cmd"], key: "e" }}
-                target={<EditPinView pin={pin} setPins={setPins} />}
+                target={<PinForm pin={pin} setPins={setPins} />}
               />
               <Action.Push
                 title="Duplicate"
                 icon={Icon.EyeDropper}
                 shortcut={{ modifiers: ["cmd", "ctrl"], key: "d" }}
-                target={<EditPinView pin={{ ...pin, name: pin.name + " Copy", id: -1 }} setPins={setPins} />}
+                target={<PinForm pin={{ ...pin, name: pin.name + " Copy", id: -1 }} setPins={setPins} />}
               />
 
               {index > 0 ? (
@@ -453,7 +282,7 @@ export default function Command() {
           </ActionPanel>
         }
       />
-    ));
+    )});
   };
 
   return (
