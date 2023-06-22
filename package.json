@@ -2,10 +2,10 @@
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "name": "pins",
   "title": "Pins",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": "Create pins for paths and URLs and display them in the menu bar",
   "keywords": [
-    "pins",
+    "pin",
     "menubar",
     "shortcut",
     "pinned",
@@ -13,7 +13,10 @@
     "quick",
     "access",
     "link",
-    "url"
+    "url",
+    "placeholders",
+    "bookmark",
+    "save"
   ],
   "icon": "command-icon.png",
   "author": "HelloImSteven",
@@ -116,6 +119,30 @@
           "type": "checkbox",
           "label": "Show Application Icon",
           "description": "Whether to show the icon for the application that a pin opens with.",
+          "default": true,
+          "required": false
+        },
+        {
+          "name": "showExpiration",
+          "type": "checkbox",
+          "label": "Show Expiration Date",
+          "description": "Whether to show the expiration date for pins that have one.",
+          "default": true,
+          "required": false
+        },
+        {
+          "name": "showExecutionVisibility",
+          "type": "checkbox",
+          "label": "Show Execution Visibility",
+          "description": "Whether to show the execution visibility for Terminal command pins",
+          "default": true,
+          "required": false
+        },
+        {
+          "name": "showFragment",
+          "type": "checkbox",
+          "label": "Show Text Fragment Icon",
+          "description": "Whether to show the icon for text fragment pins",
           "default": true,
           "required": false
         }

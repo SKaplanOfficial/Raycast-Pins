@@ -1,4 +1,4 @@
-import { LocalStorage, Icon, Clipboard, showToast, Toast, useNavigation, Application, getPreferenceValues, Form, ActionPanel, Action, environment, getApplications } from "@raycast/api";
+import { LocalStorage, Icon, Clipboard, showToast, Toast, useNavigation, Application, getPreferenceValues, Form, ActionPanel, Action, environment, getApplications, showHUD } from "@raycast/api";
 import { runAppleScript } from "run-applescript";
 import { exec, execSync } from "child_process";
 import { StorageKey } from "./constants";
@@ -8,6 +8,7 @@ import { Group, useGroups } from "./Groups";
 import { useState } from "react";
 import path from "path";
 import * as os from "os";
+import { Placeholders } from "./placeholders";
 
 /**
  * Preferences for the entire extension.
@@ -449,3 +450,126 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
     </Form>
   );
 };
+
+/**
+ * A user-defined variable created via the {{set:...}} placeholder. These variables are stored in the extension's persistent local storage.
+ */
+export interface PersistentVariable {
+  name: string;
+  value: string;
+  initialValue: string;
+}
+
+/**
+ * Gets the current value of persistent variable from the extension's persistent local storage.
+ * @param name The name of the variable to get.
+ * @returns The value of the variable, or an empty string if the variable does not exist.
+ */
+export const getPersistentVariable = async (name: string): Promise<string> => {
+  const vars: PersistentVariable[] = await getStorage(StorageKey.PERSISTENT_VARS)
+  const variable = vars.find((variable) => variable.name == name);
+  if (variable) {
+    return variable.value;
+  }
+  return "";
+}
+
+/**
+ * Sets the value of a persistent variable in the extension's persistent local storage. If the variable does not exist, it will be created. The most recently set variable will be always be placed at the end of the list.
+ * @param name The name of the variable to set.
+ * @param value The initial value of the variable.
+ */
+export const setPersistentVariable = async (name: string, value: string) => {
+  const vars: PersistentVariable[] = await getStorage(StorageKey.PERSISTENT_VARS)
+  const variable = vars.find((variable) => variable.name == name);
+  if (variable) {
+    vars.splice(vars.indexOf(variable), 1);
+    variable.value = value;
+    vars.push(variable);
+  } else {
+    vars.push({ name: name, value: value, initialValue: value });
+  }
+  await setStorage(StorageKey.PERSISTENT_VARS, vars);
+}
+
+/**
+ * Resets the value of a persistent variable to its initial value. If the variable does not exist, nothing will happen.
+ * @param name The name of the variable to reset.
+ */
+export const resetPersistentVariable = async (name: string): Promise<string> => {
+  const vars: PersistentVariable[] = await getStorage(StorageKey.PERSISTENT_VARS);
+  const variable = vars.find((variable) => variable.name == name);
+  if (variable) {
+    vars.splice(vars.indexOf(variable), 1);
+    variable.value = variable.initialValue;
+    vars.push(variable);
+    await setStorage(StorageKey.PERSISTENT_VARS, vars);
+    return variable.value;
+  }
+  return "";
+}
+
+/**
+ * Deletes a persistent variable from the extension's persistent local storage. If the variable does not exist, nothing will happen.
+ * @param name The name of the variable to delete.
+ */
+export const deletePersistentVariable = async (name: string) => {
+  const vars: PersistentVariable[] = await getStorage(StorageKey.PERSISTENT_VARS);
+  const variable = vars.find((variable) => variable.name == name);
+  if (variable) {
+    vars.splice(vars.indexOf(variable), 1);
+    await setStorage(StorageKey.PERSISTENT_VARS, vars);
+  }
+}
+
+/**
+ * A scheduled execution of a placeholder. These are stored in the extension's persistent local storage.
+ */
+export interface DelayedExecution {
+  target: string;
+  dueDate: Date;
+}
+
+/**
+ * Schedules content to be evaluated by the placeholder system at a later date.
+ * @param target The content to evaluate.
+ * @param dueDate The date and time at which the content should be evaluated.
+ */
+export const scheduleTargetEvaluation = async (target: string, dueDate: Date) => {
+  const delayedExecutions = await getStorage(StorageKey.DELAYED_EXECUTIONS);
+  delayedExecutions.push({ target: target, dueDate: dueDate });
+  await setStorage(StorageKey.DELAYED_EXECUTIONS, delayedExecutions);
+  
+  if (environment.commandName == "index") {
+    await showHUD("Scheduled Delayed Evaluation")
+  } else {
+    await showToast({ title: "Scheduled Delayed Evaluation", primaryAction: { title: "Cancel", onAction: async () => {
+      await removedScheduledEvaluation(target, dueDate)
+      await showToast({ title: "Canceled Delayed Evaluation" })
+    } } });
+  }
+}
+
+/**
+ * Cancels a schedules evaluation, removing it from the extension's persistent local storage.
+ * @param target The content of the evaluation to cancel.
+ * @param dueDate The date and time at which the evaluation was scheduled to occur.
+ */
+export const removedScheduledEvaluation = async (target: string, dueDate: Date) => {
+  const delayedExecutions: { target: string; dueDate: string }[] = await getStorage(StorageKey.DELAYED_EXECUTIONS);
+  await setStorage(StorageKey.DELAYED_EXECUTIONS, delayedExecutions.filter((execution) => execution.target != target && new Date(execution.dueDate) != dueDate));
+}
+
+/**
+ * Checks if any scheduled executions are due to be evaluated, and evaluates them if they are.
+ */
+export const checkDelayedExecutions = async () => {
+  const delayedExecutions: { target: string; dueDate: string }[] = await getStorage(StorageKey.DELAYED_EXECUTIONS);
+  const now = new Date();
+  for (const execution of delayedExecutions) {
+    if (new Date(execution.dueDate) <= now) {
+      await Placeholders.applyToString(execution.target);
+    }
+  }
+  await setStorage(StorageKey.DELAYED_EXECUTIONS, delayedExecutions.filter((execution) => new Date(execution.dueDate) > now));
+}

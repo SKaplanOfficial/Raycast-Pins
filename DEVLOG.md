@@ -7,52 +7,100 @@
 - AST0: New Features
     - AST0a: Text fragment pins
     - AST0b: Directives
-        - AST0b1: {{copy:…}}
-        - AST0b2: {{paste:…}}
+        - AST0b1: {{copy:…}} (COMPLETE)
+        - AST0b2: {{paste:…}} (COMPLETE)
         - AST0b3: {{write to [file]:...}}
         - AST0b4: {{open in [app]:…}}? Maybe not
         - AST0b5: {{askAI:…}}
-        - AST0b6: {{delay for [interval]:…}}
+        - AST0b6: {{delay for [interval]:…}} (COMPLETE)
             - Delays execution of the content of the directive for the specified interval.
             - Content must be one of: script placeholder | directive
             - <30s No diff from AppleScript
             - >30s: Called on update interval, command not kept active
-        - AST0b7 / AST0c1: {{set x:...}}
-        - AST0b8 / AST0c2: {{delete x}}
-        - AST0b9 / AST0c4: {{reset x}}
-        - AST0b10: {{ignore:...}}
+        - AST0b7 / AST0c1: {{set x:...}} (COMPLETE)
+        - AST0b8 / AST0c2: {{delete x}} (COMPLETE)
+        - AST0b9 / AST0c4: {{reset x}} (COMPLETE)
+        - AST0b10: {{ignore:...}} (COMPLETE)
             - Ignore the result of the specified value (substitute the value with an empty string)
-        - AST0b11 / AST0c3: {{get x}}
+        - AST0b11 / AST0c3: {{get x}} (COMPLETE)
     - AST0c: Persistent Variables
-        - AST0c1 / AST0b7: {{set x:...}}
+        - AST0c1 / AST0b7: {{set x:...}} (COMPLETE)
             - Set a persistent variable x to the value specified by ...
-        - AST0c2 / AST0b8: {{delete x}}
+        - AST0c2 / AST0b8: {{delete x}} (COMPLETE)
             - Delete the persistent variable x
-        - AST0c3 / AST1a1: {{get x}}
-        - AST0c4 / AST0b9: {{reset x}}?
+        - AST0c3 / AST1a1: {{get x}} (COMPLETE)
+            - Get the current value of the persistent variable x
+        - AST0c4 / AST0b9: {{reset x}}? (COMPLETE)
             - Reset the persistent variable x to its initial value
     - AST0d: Fine-grained preferences for which Quick Pins to display
 - AST1: New Placeholders
     - AST1a: New Information Placeholders:
-        - AST1a2: {{file:...}}
-        - AST1a3: {{}}
+        - AST1a2: {{file:...}} (COMPLETE)
+        - AST1a3: {{shortcut:...:input}} (COMPLETE)
+            - Run a Siri Shortcut and return the result
+        - AST1a4: {{shortcuts}} (COMPLETE)
+            - List all Siri Shortcuts
+        - AST1a5: {{todayEvents}}
+        - AST1a6: {{tomorrowEvents}}
+        - AST1a7: {{weekEvents}}
+        - AST1a8: {{monthEvents}}
+        - AST1a9: {{yearEvents}}
+        - AST1a10: {{todayReminders}}
+        - AST1a11: {{tomorrowReminders}}
+        - AST1a12: {{weekReminders}}
+        - AST1a13: {{monthReminders}}
+        - AST1a14: {{yearReminders}}
+        - AST1a15: {{location}}
+        - AST1a16: {{lastEmail}}
+        - AST1a17: {{lastNote}}
+        - AST1a18: {{lastMessage}}
+        - AST1a19: {{currentTrack}}
+        - AST1a20: {{currentTrackAlbum}}
+        - AST1a21: {{currentTrackArtist}}
+        - AST1a22: {{tabs}}
+        - AST1a23: {{runningApplications}}
+        - AST1a24: {{input}} (COMPLETE)
+            - Ask the user for input
+        - AST1a25: {{selectedFileContents}} (COMPLETE)
+
     - AST1b: Script Placeholders:
-        - AST1b1: {{py:…}}?
-        - AST1b2: {{rust:…}}?
-        - AST1b3: {{go:…}}?
-        - AST1b4: {{perl:…}}
-        - AST1b5: {{php:…}}
-        - AST1b7: {{lua:…}}
+        - AST1b1: {{py:…}}? (REJECTED)
+        - AST1b2: {{rust:…}}? (REJECTED)
+        - AST1b3: {{go:…}}? (REJECTED)
+        - AST1b4: {{perl:…}} (REJECTED)
+        - AST1b5: {{php:…}} (REJECTED)
+        - AST1b7: {{lua:…}} (REJECTED)
 - AST2: Bug Fixes
     - AST2a: Non-url targets that resemble URLs are sometimes treated as URLs, e.g. "button%20returned:ok" is treated as a URL (RESOLVED)
     - AST2b: Leaving pin name blank does not use the target as the pin name (RESOLVED)
     - AST2c: {{selectedText}} placeholder causes alert sound to play when no text is selected (RESOLVED)
 - AST3: UI enhancements
-    - AST3a: Show icon for application that Pins launch with as an accessory
-    - AST3b: Show date that pin expires on as an accessory
-    - AST3c: Show accessory icon for whether a Terminal command pin executes in the background or foreground
+    - AST3a: Show icon for application that Pins launch with as an accessory (COMPLETE)
+    - AST3b: Show date that pin expires on as an accessory (COMPLETE)
+    - AST3c: Show accessory icon for whether a Terminal command pin executes in the background or foreground (COMPLETE)
 - AST4: New Quick Pins
     - AST4a: Pin selected text as text fragment (COMPLETE)
+
+### 2023-06-22
+
+- Added additional aliases for various placeholders
+- Added {{selectedFileContents}} placeholder, which inserts the text contents of the selected file(s) in Finder
+- Added {{input [prompt]:...}} placeholder, which prompts the user for input with the specified prompt using a dialog window
+- Added {{shortcut:... [input]="..."}} placeholder, which executes the specified Siri Shortcut with the specified input, if present, and inserts the result
+- Added {{shortcuts}} placeholder, which inserts a list of all Siri Shortcuts on the system
+- Added accessories for list items in "View Pins" command:
+    - Expiration date, if one is set
+    - Application that the pin opens with, if one is set
+    - Terminal icon for Terminal command pins
+    - Terminal command visibility setting
+    - Text icon for text fragment pins
+- Added settings for showing/hiding each accessory in the "View Pins" command
+
+### 2023-06-21
+
+- Added {{set [name]:...}}, {{reset [name]}}, {{get [name]}}, and {{delete [name]}} placeholders for managing persistent variables
+- Added {{ignore:...}} placeholder, which ignores all content within it
+- Added {{copy:...}} and {{paste:...}} placeholders, which copy and paste the specified text, respectively, and show indicators accordingly
 
 ### 2023-06-20
 

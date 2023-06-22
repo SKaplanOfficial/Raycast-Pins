@@ -167,6 +167,21 @@ interface CommandPreferences {
    * Whether to display icons for applications that pins open with, if one is specified.
    */
   showApplication: boolean;
+
+  /**
+   * Whether to display the expiration date for pins that have one.
+   */
+  showExpiration: boolean;
+
+  /**
+   * Whether to display the execution visibility for Terminal command pins.
+   */
+  showExecutionVisibility: boolean
+
+  /**
+   * Whether to display an icon accessory for text fragments.
+   */
+  showFragment: boolean;
 }
 
 export default function Command() {
@@ -185,9 +200,28 @@ export default function Command() {
 
   const getPinListItems = (pins: Pin[]) => {
     return pins.map((pin, index) => {
+      // Add accessories based on the user's preferences
       const accessories: List.Item.Accessory[] = [];
+      if (preferences.showExpiration && pin.expireDate) {
+        // Expiration date accessory
+        const expirationDate = new Date(pin.expireDate);
+        const dateString = expirationDate.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "numeric", hour12: true });
+        accessories.push({ date: expirationDate, tooltip: `Expires On ${dateString}` });
+      }
       if (preferences.showApplication && pin.application != "None") {
-        accessories.push({ icon: { fileIcon: pin.application }, tooltip: `Opens with ${pin.application}` });
+        // Application accessory
+        accessories.push({ icon: { fileIcon: pin.application }, tooltip: `Opens With ${path.basename(pin.application, ".app")}` });
+      } else if (preferences.showApplication && !pin.fragment && !pin.url?.startsWith("/") && !pin.url?.startsWith("~") && !pin.url?.match(/^[a-zA-Z0-9]*?:.*/g)) {
+        // Terminal command accessory
+        accessories.push({ icon: Icon.Terminal, tooltip: "Runs Terminal Command" });
+      }
+      if (preferences.showExecutionVisibility && !pin.fragment && !pin.url?.startsWith("/") && !pin.url?.startsWith("~") && !pin.url?.match(/^[a-zA-Z0-9]*?:.*/g)) {
+        // Execution visibility accessory
+        accessories.push({ icon: pin.execInBackground ? Icon.EyeDisabled : Icon.Eye, tooltip: pin.execInBackground ? "Executes in Background" : "Executes In New Terminal Tab" });
+      }
+      if (preferences.showFragment && pin.fragment) {
+        // Text fragment accessory
+        accessories.push({ icon: Icon.Text, tooltip: "Text Fragment" });
       }
 
       return (

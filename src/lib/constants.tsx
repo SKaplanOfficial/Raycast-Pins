@@ -41,4 +41,14 @@ export enum StorageKey {
    * The ID of the pin that was most recently opened.
    */
   LAST_OPENED_PIN = "lastOpenedPin",
+
+  /**
+   * The list of persistent variables, their current values, and their default (initial) values.
+   */
+  PERSISTENT_VARS = "persistentVars",
+
+  /**
+   * The list of delayed executions, their targets, and their due dates.
+   */
+  DELAYED_EXECUTIONS = "delayedExecutions",
 }

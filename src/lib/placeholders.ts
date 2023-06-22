@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */ // Disable since many placeholder functions have unused parameters that are kept for consistency.
-import { getFrontmostApplication } from "@raycast/api";
+import { environment, getFrontmostApplication, showHUD, showToast } from "@raycast/api";
 import { Clipboard } from "@raycast/api";
 import { runAppleScript } from "run-applescript";
 import { SupportedBrowsers, getCurrentURL, getTextOfWebpage } from "./browser-utils";
@@ -7,7 +7,15 @@ import * as fs from "fs";
 import * as os from "os";
 import * as crypto from "crypto";
 import * as vm from "vm";
-import { getStorage, setStorage } from "./utils";
+import {
+  deletePersistentVariable,
+  getPersistentVariable,
+  getStorage,
+  resetPersistentVariable,
+  scheduleTargetEvaluation,
+  setPersistentVariable,
+  setStorage,
+} from "./utils";
 import { StorageKey } from "./constants";
 import { execSync } from "child_process";
 import { getPreviousPin } from "./Pins";
@@ -47,11 +55,137 @@ type Placeholder = {
  * Placeholder specification.
  */
 const placeholders: Placeholder = {
+  "{{delay (\\d+?)(s|ms|m|h)?:([\\s\\S]*?)(?=}})": {
+    name: "Delay",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      const match = str.match(/(?<=delay )(\d+?)(s|ms|m|h)?:([\s\S]*)(?=}})/);
+      if (!match) return "";
+      const delay = parseInt(match[1]);
+      const unit = match[2] || "s";
+      const content = match[3] || "";
+      if (!content.length) return "";
+      if (delay <= 0) return "";
+
+      // Short delay, less than update interval -> just use setTimeout
+      if (unit == "s" && delay < 30) {
+        await new Promise((resolve) =>
+          setTimeout(() => {
+            applyToString(content, context);
+            resolve(true);
+          }, delay * 1000)
+        );
+      }
+
+      // Long delay, more than update interval -> schedule execution to be run on update interval
+      else {
+        const delayInMinutes =
+          unit == "s" ? delay / 60 : unit == "ms" ? delay / 1000 / 60 : unit == "m" ? delay : delay * 60;
+        const dueDate = new Date(Date.now() + Math.round(delayInMinutes) * 60000);
+        await scheduleTargetEvaluation(content, dueDate);
+      }
+      return "";
+    },
+  },
+
+  /**
+   * Directive to reset the value of a persistent variable to its initial value. If the variable does not exist, nothing will happen. The placeholder will always be replaced with an empty string.
+   */
+  "{{reset [a-zA-Z0-9_]+}}": {
+    name: "Reset Persistent Variable",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      const matches = str.match(/{{reset ([a-zA-Z0-9_]+)}}/);
+      if (matches) {
+        const key = matches[1];
+        const initialValue = await resetPersistentVariable(key);
+        await setPersistentVariable(key, initialValue);
+      }
+      return "";
+    },
+  },
+
+  /**
+   * Directive to get the value of a persistent variable. If the variable does not exist, the placeholder will be replaced with an empty string.
+   */
+  "{{get [a-zA-Z0-9_]+}}": {
+    name: "Get Persistent Variable",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      const matches = str.match(/{{get ([a-zA-Z0-9_]+)}}/);
+      if (matches) {
+        const key = matches[1];
+        return (await getPersistentVariable(key)) || "";
+      }
+      return "";
+    },
+  },
+
+  /**
+   * Directive to delete a persistent variable. If the variable does not exist, nothing will happen. The placeholder will always be replaced with an empty string.
+   */
+  "{{delete [a-zA-Z0-9_]+}}": {
+    name: "Delete Persistent Variable",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      const matches = str.match(/{{delete ([a-zA-Z0-9_]+)}}/);
+      if (matches) {
+        const key = matches[1];
+        await deletePersistentVariable(key);
+      }
+      return "";
+    },
+  },
+
+  /**
+   * Directive/placeholder to ask the user for input via a dialog window. The placeholder will be replaced with the user's input. If the user cancels the dialog, the placeholder will be replaced with an empty string.
+   */
+  "{{input( prompt=(\"|').*?(\"|'))?}}": {
+    name: "Input",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      const pinsIcon = path.join(environment.assetsPath, "pins.icns");
+      const prompt = str.match(/(?<=prompt=("|')).*?(?=("|'))/)?.[0] || "Input:";
+      return await runAppleScript(`try
+          return text returned of (display dialog "${prompt}" default answer "" giving up after 60 with title "Input" with icon (POSIX file "${pinsIcon}"))
+        on error
+          return ""
+        end try`);
+    },
+  },
+
+  /**
+   * Directive/placeholder to execute a Siri Shortcut by name, optionally supplying input, and insert the result. If the result is null, the placeholder will be replaced with an empty string.
+   */
+  "{{shortcut:([\\s\\S]+?)( input=(\"|').*?(\"|'))?}}": {
+    name: "Run Siri Shortcut",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      const matches = str.match(/{{shortcut:([\s\S]+?)( input=("|')(.*?)("|'))?}}/);
+      console.log(matches);
+      if (matches) {
+        const shortcutName = matches[1];
+        const input = matches[4] || "";
+        const result = await runAppleScript(`tell application "Shortcuts Events"
+          set res to run shortcut "${shortcutName}" with input "${input}"
+          if res is not missing value then
+            return res
+          else
+            return ""
+          end if 
+        end tell`);
+        return result;
+      }
+      return "";
+    },
+  },
+
   /**
    * Placeholder for the text currently stored in the clipboard. If the clipboard is empty, this placeholder will not be replaced. Most clipboard content supplies a string format, such as file names when copying files in Finder.
    */
   "{{clipboardText}}": {
     name: "Clipboard Text",
+    aliases: ["{{clipboard}}"],
     rules: [
       async (str: string, context?: LocalDataObject) => {
         try {
@@ -99,6 +233,7 @@ const placeholders: Placeholder = {
    */
   "{{selectedFiles}}": {
     name: "Selected Files",
+    aliases: ["{{selectedFile}}"],
     rules: [
       async (str: string, context?: LocalDataObject) => {
         try {
@@ -118,10 +253,44 @@ const placeholders: Placeholder = {
   },
 
   /**
+   * Placeholder for the contents of the currently selected files in Finder as a newline-separated list. If no files are selected, this placeholder will not be replaced.
+   */
+  "{{selectedFileContents}}": {
+    name: "Selected File Contents",
+    aliases: [
+      "{{selectedFilesContents}}",
+      "{{selectedFileContent}}",
+      "{{selectedFilesContent}}",
+      "{{selectedFileText}}",
+      "{{selectedFilesText}}",
+      "{{contents}}",
+    ],
+    rules: [
+      async (str: string, context?: LocalDataObject) => {
+        try {
+          return (await getFinderSelection()).length > 0;
+        } catch (e) {
+          return false;
+        }
+      },
+    ],
+    apply: async (str: string, context?: LocalDataObject) => {
+      try {
+        const files = await getFinderSelection();
+        const fileContents = files.map((file) => fs.readFileSync(file.path));
+        return fileContents.join("\n\n");
+      } catch (e) {
+        return "";
+      }
+    },
+  },
+
+  /**
    * Placeholder for the name of the current application. Barring any issues, this should always be replaced.
    */
   "{{currentAppName}}": {
     name: "Current Application",
+    aliases: ["{{currentApp}}", "{{currentApplication}}", "{{currentApplicationName}}"],
     rules: [],
     apply: async (str: string, context?: LocalDataObject) => {
       try {
@@ -137,6 +306,7 @@ const placeholders: Placeholder = {
    */
   "{{currentAppPath}}": {
     name: "Current Application Path",
+    aliases: ["{{currentApplicationPath}}"],
     rules: [],
     apply: async (str: string, context?: LocalDataObject) => {
       try {
@@ -195,6 +365,7 @@ const placeholders: Placeholder = {
    */
   "{{currentTabText}}": {
     name: "Current Tab Text",
+    aliases: ["{{tabText}}"],
     rules: [
       async (str: string, context?: LocalDataObject) => {
         try {
@@ -252,6 +423,17 @@ const placeholders: Placeholder = {
   },
 
   /**
+   * Placeholder for the list of names of all Siri Shortcuts on the current machine. The list is comma-separated.
+   */
+  "{{shortcuts}}": {
+    name: "Siri Shortcuts",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      return await runAppleScript(`tell application "Shortcuts Events" to return name of every shortcut`);
+    },
+  },
+
+  /**
    * Placeholder for the current date supporting an optional format argument. Defaults to "Month Day, Year". Barring any issues, this should always be replaced.
    */
   "{{date( format=(\"|').*?(\"|'))?}}": {
@@ -278,7 +460,11 @@ const placeholders: Placeholder = {
    */
   "{{day( locale=(\"|').*?(\"|'))?}}": {
     name: "Day of the Week",
-    aliases: ["{{dayName( locale=(\"|').*?(\"|'))?}}"],
+    aliases: [
+      "{{dayName( locale=(\"|').*?(\"|'))?}}",
+      "{{currentDay( locale=(\"|').*?(\"|'))?}}",
+      "{{currentDayName( locale=(\"|').*?(\"|'))?}}",
+    ],
     rules: [],
     apply: async (str: string, context?: LocalDataObject) => {
       const locale = str.match(/(?<=locale=("|')).*?(?=("|'))/)?.[0] || "en-US";
@@ -328,7 +514,15 @@ const placeholders: Placeholder = {
    */
   "{{previousApp}}": {
     name: "Previous Application",
-    aliases: ["{{previousAppName}}", "{{lastApp}}", "{{lastAppName}}"],
+    aliases: [
+      "{{previousAppName}}",
+      "{{lastApp}}",
+      "{{lastAppName}}",
+      "{{previousApplication}}",
+      "{{lastApplication}}",
+      "{{previousApplicationName}}",
+      "{{lastApplicationName}}",
+    ],
     rules: [
       async (str: string, context?: LocalDataObject) => {
         try {
@@ -393,6 +587,7 @@ const placeholders: Placeholder = {
    */
   "{{previousPinName}}": {
     name: "Last Opened Pin Name",
+    aliases: ["{{lastPinName}}"],
     rules: [
       async (str: string, context?: LocalDataObject) => {
         try {
@@ -419,6 +614,7 @@ const placeholders: Placeholder = {
    */
   "{{previousPinTarget}}": {
     name: "Last Opened Pin Target",
+    aliases: ["{{lastPinTarget}}"],
     rules: [
       async (str: string, context?: LocalDataObject) => {
         try {
@@ -469,7 +665,7 @@ const placeholders: Placeholder = {
 
       const filePath = target.startsWith("~") ? target.replace("~", os.homedir()) : target;
       if (filePath == "") return "";
-  
+
       if (!filePath.startsWith("/")) return "";
 
       try {
@@ -480,7 +676,57 @@ const placeholders: Placeholder = {
       }
     },
   },
-        
+
+  /**
+   * Directive to copy the provided text to the clipboard. The placeholder will always be replaced with an empty string.
+   */
+  "{{copy:[^}]*?}}": {
+    name: "Copy to Clipboard",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      const text = str.match(/(?<=(copy:))[^}]*?(?=}})/)?.[0];
+      if (!text) return "";
+      await Clipboard.copy(text);
+      if (environment.commandName == "index") {
+        await showHUD("Copied to Clipboard");
+      } else {
+        await showToast({ title: "Copied to Clipboard" });
+      }
+      return "";
+    },
+  },
+
+  /**
+   * Directive to paste the provided text in the frontmost application. The placeholder will always be replaced with an empty string.
+   */
+  "{{paste:[^}]*?}}": {
+    name: "Paste from Clipboard",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      const text = str.match(/(?<=(paste:))[^}]*?(?=}})/)?.[0];
+      if (!text) return "";
+      await Clipboard.paste(text);
+      await showHUD("Pasted Into Frontmost App");
+      return "";
+    },
+  },
+
+  /**
+   * Directive to set the value of a persistent variable. If the variable does not exist, it will be created. The placeholder will always be replaced with an empty string.
+   */
+  "{{set [a-zA-Z0-9_]+:.*?}}": {
+    name: "Set Persistent Variable",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      const matches = str.match(/{{set ([a-zA-Z0-9_]+):(.*?)}}/);
+      if (matches) {
+        const key = matches[1];
+        const value = matches[2];
+        await setPersistentVariable(key, value);
+      }
+      return "";
+    },
+  },
 
   /**
    * Placeholder for output of an AppleScript script. If the script fails, this placeholder will be replaced with an empty string. No sanitization is done in the script input; the expectation is that users will only use this placeholder with trusted scripts.
@@ -594,11 +840,33 @@ const placeholders: Placeholder = {
             await Placeholders.allPlaceholders["{{previousPinName}}"].apply("{{previousPinName}}"),
           previousPinTarget: async () =>
             await Placeholders.allPlaceholders["{{previousPinTarget}}"].apply("{{previousPinTarget}}"),
+          reset: async (variable: string) => await Placeholders.allPlaceholders["{{reset [a-zA-Z0-9_]+}}"].apply(`{{reset ${variable}}}`),
+          get: async (variable: string) => await Placeholders.allPlaceholders["{{get [a-zA-Z0-9_]+}}"].apply(`{{get ${variable}}}`),
+          delete: async (variable: string) => await Placeholders.allPlaceholders["{{delete [a-zA-Z0-9_]+}}"].apply(`{{delete ${variable}}}`),
+          set: async (variable: string, value: string) => await Placeholders.allPlaceholders["{{set [a-zA-Z0-9_]+:.*?}}"].apply(`{{set ${variable}:${value}}}`),
+          shortcut: async (name: string) => await Placeholders.allPlaceholders["{{shortcut:([\\s\\S]+?)( input=(\"|').*?(\"|'))?}}"].apply(`{{shortcut:${name}}}`),
+          selectedFiles: async () => await Placeholders.allPlaceholders["{{selectedFiles}}"].apply("{{selectedFiles}}"),
+          selectedFileContents: async () => await Placeholders.allPlaceholders["{{selectedFileContents}}"].apply("{{selectedFileContents}}"),
+          shortcuts: async () => await Placeholders.allPlaceholders["{{shortcuts}}"].apply("{{shortcuts}}"),
+          copy: async (text: string) => await Placeholders.allPlaceholders["{{copy:[^}]*?}}"].apply(`{{copy:${text}}}`),
+          paste: async (text: string) => await Placeholders.allPlaceholders["{{paste:[^}]*?}}"].apply(`{{paste:${text}}}`),
+          ignore: async (text: string) => await Placeholders.allPlaceholders["{{(ignore|IGNORE):[^}]*?}}"].apply(`{{ignore:${text}}}`),
         };
         return await vm.runInNewContext(script, sandbox, { timeout: 1000, displayErrors: true });
       } catch (e) {
         return "";
       }
+    },
+  },
+
+  /**
+   * Directive to ignore all content within the directive. Allows placeholders and directives to run without influencing the output.
+   */
+  "{{(ignore|IGNORE):[^}]*?}}": {
+    name: "Ignore Content",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      return "";
     },
   },
 };
@@ -673,7 +941,11 @@ const applyToObjectValueWithKey = async (obj: { [key: string]: unknown }, key: s
  * @param keys The keys of the object to apply placeholders to.
  * @returns The object with placeholders applied.
  */
-const applyToObjectValuesWithKeys = async (obj: { [key: string]: unknown }, keys: string[], context?: LocalDataObject) => {
+const applyToObjectValuesWithKeys = async (
+  obj: { [key: string]: unknown },
+  keys: string[],
+  context?: LocalDataObject
+) => {
   const subbedObj: { [key: string]: unknown } = {};
   for (const key of keys) {
     subbedObj[key] = await applyToObjectValueWithKey(obj, key);

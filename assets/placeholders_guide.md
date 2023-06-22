@@ -4,7 +4,7 @@
 
 Author: Stephen Kaplan _(HelloImSteven)_ <br />
 Last Updated: 2023-06-18 <br />
-Pins Version: 1.3.0
+Pins Version: 1.4.0
 
 ------------------------
 
@@ -12,9 +12,9 @@ Pins Version: 1.3.0
 
 Pins supports various placeholders that are evaluated at runtime whenever you open/execute a pin. These placeholders are useful for pinning items that rely on the current context such as selected text. The placeholders system is provided as a way to supply additional functionality for users that need or want it without complicating the core functionality of Pins.
 
-Placeholders in Pins fall into two categories: **information placeholders**, which are replaced with information about the current context, and **script placeholders**, which are replaced with the return value of some script. You can think of information placeholders as a way to get an instantaneous snapshot of the current context, without performing any additional actions, while script placeholders can be used to perform actions and process data before resolving to a string value.
+Placeholders in Pins fall into three categories: **information placeholders**, which are replaced with information about the current context, **script placeholders**, which are replaced with the return value of some script, and **directives**, which are commands for Pins to execute that are generally replaced with an empty string (with some exceptions). You can think of information placeholders as a way to get an instantaneous snapshot of the current context, without performing any additional actions, while script placeholders can be used to perform actions and process data before resolving to a string value.
 
-All placeholders are evaluated at runtime — when you open/execute a pin — and are replaced in order of precedence, with script placeholders evaluated last. Thus, you can use information placeholders in your scripts to make them even more dynamic. See [Placeholder Precedence](#placeholder-precedence) for more information on how placeholders are evaluated.
+All placeholders are evaluated at runtime — when you open/execute a pin — and are replaced in order of precedence, with script placeholders generally evaluated last. Thus, you can use information placeholders in your scripts to make them even more dynamic. See [Placeholder Precedence](#placeholder-precedence) for more information on how placeholders are evaluated.
 
 ### Why would I use placeholders?
 
@@ -26,25 +26,37 @@ Placeholders allow pins to be more dynamic and context-aware. You can use placeh
 
 | Placeholder | Replaced With |
 | ----- | ----- |
+| `{{set [name]:...}}` | Sets the value of the persistent variable with the specified name, e.g. `{{set myVar:Hello World}}`. |
+| `{{reset [name]}}` | Resets the value of the persistent variable with the specified name to its initial value. |
+| `{{get [name]}}` | Gets the value of the persistent variable with the specified name. |
+| `{{delete [name]}}` | Deletes the persistent variable with the specified name. |
+| `{{ignore:...}}` or <br /> `{{IGNORE:...}}` | Ignores all content contained within. Useful for running placeholders without inserting their return value. |
+| `{{input}}` | The text entered by the user in an input dialog. You can specify a prompt using `{{input prompt="..."}}`. |
 | `{{as:...}}` or <br /> `{{AS:..}}` | The return value of an AppleScript script. |
-| `{{clipboardText}}` | The current text content of the clipboard. |
-| `{{currentAppName}}` | The name of the frontmost application. |
-| `{{currentAppPath}}` | The POSIX path to the bundle of the frontmost application. |
+| `{{clipboardText}}` or <br /> `{{clipboard}}` | The current text content of the clipboard. |
+| `{{copy:...}}` | Copies the specified text to the clipboard. |
+| `{{currentAppName}}` or <br /> `{{currentApp}}` or <br /> `{{currentApplicationName}}` or <br /> `{{currentApplication}}` | The name of the frontmost application. |
+| `{{currentAppPath}}` or <br /> `{{currentApplicationPath}}` | The POSIX path to the bundle of the frontmost application. |
 | `{{currentDirectory}}` | The POSIX path of Finder's current insertion location. This is the desktop if no Finder windows are open. |
-| `{{currentTabText}}` | The visible text of the current tab of the frontmost browser window. |
+| `{{currentTabText}}` or <br /> `{{tabText}}` | The visible text of the current tab of the frontmost browser window. |
 | `{{currentURL}}` | The URL of the active tab of the frontmost browser window. |
 | `{{date}}` or <br /> `{{currentDate}}` | The current date. Use `{{date format="..."}}` to specify a custom date format. Defaults to `MMMM d, yyyy`. |
-| `{{day}}` or <br /> `{{dayName}}` | The current weekday, e.g. "Monday". Defaults to en-US locale. Use format `{{day locale="xx-XX"}}` to specify a different locale. |
+| `{{day}}` or <br /> `{{dayName}}` or <br /> `{{currentDay}}` or <br /> `{{currentDayName}}` | The current weekday, e.g. "Monday". Defaults to en-US locale. Use format `{{day locale="xx-XX"}}` to specify a different locale. |
+| `{{file:...}}` | The text content of a path at the specified path. The path can be absolute or relative to the user's home directory using `~/`. |
 | `{{homedir}}` or <br /> `{{homeDirectory}}` | The path to the user's home directory. |
 | `{{hostname}}` | The hostname of the computer. |
 | `{{js:...}}` or <br /> `{{JS:...}}` | The return value of sandboxed JavaScript code. See [JavaScript Placeholder Reference](#javascript-placeholder-reference) for more information. |
 | `{{jxa:...}}` or <br /> `{{JXA:...}}` | The return value of a JXA script. |
-| `{{previousApp}}` or <br /> `{{previousAppName}}` or <br /> `{{lastApp}}` or <br /> `{{lastAppName}}` | The name of the last application that was active before the current one. |
-| `{{previousPinName}}` | The URL-encoded name of the last pin that was opened. |
-| `{{previousPinTarget}}` | The URL-encoded target of the last pin that was opened. |
-| `{{selectedFiles}}` | A comma-separated list of POSIX paths of the currently selected files in Finder. |
+| `{{paste:...}}` | Pastes the specified text into the frontmost application. |
+| `{{previousApp}}` or <br /> `{{previousAppName}}` or <br /> `{{lastApp}}` or <br /> `{{lastAppName}}` or <br /> `{{previousApplication}}` or <br /> `{{previousApplicationName}}` or <br /> `{{lastApplication}}` or <br /> `{{lastApplicationName}}` | The name of the last application that was active before the current one. |
+| `{{previousPinName}}` or <br /> `{{lastPinName}}` | The URL-encoded name of the last pin that was opened. |
+| `{{previousPinTarget}}` or <br /> `{{lastPinTarget}}` | The URL-encoded target of the last pin that was opened. |
+| `{{selectedFiles}}` or <br /> `{{selectedFile}}` | A comma-separated list of POSIX paths of the currently selected files in Finder. |
+| `{{selectedFileContents}}` or <br /> `{{selectedFilesContents}}` or <br /> `{{selectedFileContent}}` or <br /> `{{selectedFilesContent}}` or <br /> `{{selectedFileText}}` or <br /> `{{selectedFilesText}}` or <br /> `{{contents}}` | The text content of the currently selected file(s) in Finder. |
 | `{{selectedText}}` | The currently selected text. |
 | `{{shell:...}}` | The return value of a shell script. The shell is ZSH by default, but you can specify a different shell using the format `{{shell bin/bash:...}}`. |
+| `{{shortcut:...}}` | The value returned after executing the specified Siri Shortcut. Specify input to the shortcut using `{{shortcut:... input="..."}}`. |
+| `{{shortcuts}}` | The comma-separated list of Siri Shortcuts installed on the system. |
 | `{{systemLanguage}}` or <br /> `{{language}}` | The configured language for the system. |
 | `{{time}}` or <br /> `{{currentTime}}` | The current time. Use `{{time format="..."}}` to specify a custom time format. Defaults to `HH:mm:s a`. |
 | `{{url:...}}` or <br /> `{{URL:...}}` | The visible text content at the specified URL. Example: `{{url:https://google.com}}`. |
@@ -61,9 +73,15 @@ Placeholders are evaluated in the following order, from first to last:
 
 | Category | Placeholder |
 | -------- | ----------- |
+| Directive | `{{reset [name]}}` |
+| Directive | `{{get [name]}}` |
+| Directive | `{{delete [name]}}` |
+| Directive | `{{input}}` |
+| Dropdown | `{{shortcut:...}}` |
 | Information | `{{clipboardText}}` |
 | Information | `{{selectedText}}` |
 | Information | `{{selectedFiles}}` |
+| Information | `{{selectedFileContents}}` |
 | Information | `{{currentAppName}}` |
 | Information | `{{currentAppPath}}` |
 | Information | `{{currentDirectory}}` |
@@ -72,6 +90,7 @@ Placeholders are evaluated in the following order, from first to last:
 | Information | `{{user}}` |
 | Information | `{{homedir}}` |
 | Information | `{{hostname}}` |
+| Information | `{{shortcuts}}` |
 | Information | `{{date}}` |
 | Information | `{{day}}` |
 | Information | `{{time}}` |
@@ -82,13 +101,18 @@ Placeholders are evaluated in the following order, from first to last:
 | Information | `{{previousPinName}}` |
 | Information | `{{previousPinTarget}}` |
 | Script | `{{url:...}}`** |
+| Script | `{{file:...}}` |
+| Directive | `{{copy:...}}` |
+| Directive | `{{paste:...}}` |
+| Directive | `{{set [name]:...}}` |
 | Script | `{{as:...}}` |
 | Script | `{{jxa:...}}` |
 | Script | `{{shell:...}}` |
 | Script | `{{js:...}}` |
+| Directive | `{{ignore:...}}` |
 
 > **Note**
-> Precedence may change slightly in future versions of Pins. However, script placeholders will always be evaluated after information placeholders. `{{js:...}}` placeholders will always be evaluated last.
+> Precedence may change slightly in future versions of Pins. However, script placeholders will always be evaluated after information placeholders. `{{js:...}}` and `{{ignore}}` placeholders will always be evaluated last.
 
 > **Note**
 > **Since URL placeholders involve significant processing, they are treated as script placeholders.
