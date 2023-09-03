@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Icon, Form, List, useNavigation, Action, ActionPanel, confirmAlert, Alert } from "@raycast/api";
-import { iconMap, setStorage, getStorage } from "./lib/utils";
-import { StorageKey } from "./lib/constants";
+import { setStorage, getStorage } from "./lib/utils";
+import { SORT_STRATEGY, StorageKey } from "./lib/constants";
 import { Group, deleteGroup, modifyGroup, useGroups } from "./lib/Groups";
 import { Pin, usePins } from "./lib/Pins";
+import { addSortingStrategyAccessory } from "./lib/accessories";
+import { getGroupIcon, getIcon } from "./lib/icons";
 
 /**
  * Form view for editing a group.
@@ -15,10 +17,8 @@ const EditGroupView = (props: { group: Group; setGroups: (groups: Group[]) => vo
   const group = props.group;
   const setGroups = props.setGroups;
   const [nameError, setNameError] = useState<string | undefined>();
+  const [parentError, setParentError] = useState<string | undefined>();
   const { pop } = useNavigation();
-
-  const iconList = Object.keys(Icon);
-  iconList.unshift("None");
 
   return (
     <Form
@@ -26,7 +26,21 @@ const EditGroupView = (props: { group: Group; setGroups: (groups: Group[]) => vo
         <ActionPanel>
           <Action.SubmitForm
             icon={Icon.ChevronRight}
-            onSubmit={(values) => modifyGroup(group, values.nameField, values.iconField, pop, setGroups)}
+            onSubmit={(values) => {
+              if (values.parentField == group.id.toString()) {
+                setParentError("Group cannot be its own parent!");
+                return false;
+              }
+              modifyGroup(
+                group,
+                values.nameField,
+                values.iconField,
+                pop,
+                setGroups,
+                values.parentField ? values.parentField : undefined,
+                values.sortStrategyField ? values.sortStrategyField : "manual"
+              );
+            }}
           />
         </ActionPanel>
       }
@@ -48,17 +62,50 @@ const EditGroupView = (props: { group: Group; setGroups: (groups: Group[]) => vo
       />
 
       <Form.Dropdown id="iconField" title="Group Icon" defaultValue={group.icon}>
-        {iconList.map((icon) => {
+        {["None"].concat(Object.keys(Icon)).map((icon) => {
           return (
             <Form.Dropdown.Item
               key={icon}
               title={icon}
               value={icon}
-              icon={icon in iconMap ? iconMap[icon] : Icon.Minus}
+              icon={getIcon(icon)}
             />
           );
         })}
       </Form.Dropdown>
+
+      <Form.Dropdown
+        id="sortStrategyField"
+        title="Sort Method"
+        defaultValue={group.sortStrategy || "manual"}
+        info="The sorting rule applied to the group. You can manually adjust the order of pins, but you can choose to have them automatically sorted alphabetically, by frequency of usage, by most recent usage, or by initial creation date."
+      >
+        {Object.entries(SORT_STRATEGY).map(([key, value]) => {
+          return <Form.Dropdown.Item key={key} title={value} value={key} />;
+        })}
+      </Form.Dropdown>
+
+      <Form.TextField
+        id="parentField"
+        title="Parent Group"
+        placeholder="Parent Group ID"
+        defaultValue={(group.parent || "").toString()}
+        info="The ID of this group's parent. You can use this to create multi-layer groupings within the menu bar dropdown menu."
+        error={parentError}
+        onChange={(value) => {
+          if (value != group.id.toString()) {
+            setParentError(undefined);
+          }
+        }}
+      />
+
+      <Form.TextField
+        id="idField"
+        title="Group ID"
+        value={group.id.toString()}
+        info="The ID of this group. You can use this to specify this group as a parent of other groups."
+        onChange={() => null}
+      />
     </Form>
   );
 };
@@ -81,6 +128,7 @@ const CreateNewGroupAction = (props: { setGroups: (groups: Group[]) => void }) =
             name: "",
             icon: "None",
             id: -1,
+            parent: undefined,
           }}
           setGroups={setGroups}
         />
@@ -122,9 +170,6 @@ export default function Command() {
   const { pins } = usePins();
   const { push } = useNavigation();
 
-  const iconList = Object.keys(Icon);
-  iconList.unshift("None");
-
   return (
     <List
       isLoading={groups === undefined}
@@ -138,12 +183,17 @@ export default function Command() {
       <List.EmptyView title="No Groups Found" icon="no-view.png" />
       {((groups as Group[]) || []).map((group, index) => {
         const groupPins = pins.filter((pin: Pin) => pin.group == group.name);
+
+        const accessories: List.Item.Accessory[] = [];
+        addSortingStrategyAccessory(group, accessories);
+
         return (
           <List.Item
             title={group.name}
             subtitle={`${groupPins.length} pin${groupPins.length == 1 ? "" : "s"}`}
+            accessories={accessories}
             key={group.id}
-            icon={group.icon in iconMap ? iconMap[group.icon] : Icon.Minus}
+            icon={getGroupIcon(group)}
             actions={
               <ActionPanel>
                 <ActionPanel.Section title="Group Actions">
@@ -159,6 +209,11 @@ export default function Command() {
                     title="Copy Group Name"
                     content={group.name}
                     shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
+                  />
+                  <Action.CopyToClipboard
+                    title="Copy Group ID"
+                    content={group.id.toString()}
+                    shortcut={{ modifiers: ["cmd", "shift"], key: "i" }}
                   />
 
                   <Action

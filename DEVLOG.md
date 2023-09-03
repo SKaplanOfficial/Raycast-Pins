@@ -2,6 +2,16 @@
 
 ## 1.4.0 Release, TBD
 
+### 2023-09-03
+
+- Added keyboard shortcuts for quick pins
+- Added ability to set a keyboard shortcut for each pin. Some shortcuts are reserved for the extension itself.
+- Added support for multi-layer groups (i.e. groups within groups). The parent group can be specified by providing its ID while editing a group.
+- Added setting to hide/show the "Copy Pin Data" menu item.
+- Added setting to hide/show the "Preferences..." menu item.
+- Added setting for sorting pins alphabetically, by frequency, date last used, creation date, or manually. Groups can be controlled separately from non-grouped pins.
+- Improved group deletion logic -- now hands children off to the parent group, if one exists.
+
 ### 2023-09-02
 
 - Added `{{alert timeout=[number]:[title],[message]}}` directive for displaying an alert with the specified title and message, with an optional timeout in seconds. The default timeout is 10 seconds.

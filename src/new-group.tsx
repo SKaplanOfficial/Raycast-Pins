@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Form, Icon, ActionPanel, Action, popToRoot } from "@raycast/api";
-import { iconMap } from "./lib/utils";
+import { getStorage } from "./lib/utils";
 import { createNewGroup, useGroups } from "./lib/Groups";
+import { SORT_STRATEGY, StorageKey } from "./lib/constants";
+import { iconMap } from "./lib/icons";
 
 /**
  * Checks that the name field is not empty and that the name is not already taken.
@@ -26,6 +28,7 @@ const checkNameField = (name: string, setNameError: (error: string | undefined) 
  */
 const NewGroupForm = () => {
   const [nameError, setNameError] = useState<string | undefined>();
+  const [parentError, setParentError] = useState<string | undefined>();
   const { groups } = useGroups();
   const groupNames = groups?.map((group) => group.name);
 
@@ -38,7 +41,17 @@ const NewGroupForm = () => {
           <Action.SubmitForm
             icon={Icon.ChevronRight}
             onSubmit={async (values) => {
-              await createNewGroup(values.nameField, values.iconField);
+              const nextID = await getStorage(StorageKey.NEXT_GROUP_ID);
+              if (values.parentField == nextID.toString()) {
+                setParentError("Group cannot be its own parent!");
+                return false;
+              }
+              await createNewGroup(
+                values.nameField,
+                values.iconField,
+                values.parentField ? values.parentField : undefined,
+                values.sortStrategyField ? values.sortStrategyField : "manual"
+              );
               await popToRoot();
             }}
           />
@@ -62,6 +75,32 @@ const NewGroupForm = () => {
           );
         })}
       </Form.Dropdown>
+
+      <Form.Dropdown
+        id="sortStrategyField"
+        title="Sort Method"
+        defaultValue="manual"
+        info="The sorting rule applied to the group. You can manually adjust the order of pins, but you can choose to have them automatically sorted alphabetically, by frequency of usage, by most recent usage, or by date of initial creation."
+      >
+        {Object.entries(SORT_STRATEGY).map(([key, value]) => {
+          return <Form.Dropdown.Item key={key} title={value} value={key} />;
+        })}
+      </Form.Dropdown>
+
+      <Form.TextField
+        id="parentField"
+        title="Parent Group"
+        placeholder="Parent Group ID"
+        defaultValue=""
+        info="The ID of this group's parent. You can use this to create multi-layer groupings within the menu bar dropdown menu."
+        error={parentError}
+        onChange={async (value) => {
+          const nextID = await getStorage(StorageKey.NEXT_GROUP_ID);
+          if (value != nextID.toString()) {
+            setParentError(undefined);
+          }
+        }}
+      />
     </Form>
   );
 };

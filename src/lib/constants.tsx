@@ -1,3 +1,5 @@
+import { Keyboard } from "@raycast/api";
+
 /**
  * Storage keys used throughout the extension.
  */
@@ -51,4 +53,33 @@ export enum StorageKey {
    * The list of delayed executions, their targets, and their due dates.
    */
   DELAYED_EXECUTIONS = "delayedExecutions",
+}
+
+/**
+ * Reserved shortcuts used throughout the extension.
+ */
+export const KEYBOARD_SHORTCUT: { [key: string]: Keyboard.Shortcut } = {
+  PIN_CURRENT_APP: { modifiers: ["cmd", "shift"], key: "a" },
+  PIN_CURRENT_DIRECTORY: { modifiers: ["cmd", "shift"], key: "d" },
+  PIN_CURRENT_TAB: { modifiers: ["cmd", "shift"], key: "t" },
+  PIN_ALL_TABS: { modifiers: ["cmd", "shift"], key: "g" },
+  PIN_SELECTED_TEXT: { modifiers: ["cmd", "shift"], key: "s" },
+  PIN_SELECTED_FILES: { modifiers: ["cmd", "shift"], key: "f" },
+  PIN_CURRENT_DOCUMENT: { modifiers: ["cmd", "shift"], key: "e" },
+  PIN_SELECTED_NOTES: { modifiers: ["cmd", "shift"], key: "n" },
+
+  CREATE_NEW_PIN: { modifiers: ["cmd"], key: "n" },
+  COPY_PINS_JSON: { modifiers: ["cmd"], key: "j" },
+  OPEN_PREFERENCES: { modifiers: ["cmd"], key: "," },
+}
+
+/**
+ * Sorting strategies and their display names.
+ */
+export const SORT_STRATEGY: { [key: string]: string } = {
+  alphabetical: "Alphabetical",
+  dateCreated: "Creation Date",
+  frequency: "Frequency",
+  manual: "Manual",
+  recency: "Recency",
 }

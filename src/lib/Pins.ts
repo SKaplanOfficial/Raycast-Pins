@@ -1,13 +1,25 @@
 import { useCachedState } from "@raycast/utils";
-import { Clipboard, LaunchType, Toast, confirmAlert, environment, open, showHUD, showToast } from "@raycast/api";
+import {
+  Clipboard,
+  Keyboard,
+  LaunchType,
+  Toast,
+  confirmAlert,
+  environment,
+  getPreferenceValues,
+  open,
+  showHUD,
+  showToast,
+} from "@raycast/api";
 import { useEffect, useState } from "react";
 import { StorageKey } from "./constants";
-import { getStorage, runCommand, runCommandInTerminal, setStorage } from "./utils";
+import { ExtensionPreferences, getStorage, runCommand, runCommandInTerminal, setStorage } from "./utils";
 import * as fs from "fs";
 import * as os from "os";
 import { Placeholders } from "./placeholders";
 import path from "path";
 import { LocalDataObject } from "./LocalData";
+import { Group } from "./Groups";
 
 export type Pin = {
   /**
@@ -54,6 +66,26 @@ export type Pin = {
    * Whether or not the pin's target should be executed in the background. Only applies to pins with a Terminal command target.
    */
   execInBackground?: boolean;
+
+  /**
+   * The keyboard shortcut to open/execute the pin.
+   */
+  shortcut?: Keyboard.Shortcut;
+
+  /**
+   * The date that the pin was last opened.
+   */
+  lastOpened?: string;
+
+  /**
+   * The number of times that the pin has been opened.
+   */
+  timesOpened?: number;
+
+  /**
+   * The date that the pin was initially created.
+   */
+  dateCreated?: string;
 };
 
 /**
@@ -122,6 +154,28 @@ export const usePins = () => {
  * @param preferences The extension preferences object.
  */
 export const openPin = async (pin: Pin, preferences: { preferredBrowser: string }, context?: LocalDataObject) => {
+  await modifyPin(
+    pin,
+    pin.name,
+    pin.url,
+    pin.icon,
+    pin.group,
+    pin.application,
+    pin.expireDate ? new Date(pin.expireDate) : undefined,
+    pin.execInBackground,
+    pin.fragment,
+    pin.shortcut,
+    new Date(),
+    (pin.timesOpened || 0) + 1,
+    pin.dateCreated ? new Date(pin.dateCreated) : undefined,
+    () => {
+      null;
+    },
+    () => {
+      null;
+    },
+    false
+  );
   try {
     if (pin.fragment) {
       // Copy the text fragment to the clipboard
@@ -189,6 +243,8 @@ export const openPin = async (pin: Pin, preferences: { preferredBrowser: string 
  * @param application The application to open the pin in.
  * @param expireDate The date the pin expires.
  * @param execInBackground Whether to run the specified command, if any, in the background.
+ * @param fragment Whether to treat the pin's target as a text fragment, regardless of its contents.
+ * @param shortcut The keyboard shortcut to open/execute the pin.
  */
 export const createNewPin = async (
   name: string,
@@ -199,6 +255,7 @@ export const createNewPin = async (
   expireDate: Date | undefined,
   execInBackground: boolean | undefined,
   fragment: boolean | undefined,
+  shortcut: Keyboard.Shortcut | undefined
 ) => {
   // Get the stored pins
   const storedPins = await getStorage(StorageKey.LOCAL_PINS);
@@ -222,6 +279,8 @@ export const createNewPin = async (
     expireDate: expireDate?.toUTCString(),
     execInBackground: execInBackground,
     fragment: fragment,
+    shortcut: shortcut,
+    dateCreated: new Date().toUTCString(),
   });
 
   // Update the stored pins
@@ -238,6 +297,8 @@ export const createNewPin = async (
  * @param application The new application to open the pin in.
  * @param expireDate The new date the pin expires.
  * @param execInBackground Whether to run the specified command, if any, in the background.
+ * @param fragment Whether to treat the pin's target as a text fragment, regardless of its contents.
+ * @param shortcut The new keyboard shortcut to open/execute the pin.
  * @param pop The function to close the pin editor.
  * @param setPins The function to update the list of pins.
  */
@@ -251,8 +312,13 @@ export const modifyPin = async (
   expireDate: Date | undefined,
   execInBackground: boolean | undefined,
   fragment: boolean | undefined,
+  shortcut: Keyboard.Shortcut | undefined,
+  lastOpened: Date | undefined,
+  timesOpened: number | undefined,
+  dateCreated: Date | undefined,
   pop: () => void,
-  setPins: React.Dispatch<React.SetStateAction<Pin[]>>
+  setPins: React.Dispatch<React.SetStateAction<Pin[]>>,
+  notify = true
 ) => {
   const storedPins = await getStorage(StorageKey.LOCAL_PINS);
   const newData: Pin[] = storedPins.map((oldPin: Pin) => {
@@ -268,6 +334,10 @@ export const modifyPin = async (
         expireDate: expireDate?.toUTCString(),
         execInBackground: execInBackground,
         fragment: fragment,
+        shortcut: shortcut,
+        lastOpened: lastOpened?.toUTCString(),
+        timesOpened: timesOpened,
+        dateCreated: dateCreated?.toUTCString(),
       };
     } else {
       return oldPin;
@@ -292,12 +362,19 @@ export const modifyPin = async (
       expireDate: expireDate?.toUTCString(),
       execInBackground: execInBackground,
       fragment: fragment,
+      shortcut: shortcut,
+      lastOpened: lastOpened?.toUTCString(),
+      timesOpened: timesOpened,
+      dateCreated: dateCreated?.toUTCString(),
     });
   }
 
   setPins(newData);
   await setStorage(StorageKey.LOCAL_PINS, newData);
-  await showToast({ title: `Updated pin!` });
+
+  if (notify) {
+    await showToast({ title: `Updated pin!` });
+  }
   pop();
 };
 
@@ -329,4 +406,66 @@ export const getPreviousPin = async (): Promise<Pin | undefined> => {
   if (previousPin == undefined || parseInt(previousPin) == undefined) return undefined;
   const pins = await getStorage(StorageKey.LOCAL_PINS);
   return pins.find((pin: Pin) => pin.id == previousPin);
+};
+
+/**
+ * Sorts pins according to extension-level and per-group sort strategy preferences.
+ * @param pins The list of pins to sort.
+ * @param groups The list of groups to sort by.
+ * @returns The sorted list of pins.
+ */
+export const sortPins = (pins: Pin[], groups: Group[]) => {
+  const preferences = getPreferenceValues<ExtensionPreferences>();
+  return pins.sort((p1, p2) => {
+    const group = groups.find((group) => group.name == p1.group);
+    if (group?.sortStrategy == "alphabetical" || (!group && preferences.defaultSortStrategy == "alphabetical")) {
+      return p1.name.localeCompare(p2.name);
+    } else if (group?.sortStrategy == "frequency" || (!group && preferences.defaultSortStrategy == "frequency")) {
+      return (p2.timesOpened || 0) - (p1.timesOpened || 0);
+    } else if (group?.sortStrategy == "recency" || (!group && preferences.defaultSortStrategy == "recency")) {
+      return (p1.lastOpened ? new Date(p1.lastOpened) : new Date(0)).getTime() >
+        (p2.lastOpened ? new Date(p2.lastOpened) : new Date(0)).getTime()
+        ? -1
+        : 1;
+    } else if (group?.sortStrategy == "dateCreated" || (!group && preferences.defaultSortStrategy == "dateCreated")) {
+      return (p1.dateCreated ? new Date(p1.dateCreated) : new Date(0)).getTime() >
+        (p2.dateCreated ? new Date(p2.dateCreated) : new Date(0)).getTime()
+        ? -1
+        : 1;
+    }
+    return 0;
+  });
+};
+
+/**
+ * Gets the most recently opened pin.
+ * @param pins The list of pins to search.
+ * @returns The {@link Pin} that was most recently opened, or undefined if no pins have been created yet.
+ */
+export const getLastOpenedPin = (pins: Pin[]) => {
+  const sortedPins = pins.sort((p1, p2) => {
+    return (
+      (p2.lastOpened ? new Date(p2.lastOpened) : new Date(0)).getTime() -
+      (p1.lastOpened ? new Date(p1.lastOpened) : new Date(0)).getTime()
+    );
+  });
+  if (sortedPins.length > 0) {
+    return sortedPins[0];
+  }
+  return undefined;
+};
+
+/**
+ * Gets keywords for a given pin. Keywords are derived from the pin's name, group name, and URL/target.
+ * @param pin The pin to get keywords for.
+ * @returns The list of keywords.
+ */
+export const getPinKeywords = (pin: Pin) => {
+  return [
+    ...(pin.group == "None" ? "Other" : pin.group.split(" ")),
+    ...pin.url
+      .replaceAll(/([ /:.'"-])(.+?)(?=\b|[ /:.'"-])/gs, " $1 $1$2 $2")
+      .split(" ")
+      .filter((term) => term.trim().length > 0),
+  ];
 };

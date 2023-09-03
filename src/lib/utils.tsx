@@ -1,6 +1,6 @@
 import { LocalStorage, Icon, Clipboard, showToast, Toast, useNavigation, Application, getPreferenceValues, Form, ActionPanel, Action, environment, getApplications, showHUD } from "@raycast/api";
 import { exec, execSync } from "child_process";
-import { StorageKey } from "./constants";
+import { KEYBOARD_SHORTCUT, StorageKey } from "./constants";
 import { getFavicon, runAppleScript } from "@raycast/utils";
 import { Pin, createNewPin, deletePin, getPins, modifyPin } from "./Pins";
 import { Group, useGroups } from "./Groups";
@@ -8,6 +8,7 @@ import { useState } from "react";
 import path from "path";
 import * as os from "os";
 import { Placeholders } from "./placeholders";
+import { iconMap } from "./icons";
 
 /**
  * Preferences for the entire extension.
@@ -27,12 +28,12 @@ export interface ExtensionPreferences {
    * Whether or not to show the recent applications section in lists of pins.
    */
   showRecentApplications: boolean;
-}
 
-/**
- * A map of icon names to icon objects.
- */
-export const iconMap: { [index: string]: Icon } = Icon;
+  /**
+   * The default sort strategy for lists of pins outside of groups.
+   */
+  defaultSortStrategy: string;
+}
 
 /**
  * Sets the value of a local storage key.
@@ -116,24 +117,6 @@ export const copyPinData = async () => {
   const jsonData = JSON.stringify(data);
   await Clipboard.copy(jsonData);
   return jsonData;
-};
-
-/**
- * Converts a vague icon reference to an icon object.
- * @param iconRef The icon reference to convert.
- * @returns The icon object.
- */
-export const getIcon = (iconRef: string) => {
-  if (iconRef in iconMap) {
-    return iconMap[iconRef];
-  } else if (iconRef.startsWith("/") || iconRef.startsWith("~")) {
-    return { fileIcon: iconRef };
-  } else if (iconRef.match(/^[a-zA-Z0-9]*?:.*/g)) {
-    return getFavicon(iconRef);
-  } else if (iconRef == "None") {
-    return "";
-  }
-  return Icon.Terminal;
 };
 
 /**
@@ -252,6 +235,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
   const { pin, setPins } = props;
   const [url, setURL] = useState<string | undefined>(pin ? pin.url : undefined);
   const [urlError, setUrlError] = useState<string | undefined>();
+  const [shortcutError, setShortcutError] = useState<string | undefined>();
   const [isFragment, setIsFragment] = useState<boolean>(pin &&  pin.fragment ? true : false);
   const [applications, setApplications] = useState<Application[]>([]);
   const { groups } = useGroups();
@@ -270,6 +254,15 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
           <Action.SubmitForm
             icon={Icon.ChevronRight}
             onSubmit={async (values) => {
+              const shortcut = { modifiers: values.modifiersField, key: values.keyField };
+
+              const reservedShortcut = Object.entries(KEYBOARD_SHORTCUT).find(([, reservedShortcut]) => reservedShortcut.modifiers.every((modifier) => shortcut.modifiers.includes(modifier)) && reservedShortcut.key == shortcut.key);
+              if (reservedShortcut) {
+                setShortcutError(`This shortcut is reserved by the extension! (${reservedShortcut[0]})`);
+                return false;
+              }
+              setShortcutError(undefined);
+
               if (pin && setPins) {
                 await modifyPin(
                   pin,
@@ -281,6 +274,10 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
                   values.dateField,
                   values.execInBackgroundField,
                   values.fragmentField,
+                  { modifiers: values.modifiersField, key: values.keyField },
+                  pin.lastOpened ? new Date(pin.lastOpened) : undefined,
+                  pin.timesOpened,
+                  pin.dateCreated ? new Date(pin.dateCreated) : undefined,
                   pop,
                   setPins
                 );
@@ -293,7 +290,8 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
                   values.openWithField,
                   values.dateField,
                   values.execInBackgroundField,
-                  values.fragmentField
+                  values.fragmentField,
+                  { modifiers: values.modifiersField, key: values.keyField },
                 );
                 if (setPins) {
                   setPins(await getPins());
@@ -448,6 +446,17 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
           })}
         </Form.Dropdown>
       ) : null}
+
+      <Form.Separator />
+
+      <Form.TagPicker id="modifiersField" title="Keyboard Shortcut Modifiers" defaultValue={pin ? pin.shortcut?.modifiers : undefined} error={shortcutError}>
+        <Form.TagPicker.Item key="cmd" title="Command" value="cmd" />
+        <Form.TagPicker.Item key="shift" title="Shift" value="shift" />
+        <Form.TagPicker.Item key="ctrl" title="Control" value="ctrl" />
+        <Form.TagPicker.Item key="alt" title="Option" value="alt" />
+      </Form.TagPicker>
+
+      <Form.TextField id="keyField" title="Keyboard Shortcut Key" defaultValue={pin ? pin.shortcut?.key : undefined} error={shortcutError} />
     </Form>
   );
 };

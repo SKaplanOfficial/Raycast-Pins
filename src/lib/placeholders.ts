@@ -16,12 +16,11 @@ import {
   setStorage,
 } from "./utils";
 import { StorageKey } from "./constants";
-import { execFile, execSync } from "child_process";
+import { execSync } from "child_process";
 import { getPreviousPin } from "./Pins";
-import { LocalDataObject, getFinderSelection, getTextSelection } from "./LocalData";
+import { LocalDataObject, getFinderSelection } from "./LocalData";
 import path from "path";
 import { runAppleScript } from "@raycast/utils";
-import * as util from "util";
 import { LocationManager } from "./scripts";
 
 /**
@@ -928,49 +927,6 @@ const placeholders: Placeholder = {
       return "";
     }
   },
-
-  // "{{(notify|notification):(([^{]|{(?!{)|{{[\\s\\S]*?}})*?)}}": {
-  //   name: "Send Notification",
-  //   rules: [],
-  //   apply: async (str: string, context?: LocalDataObject) => {
-  //     const matches = str.match(/{{(notify|notification):(([^{]|{(?!{)|{{[\s\S]*?}})*?)}}/);
-  //     if (matches) {
-  //       const query = matches[2];
-  //       try {
-  //       await runAppleScript(`(() => {
-  //         ObjC.import('UserNotifications');
-
-  //         const app = $.NSApp;
-          
-  //         const center = $.UNUserNotificationCenter.currentNotificationCenter;
-  //         center.requestAuthorizationWithOptionsCompletionHandler($.UNAuthorizationOptionAlert, (granted, error) => {
-  //           if (error.js) {
-  //             return;
-  //           }
-            
-  //           const content = $.UNMutableNotificationContent.alloc.init;
-  //           content.title = '${query}';
-  //           content.body = "oof";
-            
-  //           const trigger = $.UNTimeIntervalNotificationTrigger.triggerWithTimeIntervalRepeats(1.0, false);
-            
-  //           const request = $.UNNotificationRequest.requestWithIdentifierContentTrigger("a", content, trigger);
-  //           center.addNotificationRequestWithCompletionHandler(request, (error) => {
-  //             if (error.js) {
-  //               return;
-  //             }
-  //             return;
-  //           });
-  //         })
-  //       })();`, { language: "JavaScript" });
-  //       // return result.trim().replaceAll('"', "'");
-  //     } catch (e) {
-  //       console.log(e);
-  //     }
-  //   }
-  //     return "";
-  //   },
-  // },
 
   /**
    * Placeholder for output of an AppleScript script. If the script fails, this placeholder will be replaced with an empty string. No sanitization is done in the script input; the expectation is that users will only use this placeholder with trusted scripts.

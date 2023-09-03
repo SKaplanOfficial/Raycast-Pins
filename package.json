@@ -70,6 +70,22 @@
           "required": false
         },
         {
+          "name": "showCopyPinData",
+          "type": "checkbox",
+          "label": "Show \"Copy Pin Data\" Item",
+          "description": "Whether to show a \"Copy Pin Data\" item in the menu dropdown that copies all pins and groups in JSON format.",
+          "default": true,
+          "required": false
+        },
+        {
+          "name": "showPreferences",
+          "type": "checkbox",
+          "label": "Show \"Preferences...\" Item",
+          "description": "Whether to show a \"Preferences...\" item in the menu dropdown. This is a useful shortcut for opening the extension preferences window, but you might prefer a more streamlined menu.",
+          "default": true,
+          "required": false
+        },
+        {
           "name": "showInapplicablePins",
           "type": "checkbox",
           "label": "Show Inapplicable Pins",
@@ -123,6 +139,14 @@
           "required": false
         },
         {
+          "name": "showCreationDate",
+          "type": "checkbox",
+          "label": "Show Creation Date",
+          "description": "Whether to show the creation date of each pin.",
+          "default": true,
+          "required": false
+        },
+        {
           "name": "showExpiration",
           "type": "checkbox",
           "label": "Show Expiration Date",
@@ -143,6 +167,22 @@
           "type": "checkbox",
           "label": "Show Text Fragment Icon",
           "description": "Whether to show the icon for text fragment pins",
+          "default": true,
+          "required": false
+        },
+        {
+          "name": "showFrequency",
+          "type": "checkbox",
+          "label": "Show Frequency",
+          "description": "Whether to show the number of times each pin has been opened",
+          "default": true,
+          "required": false
+        },
+        {
+          "name": "showLastOpened",
+          "type": "checkbox",
+          "label": "Show Last Opened",
+          "description": "Whether to an indicator on the most recently opened pin",
           "default": true,
           "required": false
         }
@@ -198,6 +238,36 @@
         {
           "title": "Groups First",
           "value": "groups"
+        }
+      ]
+    },
+    {
+      "name": "defaultSortStrategy",
+      "type": "dropdown",
+      "title": "Default Sort Method",
+      "description": "Specifies the default sort method for pins outside of groups.",
+      "default": "manual",
+      "required": false,
+      "data": [
+        {
+          "title": "Manual",
+          "value": "manual"
+        },
+        {
+          "title": "Alphabetical",
+          "value": "alphabetical"
+        },
+        {
+          "title": "Most Recently Opened",
+          "value": "recency"
+        },
+        {
+          "title": "Most Frequently Opened",
+          "value": "frequency"
+        },
+        {
+          "title": "Date Created",
+          "value": "dateCreated"
         }
       ]
     },

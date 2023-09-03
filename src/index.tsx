@@ -9,16 +9,20 @@ import {
   launchCommand,
   LaunchType,
 } from "@raycast/api";
-import { setStorage, getStorage, iconMap, copyPinData, ExtensionPreferences, getIcon } from "./lib/utils";
-import { StorageKey } from "./lib/constants";
+import { setStorage, getStorage, copyPinData, ExtensionPreferences } from "./lib/utils";
+import { KEYBOARD_SHORTCUT, StorageKey } from "./lib/constants";
 import { SupportedBrowsers } from "./lib/browser-utils";
 import * as fs from "fs";
 import { useLocalData } from "./lib/LocalData";
-import { createNewGroup, useGroups } from "./lib/Groups";
-import { Pin, createNewPin, deletePin, openPin, usePins } from "./lib/Pins";
+import { Group, createNewGroup, useGroups } from "./lib/Groups";
+import { Pin, createNewPin, sortPins, usePins } from "./lib/Pins";
 import { useCachedState } from "@raycast/utils";
 import * as os from "os";
 import { Placeholders } from "./lib/placeholders";
+import { getGroupIcon } from "./lib/icons";
+import RecentApplicationsList from "./components/RecentApplicationsList";
+import OpenAllMenuItem from "./components/OpenAllMenuItem";
+import PinMenuItem from "./components/PinMenuItem";
 
 /**
  * Preferences for the menu bar extra.
@@ -40,9 +44,19 @@ interface CommandPreferences {
   showCreateNewPin: boolean;
 
   /**
+   * Whether to show the "Copy Pin Data" button.
+   */
+  showCopyPinData: boolean;
+
+  /**
    * Whether to show the "Quick Pins" section.
    */
   showPinShortcut: boolean;
+
+  /**
+   * Whether to show the "Preferences..." button.
+   */
+  showPreferences: boolean;
 
   /**
    * Whether to display pins that are not applicable to the current context. For example, if this is disabled, pins requiring selected text will not be shown if no text is selected.
@@ -109,142 +123,79 @@ export default function Command() {
       });
   }, []);
 
-  // If there are pins to display, then display them
-  const pinsToShow = preferences.showInapplicablePins
-    ? pins
-    : pins.filter((pin) => irrelevantPins.find((p) => p.id == pin.id) == undefined);
-  const usedGroups = groups
-    ?.filter((group) => {
-      return pinsToShow.some((pin) => pin.group == group.name);
-    })
-    .reduce(
-      (obj: { [index: string]: Pin[] }, group) => {
-        obj[group.name] = pinsToShow.filter((pin) => pin.group == group.name);
-        return obj;
-      },
-      { None: pinsToShow.filter((pin) => pin.group == "None") }
-    );
-
-  if (preferences.showRecentApplications && localData.recentApplications.length > 1) {
-    let pseudoPinID = Math.max(...pins.map((pin) => pin.id));
-    usedGroups["Recent Applications"] = localData.recentApplications.slice(1).map((app) => {
-      pseudoPinID++;
-      return {
-        id: pseudoPinID,
-        name: app.name,
-        url: app.path,
-        icon: app.path,
-        group: "Recent Applications",
-        application: "None",
-        date: undefined,
-        execInBackground: false,
-      };
-    });
-  }
-
-  const pinGroups = Object.values(usedGroups).reduce((obj: { [index: string]: Pin[] }, pins) => {
-    pins.forEach((pin) => {
-      if (pin.group in obj) {
-        obj[pin.group].push(pin);
-      } else {
-        obj[pin.group] = [pin];
-      }
-    });
-    return obj;
-  }, {});
-
-  // Remove the "None" group since it is redundant at this point
-  if ("None" in usedGroups) {
-    delete usedGroups["None"];
-  }
-
   const selectedFiles = localData.selectedFiles.filter(
     (file) =>
       file.path && ((fs.existsSync(file.path) && fs.statSync(file.path).isFile()) || file.path.endsWith(".app/"))
   );
 
+  const allPins = sortPins(
+    pins.filter((p) => preferences.showInapplicablePins || !irrelevantPins.find((pin) => pin.id == p.id)),
+    groups
+  );
+
+  /**
+   * Recursively generates the subsections and subgroups of a group.
+   * @param group The group to generate subsections for.
+   * @param groups The list of all groups.
+   * @returns A submenu containing the group's subsections and pins.
+   */
+  const getSubsections = (group: Group, groups: Group[]) => {
+    const children = groups.filter((g) => g.parent == group.id);
+    return (
+      <MenuBarExtra.Submenu
+        title={
+          group.name +
+          (!preferences.showInapplicablePins &&
+          allPins.filter((p) => p.group == group.name).some((pin) => relevantPins.find((p) => p.id == pin.id))
+            ? "  ✧"
+            : "")
+        }
+        key={group.id}
+        icon={getGroupIcon(group)}
+      >
+        {[
+          children.length > 0 ? children.map((g) => getSubsections(g, groups)) : null,
+          allPins
+            .filter((pin) => pin.group == group.name)
+            .map((pin) => (
+              <PinMenuItem
+                pin={pin}
+                relevant={relevantPins.find((p) => p.id == pin.id) != undefined && !preferences.showInapplicablePins}
+                preferences={preferences}
+                localData={localData}
+                setPins={setPins}
+                key={pin.id}
+              />
+            )),
+        ].sort(() => (preferences.topSection == "pins" ? -1 : 1))}
+        <OpenAllMenuItem pins={allPins.filter((p) => p.group == group.name)} submenuName={group.name} />
+      </MenuBarExtra.Submenu>
+    );
+  };
+
   // Display the menu
   return (
     <MenuBarExtra icon={pinIcon} isLoading={loadingPins || loadingGroups || loadingLocalData}>
-      {pins.length == 0 ? <MenuBarExtra.Item title="No pins yet!" /> : null}
+      {allPins.length == 0 ? <MenuBarExtra.Item title="No pins yet!" /> : null}
       {[
-        "None" in pinGroups ? (
-          <MenuBarExtra.Section title={preferences.showCategories ? "Pins" : undefined} key="pins">
-            {"None" in pinGroups
-              ? pinGroups["None"].map((pin: Pin) => (
-                  <MenuBarExtra.Item
-                    key={pin.id}
-                    icon={
-                      pin.icon in iconMap || pin.icon == "None" || pin.icon.startsWith("/")
-                        ? getIcon(pin.icon)
-                        : getIcon(pin.url)
-                    }
-                    title={pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url)}
-                    subtitle={
-                      !preferences.showInapplicablePins && relevantPins.find((p) => p.id == pin.id) ? "  ✧" : ""
-                    }
-                    onAction={async (event) => {
-                      if (event.type == "left-click") {
-                        await openPin(pin, preferences, localData);
-                      } else {
-                        await deletePin(pin, setPins);
-                      }
-                    }}
-                  />
-                ))
-              : null}
-          </MenuBarExtra.Section>
-        ) : null,
-        groups?.length && Object.keys(usedGroups).length ? (
-          <MenuBarExtra.Section title={preferences.showCategories ? "Groups" : undefined} key="groups">
-            {Object.keys(usedGroups).map((key) => (
-              <MenuBarExtra.Submenu
-                title={
-                  key +
-                  (!preferences.showInapplicablePins &&
-                  usedGroups[key].some((pin) => relevantPins.find((p) => p.id == pin.id))
-                    ? "  ✧"
-                    : "")
-                }
-                key={key}
-                icon={
-                  key == "Recent Applications"
-                    ? Icon.Clock
-                    : getIcon(groups.find((group) => group.name == key)?.icon || "")
-                }
-              >
-                {usedGroups[key].map((pin) => (
-                  <MenuBarExtra.Item
-                    key={pin.id}
-                    icon={
-                      pin.icon in iconMap || pin.icon == "None" || pin.icon.startsWith("/")
-                        ? getIcon(pin.icon)
-                        : getIcon(pin.url)
-                    }
-                    title={pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url)}
-                    subtitle={
-                      !preferences.showInapplicablePins && relevantPins.find((p) => p.id == pin.id) ? "  ✧" : ""
-                    }
-                    onAction={async (event) => {
-                      if (event.type == "left-click" || key == "Recent Applications") {
-                        await openPin(pin, preferences, localData);
-                      } else {
-                        await deletePin(pin, setPins);
-                      }
-                    }}
-                  />
-                ))}
-
-                <MenuBarExtra.Section>
-                  {preferences.showOpenAll ? (
-                    <MenuBarExtra.Item
-                      title="Open All"
-                      onAction={() => usedGroups[key].forEach((pin: Pin) => openPin(pin, preferences, localData))}
-                    />
-                  ) : null}
-                </MenuBarExtra.Section>
-              </MenuBarExtra.Submenu>
+        <MenuBarExtra.Section title={preferences.showCategories ? "Pins" : undefined} key="pins">
+          {allPins
+            .filter((p) => p.group == "None")
+            .map((pin: Pin) => (
+              <PinMenuItem
+                pin={pin}
+                relevant={relevantPins.find((p) => p.id == pin.id) != undefined && !preferences.showInapplicablePins}
+                preferences={preferences}
+                localData={localData}
+                setPins={setPins}
+                key={pin.id}
+              />
             ))}
+        </MenuBarExtra.Section>,
+        groups?.length ? (
+          <MenuBarExtra.Section title={preferences.showCategories ? "Groups" : undefined} key="groups">
+            {groups.filter((g) => g.parent == undefined).map((group) => getSubsections(group, groups))}
+            <RecentApplicationsList />
           </MenuBarExtra.Section>
         ) : null,
       ].sort(() => (preferences.topSection == "pins" ? 1 : -1))}
@@ -258,6 +209,7 @@ export default function Command() {
               title={`Pin This App (${localData.currentApplication.name.substring(0, 20)})`}
               icon={{ fileIcon: localData.currentApplication.path }}
               tooltip="Add a pin whose target path is the path of the current app"
+              shortcut={KEYBOARD_SHORTCUT.PIN_CURRENT_APP}
               onAction={async () => {
                 await createNewPin(
                   localData.currentApplication.name,
@@ -267,18 +219,20 @@ export default function Command() {
                   "None",
                   undefined,
                   undefined,
-                  false
+                  false,
+                  undefined
                 );
               }}
             />
           ) : null}
-          {localData.selectedText.length > 0 ? (
+          {localData.selectedText.trim().length > 0 ? (
             <MenuBarExtra.Item
               title={`Pin Selected Text (${localData.selectedText.substring(0, 20).trim()}${
                 localData.selectedText.length > 20 ? "..." : ""
               })`}
-              icon={ Icon.Text }
+              icon={Icon.Text}
               tooltip="Pin the currently selected text as a text fragment"
+              shortcut={KEYBOARD_SHORTCUT.PIN_SELECTED_TEXT}
               onAction={async () => {
                 await createNewPin(
                   localData.selectedText.substring(0, 50).trim(),
@@ -288,7 +242,8 @@ export default function Command() {
                   "None",
                   undefined,
                   undefined,
-                  true
+                  true,
+                  undefined
                 );
               }}
             />
@@ -300,6 +255,7 @@ export default function Command() {
               })`}
               icon={Icon.AppWindow}
               tooltip="Add a pin whose target URL is the URL of the current browser tab"
+              shortcut={KEYBOARD_SHORTCUT.PIN_CURRENT_TAB}
               onAction={async () => {
                 await createNewPin(
                   localData.currentTab.name,
@@ -309,7 +265,8 @@ export default function Command() {
                   localData.currentApplication.name,
                   undefined,
                   undefined,
-                  false
+                  false,
+                  undefined
                 );
               }}
             />
@@ -319,6 +276,7 @@ export default function Command() {
               title={`Pin All Tabs (${localData.tabs.length})`}
               icon={Icon.AppWindowGrid3x3}
               tooltip="Create a new pin for each tab in the current browser window, pinned to a new group"
+              shortcut={KEYBOARD_SHORTCUT.PIN_ALL_TABS}
               onAction={async () => {
                 let newGroupName = "New Tab Group";
                 let iter = 2;
@@ -339,7 +297,8 @@ export default function Command() {
                     localData.currentApplication.name,
                     undefined,
                     undefined,
-                    false
+                    false,
+                    undefined
                   );
                 }
               }}
@@ -356,6 +315,7 @@ export default function Command() {
               }`}
               icon={{ fileIcon: selectedFiles[0].path }}
               tooltip="Create a pin for each selected file, pinned to a new group"
+              shortcut={KEYBOARD_SHORTCUT.PIN_SELECTED_FILES}
               onAction={async () => {
                 if (selectedFiles.length == 1) {
                   await createNewPin(
@@ -366,7 +326,8 @@ export default function Command() {
                     "None",
                     undefined,
                     undefined,
-                    false
+                    false,
+                    undefined
                   );
                 } else {
                   let newGroupName = "New File Group";
@@ -388,7 +349,8 @@ export default function Command() {
                       "None",
                       undefined,
                       undefined,
-                      false
+                      false,
+                      undefined
                     );
                   }
                 }
@@ -402,6 +364,7 @@ export default function Command() {
               })`}
               icon={{ fileIcon: localData.currentDirectory.path }}
               tooltip="Create a pin whose target path is the current directory of Finder"
+              shortcut={KEYBOARD_SHORTCUT.PIN_CURRENT_DIRECTORY}
               onAction={async () => {
                 await createNewPin(
                   localData.currentDirectory.name,
@@ -411,7 +374,8 @@ export default function Command() {
                   "None",
                   undefined,
                   undefined,
-                  false
+                  false,
+                  undefined
                 );
               }}
             />
@@ -431,7 +395,8 @@ export default function Command() {
                 localData.currentDocument.name.length > 20 ? "..." : ""
               })`}
               icon={{ fileIcon: localData.currentApplication.path }}
-              tooltip="Create a pin whose target path is the current directory of Finder"
+              tooltip="Create a pin whose target path is the document currently open in the frontmost application"
+              shortcut={KEYBOARD_SHORTCUT.PIN_CURRENT_DOCUMENT}
               onAction={async () => {
                 await createNewPin(
                   localData.currentDocument.name,
@@ -441,7 +406,8 @@ export default function Command() {
                   "None",
                   undefined,
                   undefined,
-                  false
+                  false,
+                  undefined
                 );
               }}
             />
@@ -457,6 +423,7 @@ export default function Command() {
               }`}
               icon={{ fileIcon: localData.currentApplication.path }}
               tooltip="Create a pin for each selected note, pinned to a new group"
+              shortcut={KEYBOARD_SHORTCUT.PIN_SELECTED_NOTES}
               onAction={async () => {
                 if (localData.selectedNotes.length == 1) {
                   const cmd = `osascript -e 'Application("Notes").notes.byId("${localData.selectedNotes[0].id}").show()' -l "JavaScript"`;
@@ -468,7 +435,8 @@ export default function Command() {
                     "None",
                     undefined,
                     true,
-                    false
+                    false,
+                    undefined
                   );
                 } else {
                   let newGroupName = "New Note Group";
@@ -488,7 +456,8 @@ export default function Command() {
                       "None",
                       undefined,
                       true,
-                      false
+                      false,
+                      undefined
                     );
                   }
                 }
@@ -497,20 +466,23 @@ export default function Command() {
           ) : null}
         </MenuBarExtra.Section>
       ) : null}
+      
       <MenuBarExtra.Section>
         {preferences.showCreateNewPin ? (
           <MenuBarExtra.Item
             title="Create New Pin..."
             icon={Icon.PlusSquare}
             tooltip="Create a new pin"
+            shortcut={KEYBOARD_SHORTCUT.CREATE_NEW_PIN}
             onAction={() => launchCommand({ name: "new-pin", type: LaunchType.UserInitiated })}
           />
         ) : null}
-        {pins.length > 0 ? (
+        {pins.length > 0 && preferences.showCopyPinData ? (
           <MenuBarExtra.Item
             title="Copy Pin Data"
             icon={Icon.CopyClipboard}
             tooltip="Copy the JSON data for all of your pins"
+            shortcut={KEYBOARD_SHORTCUT.COPY_PINS_JSON}
             onAction={async () => {
               const data = await copyPinData();
               const text = await Clipboard.readText();
@@ -522,7 +494,14 @@ export default function Command() {
             }}
           />
         ) : null}
-        <MenuBarExtra.Item title="Preferences..." icon={Icon.Gear} onAction={() => openExtensionPreferences()} />
+        {preferences.showPreferences ? (
+          <MenuBarExtra.Item
+            title="Preferences..."
+            icon={Icon.Gear}
+            shortcut={KEYBOARD_SHORTCUT.OPEN_PREFERENCES}
+            onAction={() => openExtensionPreferences()}
+          />
+        ) : null}
       </MenuBarExtra.Section>
     </MenuBarExtra>
   );

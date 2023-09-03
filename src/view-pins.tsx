@@ -5,18 +5,35 @@ import {
   Action,
   ActionPanel,
   getPreferenceValues,
-  open,
   LocalStorage,
   showToast,
   environment,
 } from "@raycast/api";
-import { iconMap, setStorage, getStorage, ExtensionPreferences, installExamples, PinForm } from "./lib/utils";
+import { setStorage, getStorage, ExtensionPreferences, installExamples, PinForm } from "./lib/utils";
 import { StorageKey } from "./lib/constants";
-import { getFavicon } from "@raycast/utils";
-import { Pin, checkExpirations, deletePin, openPin, usePins } from "./lib/Pins";
+import {
+  Pin,
+  checkExpirations,
+  deletePin,
+  getLastOpenedPin,
+  getPinKeywords,
+  openPin,
+  sortPins,
+  usePins,
+} from "./lib/Pins";
 import { Group, useGroups } from "./lib/Groups";
-import { useRecentApplications } from "./lib/LocalData";
 import path from "path";
+import {
+  addApplicationAccessory,
+  addCreationDateAccessory,
+  addExecutionVisibilityAccessory,
+  addExpirationDateAccessory,
+  addFrequencyAccessory,
+  addLastOpenedAccessory,
+  addTextFragmentAccessory,
+} from "./lib/accessories";
+import { getPinIcon } from "./lib/icons";
+import RecentApplicationsList from "./components/RecentApplicationsList";
 
 /**
  * Move a pin up in the list. If the pin is in a group, it will be moved up within the group. Otherwise, it will be moved up in the overall list of pins.
@@ -96,11 +113,7 @@ const CreateNewPinAction = (props: { setPins: React.Dispatch<React.SetStateActio
       title="Create New Pin"
       icon={Icon.PlusCircle}
       shortcut={{ modifiers: ["cmd"], key: "n" }}
-      target={
-        <PinForm
-          setPins={setPins}
-        />
-      }
+      target={<PinForm setPins={setPins} />}
     />
   );
 };
@@ -169,6 +182,11 @@ interface CommandPreferences {
   showApplication: boolean;
 
   /**
+   * Whether to display a the initial creation date of each pin.
+   */
+  showCreationDate: boolean;
+
+  /**
    * Whether to display the expiration date for pins that have one.
    */
   showExpiration: boolean;
@@ -176,18 +194,27 @@ interface CommandPreferences {
   /**
    * Whether to display the execution visibility for Terminal command pins.
    */
-  showExecutionVisibility: boolean
+  showExecutionVisibility: boolean;
 
   /**
    * Whether to display an icon accessory for text fragments.
    */
   showFragment: boolean;
+
+  /**
+   * Whether to display the number of times a pin has been opened.
+   */
+  showFrequency: boolean;
+
+  /**
+   * Whether to display an indicator for the most recently opened pin.
+   */
+  showLastOpened: boolean;
 }
 
 export default function Command() {
   const { pins, setPins, loadingPins, revalidatePins } = usePins();
   const { groups, loadingGroups, revalidateGroups } = useGroups();
-  const { recentApplications, loadingRecentApplications } = useRecentApplications();
   const [examplesInstalled, setExamplesInstalled] = useState<LocalStorage.Value | undefined>(true);
   const preferences = getPreferenceValues<ExtensionPreferences & CommandPreferences>();
 
@@ -198,130 +225,111 @@ export default function Command() {
     Promise.resolve(checkExpirations());
   }, []);
 
+  const mostRecentPin = getLastOpenedPin(pins);
+  const maxTimesOpened = Math.max(...pins.map((pin) => pin.timesOpened || 0));
+
+  /**
+   * Gets the list of pins as a list of ListItems.
+   * @param pins The list of pins.
+   * @returns A list of ListItems.
+   */
   const getPinListItems = (pins: Pin[]) => {
-    return pins.map((pin, index) => {
+    return sortPins(pins, groups).map((pin, index) => {
       // Add accessories based on the user's preferences
       const accessories: List.Item.Accessory[] = [];
-      if (preferences.showExpiration && pin.expireDate) {
-        // Expiration date accessory
-        const expirationDate = new Date(pin.expireDate);
-        const dateString = expirationDate.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "numeric", hour12: true });
-        accessories.push({ date: expirationDate, tooltip: `Expires On ${dateString}` });
-      }
-      if (preferences.showApplication && pin.application != "None" && pin.application != undefined) {
-        // Application accessory
-        accessories.push({ icon: { fileIcon: pin.application }, tooltip: `Opens With ${path.basename(pin.application, ".app")}` });
-      } else if (preferences.showApplication && !pin.fragment && !pin.url?.startsWith("/") && !pin.url?.startsWith("~") && !pin.url?.match(/^[a-zA-Z0-9]*?:.*/g)) {
-        // Terminal command accessory
-        accessories.push({ icon: Icon.Terminal, tooltip: "Runs Terminal Command" });
-      }
-      if (preferences.showExecutionVisibility && !pin.fragment && !pin.url?.startsWith("/") && !pin.url?.startsWith("~") && !pin.url?.match(/^[a-zA-Z0-9]*?:.*/g)) {
-        // Execution visibility accessory
-        accessories.push({ icon: pin.execInBackground ? Icon.EyeDisabled : Icon.Eye, tooltip: pin.execInBackground ? "Executes in Background" : "Executes In New Terminal Tab" });
-      }
-      if (preferences.showFragment && pin.fragment) {
-        // Text fragment accessory
-        accessories.push({ icon: Icon.Text, tooltip: "Text Fragment" });
-      }
+      if (preferences.showFrequency) addFrequencyAccessory(pin, accessories, maxTimesOpened);
+      if (preferences.showLastOpened) addLastOpenedAccessory(pin, accessories, mostRecentPin?.id);
+      if (preferences.showCreationDate) addCreationDateAccessory(pin, accessories);
+      if (preferences.showExpiration) addExpirationDateAccessory(pin, accessories);
+      if (preferences.showApplication) addApplicationAccessory(pin, accessories);
+      if (preferences.showExecutionVisibility) addExecutionVisibilityAccessory(pin, accessories);
+      if (preferences.showFragment) addTextFragmentAccessory(pin, accessories);
+
+      const group = groups.find((group) => group.name == pin.group);
 
       return (
-      <List.Item
-        title={pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url)}
-        subtitle={preferences.showSubtitles ? pin.url.substring(0, 30) + (pin.url.length > 30 ? "..." : "") : undefined}
-        keywords={[
-          ...(pin.group == "None" ? "Other" : pin.group.split(" ")),
-          ...pin.url
-            .replaceAll(/([ /:.'"-])(.+?)(?=\b|[ /:.'"-])/gs, " $1 $1$2 $2")
-            .split(" ")
-            .filter((term) => term.trim().length > 0),
-        ]}
-        key={pin.id}
-        icon={
-          pin.icon in iconMap
-            ? iconMap[pin.icon]
-            : pin.icon == "None"
-            ? Icon.Minus
-            : pin.url.startsWith("/") || pin.url.startsWith("~")
-            ? { fileIcon: pin.url }
-            : pin.url.match(/^[a-zA-Z0-9]*?:.*/g)
-            ? getFavicon(pin.url)
-            : pin.icon.startsWith("/")
-            ? { fileIcon: pin.icon }
-            : Icon.Terminal
-        }
-        accessories={accessories}
-        actions={
-          <ActionPanel>
-            <ActionPanel.Section title="Pin Actions">
-              <Action title="Open" icon={Icon.ChevronRight} onAction={() => openPin(pin, preferences)} />
+        <List.Item
+          title={pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url)}
+          subtitle={
+            preferences.showSubtitles ? pin.url.substring(0, 30) + (pin.url.length > 30 ? "..." : "") : undefined
+          }
+          keywords={getPinKeywords(pin)}
+          key={pin.id}
+          icon={getPinIcon(pin)}
+          accessories={accessories}
+          actions={
+            <ActionPanel>
+              <ActionPanel.Section title="Pin Actions">
+                <Action title="Open" icon={Icon.ChevronRight} onAction={() => openPin(pin, preferences)} />
 
-              <Action.CopyToClipboard
-                title="Copy Pin Name"
-                content={pin.name}
-                shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
-              />
+                <Action.CopyToClipboard
+                  title="Copy Pin Name"
+                  content={pin.name}
+                  shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
+                />
 
-              <Action.CopyToClipboard
-                title="Copy Pin URL"
-                content={pin.url}
-                shortcut={{ modifiers: ["cmd", "shift"], key: "u" }}
-              />
-
-              <Action.Push
-                title="Edit"
-                icon={Icon.Pencil}
-                shortcut={{ modifiers: ["cmd"], key: "e" }}
-                target={<PinForm pin={pin} setPins={setPins} />}
-              />
-              <Action.Push
-                title="Duplicate"
-                icon={Icon.EyeDropper}
-                shortcut={{ modifiers: ["cmd", "ctrl"], key: "d" }}
-                target={<PinForm pin={{ ...pin, name: pin.name + " Copy", id: -1 }} setPins={setPins} />}
-              />
-
-              {index > 0 ? (
-                <Action
-                  title="Move Up"
-                  icon={Icon.ArrowUp}
+                <Action.CopyToClipboard
+                  title="Copy Pin URL"
+                  content={pin.url}
                   shortcut={{ modifiers: ["cmd", "shift"], key: "u" }}
-                  onAction={async () => {
-                    await movePinUp(index, setPins);
-                  }}
                 />
-              ) : null}
-              {index < pins.length - 1 ? (
-                <Action
-                  title="Move Down"
-                  icon={Icon.ArrowDown}
-                  shortcut={{ modifiers: ["cmd", "shift"], key: "d" }}
-                  onAction={async () => {
-                    await movePinDown(index, setPins);
-                  }}
-                />
-              ) : null}
 
-              <Action
-                title="Delete Pin"
-                icon={Icon.Trash}
-                onAction={async () => {
-                  await deletePin(pin, setPins);
-                }}
-                shortcut={{ modifiers: ["cmd"], key: "d" }}
-                style={Action.Style.Destructive}
-              />
-            </ActionPanel.Section>
-            <CreateNewPinAction setPins={setPins} />
-            <PlaceholdersGuideAction />
-          </ActionPanel>
-        }
-      />
-    )});
+                <Action.Push
+                  title="Edit"
+                  icon={Icon.Pencil}
+                  shortcut={{ modifiers: ["cmd"], key: "e" }}
+                  target={<PinForm pin={pin} setPins={setPins} />}
+                />
+                <Action.Push
+                  title="Duplicate"
+                  icon={Icon.EyeDropper}
+                  shortcut={{ modifiers: ["cmd", "ctrl"], key: "d" }}
+                  target={<PinForm pin={{ ...pin, name: pin.name + " Copy", id: -1 }} setPins={setPins} />}
+                />
+
+                {(index > 0 && !group?.sortStrategy) || group?.sortStrategy == "manual" ? (
+                  <Action
+                    title="Move Up"
+                    icon={Icon.ArrowUp}
+                    shortcut={{ modifiers: ["cmd", "shift"], key: "u" }}
+                    onAction={async () => {
+                      await movePinUp(index, setPins);
+                    }}
+                  />
+                ) : null}
+                {(index < pins.length - 1 && !group?.sortStrategy) || group?.sortStrategy == "manual" ? (
+                  <Action
+                    title="Move Down"
+                    icon={Icon.ArrowDown}
+                    shortcut={{ modifiers: ["cmd", "shift"], key: "d" }}
+                    onAction={async () => {
+                      await movePinDown(index, setPins);
+                    }}
+                  />
+                ) : null}
+
+                <Action
+                  title="Delete Pin"
+                  icon={Icon.Trash}
+                  onAction={async () => {
+                    await deletePin(pin, setPins);
+                  }}
+                  shortcut={{ modifiers: ["cmd"], key: "d" }}
+                  style={Action.Style.Destructive}
+                />
+              </ActionPanel.Section>
+              <CreateNewPinAction setPins={setPins} />
+              <PlaceholdersGuideAction />
+            </ActionPanel>
+          }
+        />
+      );
+    });
   };
 
   return (
     <List
-      isLoading={loadingPins || loadingGroups || loadingRecentApplications}
+      isLoading={loadingPins || loadingGroups}
       searchBarPlaceholder="Search pins..."
       filtering={{ keepSectionOrder: true }}
       actions={
@@ -349,33 +357,21 @@ export default function Command() {
             </List.Section>
           ))
         : getPinListItems(pins)}
-      {preferences.showRecentApplications && recentApplications.length > 1 ? (
-        <List.Section title="Recent Applications">
-          {recentApplications.slice(1).map((app) => (
-            <List.Item
-              title={app.name}
-              subtitle="Recent Applications"
-              key={app.name}
-              icon={{ fileIcon: app.path }}
-              actions={
-                <ActionPanel>
-                  <ActionPanel.Section title="Pin Actions">
-                    <Action title="Open" icon={Icon.ChevronRight} onAction={() => open(app.path)} />
-                  </ActionPanel.Section>
-                  <CreateNewPinAction setPins={setPins} />
-                  {!examplesInstalled && pins.length == 0 ? (
-                    <InstallExamplesAction
-                      setExamplesInstalled={setExamplesInstalled}
-                      revalidatePins={revalidatePins}
-                      revalidateGroups={revalidateGroups}
-                    />
-                  ) : null}
-                </ActionPanel>
-              }
-            />
-          ))}
-        </List.Section>
-      ) : null}
+
+      <RecentApplicationsList
+        pinActions={
+            <>
+            <CreateNewPinAction setPins={setPins} />
+            {!examplesInstalled && pins.length == 0 ? (
+              <InstallExamplesAction
+                setExamplesInstalled={setExamplesInstalled}
+                revalidatePins={revalidatePins}
+                revalidateGroups={revalidateGroups}
+              />
+            ) : null}
+          </>
+        }
+      />
     </List>
   );
 }

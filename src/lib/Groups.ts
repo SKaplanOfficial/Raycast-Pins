@@ -5,6 +5,8 @@ import { StorageKey } from "./constants";
 import { showToast } from "@raycast/api";
 import { Pin } from "./Pins";
 
+export type SortStrategy = "manual" | "alphabetical" | "frequency" | "recency" | "dateCreated";
+
 export type Group = {
   /**
    * The name of the group.
@@ -20,6 +22,17 @@ export type Group = {
    * The unique ID of the group.
    */
   id: number;
+
+  /**
+   * The ID of the parent group.
+   */
+  parent?: number;
+
+
+  /**
+   * The method used to sort the group's pins.
+   */
+  sortStrategy?: SortStrategy;
 };
 
 /**
@@ -53,7 +66,7 @@ export const useGroups = () => {
  * @param name The name of the group.
  * @param icon The icon for the group.
  */
-export const createNewGroup = async (name: string, icon: string) => {
+export const createNewGroup = async (name: string, icon: string, parent?: number, sortStrategy?: SortStrategy) => {
   // Get the stored groups
   const storedGroups = await getStorage(StorageKey.LOCAL_GROUPS);
 
@@ -70,6 +83,8 @@ export const createNewGroup = async (name: string, icon: string) => {
     name: name,
     icon: icon,
     id: newID,
+    parent: parent,
+    sortStrategy: sortStrategy,
   });
 
   // Update the stored groups
@@ -81,7 +96,9 @@ export const modifyGroup = async (
   name: string,
   icon: string,
   pop: () => void,
-  setGroups: (groups: Group[]) => void
+  setGroups: (groups: Group[]) => void,
+  parent?: number,
+  sortStrategy?: SortStrategy
 ) => {
   const storedGroups = await getStorage(StorageKey.LOCAL_GROUPS);
 
@@ -92,6 +109,8 @@ export const modifyGroup = async (
         name: name,
         icon: icon,
         id: group.id,
+        parent: parent,
+        sortStrategy: sortStrategy,
       };
     } else {
       return oldGroup;
@@ -110,6 +129,8 @@ export const modifyGroup = async (
       name: name,
       icon: icon,
       id: group.id,
+      parent: parent,
+      sortStrategy: sortStrategy,
     });
   }
 
@@ -141,10 +162,19 @@ export const modifyGroup = async (
  * @param setGroups The function to update the active list of groups.
  */
 export const deleteGroup = async (group: Group, setGroups: (groups: Group[]) => void) => {
-  const storedGroups = await getStorage(StorageKey.LOCAL_GROUPS);
+  const storedGroups: Group[] = await getStorage(StorageKey.LOCAL_GROUPS);
 
   const filteredGroups = storedGroups.filter((oldGroup: Group) => {
     return oldGroup.id != group.id;
+  }).map((g) => {
+    if (g.parent == group.id) {
+      if (group.parent != undefined) {
+        g.parent = group.parent;
+      } else {
+        g.parent = undefined;
+      }
+    }
+    return g;
   });
 
   const isDuplicate =
@@ -155,16 +185,13 @@ export const deleteGroup = async (group: Group, setGroups: (groups: Group[]) => 
   const storedPins = await getStorage(StorageKey.LOCAL_PINS);
   const updatedPins = storedPins.map((pin: Pin) => {
     if (pin.group == group.name && !isDuplicate) {
-      return {
-        name: pin.name,
-        url: pin.url,
-        icon: pin.icon,
-        group: "None",
-        id: pin.id,
-      };
-    } else {
-      return pin;
+      if (group.parent != undefined) {
+        pin.group = storedGroups.filter((g) => g.id == group.parent)[0].name;
+      } else {
+        pin.group = "None";
+      }
     }
+    return pin;
   });
 
   setGroups(filteredGroups);
