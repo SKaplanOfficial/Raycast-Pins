@@ -18,7 +18,7 @@ All placeholders are evaluated at runtime — when you open/execute a pin — an
 
 ### Why would I use placeholders?
 
-Placeholders allow pins to be more dynamic and context-aware. You can use placeholders to pin common *workflows* rather than static items. For example, you can create a pin that saves the current webpage to a specific folder in Finder, or a pin that uploads selected text to GitHub Gist.
+Placeholders allow pins to be more dynamic and context-aware. You can use placeholders to pin common _workflows_ rather than static items. For example, you can create a pin that saves the current webpage to a specific folder in Finder, or a pin that uploads selected text to GitHub Gist.
 
 ------------------------
 
@@ -26,12 +26,9 @@ Placeholders allow pins to be more dynamic and context-aware. You can use placeh
 
 | Placeholder | Replaced With |
 | ----- | ----- |
-| `{{set [name]:...}}` | Sets the value of the persistent variable with the specified name, e.g. `{{set myVar:Hello World}}`. |
-| `{{reset [name]}}` | Resets the value of the persistent variable with the specified name to its initial value. |
-| `{{get [name]}}` | Gets the value of the persistent variable with the specified name. |
-| `{{delete [name]}}` | Deletes the persistent variable with the specified name. |
-| `{{ignore:...}}` or <br /> `{{IGNORE:...}}` | Ignores all content contained within. Useful for running placeholders without inserting their return value. |
-| `{{input}}` | The text entered by the user in an input dialog. You can specify a prompt using `{{input prompt="..."}}`. |
+| `{{AI:...}}` or <br /> `{{AI:...}}` or <br /> `{{askAI:...}}` | The response to a Raycast AI query. Requires Raycast Pro. You can specify the model and creativity using `{{AI model="..." creativity=[decimal]}}`. The default model is `gpt-3.5-turbo` and the default creativity is `1.0`. The model must be either `gpt-3.5-turbo` or `text-davinci-003`. Creativity must be between `0.0` and `1.0`. |
+| `{{alert:...}}` | Displays an alert with the specified text. Specify an optional message and timeout using `{{alert timeout=[number]:Title,Message}}`. The default timeout is 10 seconds. |
+| `{{dialog:...}}` | Displays a dialog with the specified text. Specify an optional title and timeout using `{{dialog timeout=[number]:Message,Title}}`. The default timeout is 30 seconds. You can accept input by providing `input=true` before the timeout, e.g. `{{dialog input=true timeout=5:Enter a number}}`. |
 | `{{as:...}}` or <br /> `{{AS:..}}` | The return value of an AppleScript script. |
 | `{{clipboardText}}` or <br /> `{{clipboard}}` | The current text content of the clipboard. |
 | `{{copy:...}}` | Copies the specified text to the clipboard. |
@@ -42,23 +39,32 @@ Placeholders allow pins to be more dynamic and context-aware. You can use placeh
 | `{{currentURL}}` | The URL of the active tab of the frontmost browser window. |
 | `{{date}}` or <br /> `{{currentDate}}` | The current date. Use `{{date format="..."}}` to specify a custom date format. Defaults to `MMMM d, yyyy`. |
 | `{{day}}` or <br /> `{{dayName}}` or <br /> `{{currentDay}}` or <br /> `{{currentDayName}}` | The current weekday, e.g. "Monday". Defaults to en-US locale. Use format `{{day locale="xx-XX"}}` to specify a different locale. |
+| `{{delete [name]}}` | Deletes the persistent variable with the specified name. |
 | `{{file:...}}` | The text content of a path at the specified path. The path can be absolute or relative to the user's home directory using `~/`. |
+| `{{get [name]}}` | Gets the value of the persistent variable with the specified name. |
 | `{{homedir}}` or <br /> `{{homeDirectory}}` | The path to the user's home directory. |
 | `{{hostname}}` | The hostname of the computer. |
+| `{{ignore:...}}` or <br /> `{{IGNORE:...}}` | Ignores all content contained within. Useful for running placeholders without inserting their return value. |
+| `{{input}}` | The text entered by the user in an input dialog. You can specify a prompt using `{{input prompt="..."}}`. |
 | `{{js:...}}` or <br /> `{{JS:...}}` | The return value of sandboxed JavaScript code. See [JavaScript Placeholder Reference](#javascript-placeholder-reference) for more information. |
 | `{{jxa:...}}` or <br /> `{{JXA:...}}` | The return value of a JXA script. |
 | `{{paste:...}}` | Pastes the specified text into the frontmost application. |
 | `{{previousApp}}` or <br /> `{{previousAppName}}` or <br /> `{{lastApp}}` or <br /> `{{lastAppName}}` or <br /> `{{previousApplication}}` or <br /> `{{previousApplicationName}}` or <br /> `{{lastApplication}}` or <br /> `{{lastApplicationName}}` | The name of the last application that was active before the current one. |
 | `{{previousPinName}}` or <br /> `{{lastPinName}}` | The URL-encoded name of the last pin that was opened. |
 | `{{previousPinTarget}}` or <br /> `{{lastPinTarget}}` | The URL-encoded target of the last pin that was opened. |
-| `{{selectedFiles}}` or <br /> `{{selectedFile}}` | A comma-separated list of POSIX paths of the currently selected files in Finder. |
+| `{{reset [name]}}` | Resets the value of the persistent variable with the specified name to its initial value. |
+| `{{runningApplications}}` or <br /> `{{runningApps}}` | A list of names of non-background applications that are currently running. The list is newline-separated by default, but you can specify a different separator using `{{runningApplications delim="..."}}`. |
+| `{{say:...}}` | Speaks the specified text. You can specify a voice, speed, pitch, and volume using `{{say voice="..." speed=[number] pitch=[number] volume=[number]:...}}`. All arguments are optional and default to the system's defaults. |
 | `{{selectedFileContents}}` or <br /> `{{selectedFilesContents}}` or <br /> `{{selectedFileContent}}` or <br /> `{{selectedFilesContent}}` or <br /> `{{selectedFileText}}` or <br /> `{{selectedFilesText}}` or <br /> `{{contents}}` | The text content of the currently selected file(s) in Finder. |
+| `{{selectedFiles}}` or <br /> `{{selectedFile}}` | A comma-separated list of POSIX paths of the currently selected files in Finder. |
 | `{{selectedText}}` | The currently selected text. |
+| `{{set [name]:...}}` | Sets the value of the persistent variable with the specified name, e.g. `{{set myVar:Hello World}}`. |
 | `{{shell:...}}` | The return value of a shell script. The shell is ZSH by default, but you can specify a different shell using the format `{{shell bin/bash:...}}`. |
 | `{{shortcut:...}}` | The value returned after executing the specified Siri Shortcut. Specify input to the shortcut using `{{shortcut:... input="..."}}`. |
 | `{{shortcuts}}` | The comma-separated list of Siri Shortcuts installed on the system. |
 | `{{systemLanguage}}` or <br /> `{{language}}` | The configured language for the system. |
 | `{{time}}` or <br /> `{{currentTime}}` | The current time. Use `{{time format="..."}}` to specify a custom time format. Defaults to `HH:mm:s a`. |
+| `{{toast:...}}` or <br /> `{{hud:...}}` | Displays a toast/HUD notification with the specified text. Specify an optional style and detailed text using `{{toast style="[success/failure/fail]":Title,Message}}`. The default style is `success`. If the Raycast window is open when the pin is executed, the notification will display as a toast; otherwise, it will display as a HUD. |
 | `{{url:...}}` or <br /> `{{URL:...}}` | The visible text content at the specified URL. Example: `{{url:https://google.com}}`. |
 | `{{usedUUIDs}}` | The list of UUIDs previously used by the `{{uuid}}` placeholder since Pins' LocalStorage was last reset. |
 | `{{user}}` or <br /> `{{username}}` | The current user's system username. |
@@ -105,6 +111,11 @@ Placeholders are evaluated in the following order, from first to last:
 | Directive | `{{copy:...}}` |
 | Directive | `{{paste:...}}` |
 | Directive | `{{set [name]:...}}` |
+| Directive | `{{AI:...}}` |
+| Directive | `{{alert:...}}` |
+| Directive | `{{dialog:...}}` |
+| Directive | `{{say:...}}` |
+| Directive | `{{toast:...}}` |
 | Script | `{{as:...}}` |
 | Script | `{{jxa:...}}` |
 | Script | `{{shell:...}}` |

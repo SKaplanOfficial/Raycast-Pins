@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */ // Disable since many placeholder functions have unused parameters that are kept for consistency.
-import { environment, getFrontmostApplication, showHUD, showToast } from "@raycast/api";
+import { AI, Toast, environment, getFrontmostApplication, showHUD, showToast } from "@raycast/api";
 import { Clipboard } from "@raycast/api";
-import { runAppleScript } from "run-applescript";
 import { SupportedBrowsers, getCurrentURL, getTextOfWebpage } from "./browser-utils";
 import * as fs from "fs";
 import * as os from "os";
@@ -17,10 +16,13 @@ import {
   setStorage,
 } from "./utils";
 import { StorageKey } from "./constants";
-import { execSync } from "child_process";
+import { execFile, execSync } from "child_process";
 import { getPreviousPin } from "./Pins";
 import { LocalDataObject, getFinderSelection, getTextSelection } from "./LocalData";
 import path from "path";
+import { runAppleScript } from "@raycast/utils";
+import * as util from "util";
+import { LocationManager } from "./scripts";
 
 /**
  * A placeholder type that associates Regex patterns with functions that applies the placeholder to a string, rules that determine whether or not the placeholder should be replaced, and aliases that can be used to achieve the same result.
@@ -162,17 +164,18 @@ const placeholders: Placeholder = {
     rules: [],
     apply: async (str: string, context?: LocalDataObject) => {
       const matches = str.match(/{{shortcut:([\s\S]+?)( input=("|')(.*?)("|'))?}}/);
-      console.log(matches);
       if (matches) {
         const shortcutName = matches[1];
         const input = matches[4] || "";
         const result = await runAppleScript(`tell application "Shortcuts Events"
-          set res to run shortcut "${shortcutName}" with input "${input}"
-          if res is not missing value then
-            return res
-          else
-            return ""
-          end if 
+          try
+            set res to run shortcut "${shortcutName}" with input "${input}"
+            if res is not missing value then
+              return res
+            else
+              return ""
+            end if 
+          end try
         end tell`);
         return result;
       }
@@ -318,6 +321,33 @@ const placeholders: Placeholder = {
   },
 
   /**
+   * Placeholder for the list of names of all non-background applications currently running. The list is newline-separated by default, but can be changed with the `delim` argument.
+   * 
+   * Syntax: `{{runningApplications delim="[string]"}}`
+   */
+  "{{runningApplications( (delim|delimiter|delimiters|delims)=\"(([^{]|{(?!{)|{{[\\s\\S]*?}})*?)\")?}}": {
+    name: "Running Applications",
+    aliases: ["{{runningApps}}"],
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      const matches = str.match(/(?<=(delim|delimiter|delimiters|delims)=("|')).*?(?=("|'))/);
+      const delim = matches ? matches[0] : "\n";
+      try {
+        const runningApps = (await runAppleScript(`tell application "System Events"
+          set oldDelims to AppleScript's text item delimiters
+          set AppleScript's text item delimiters to "###"
+          set theApps to (name of every application process whose background only is false) as string
+          set AppleScript's text item delimiters to oldDelims
+          return theApps
+        end tell`)) || "";
+        return runningApps.split("###").join(delim);
+      } catch (e) {
+        return "";
+      }
+    },
+  },
+
+  /**
    * Placeholder for the current working directory. If the current application is not Finder, this placeholder will not be replaced.
    */
   "{{currentDirectory}}": {
@@ -332,7 +362,9 @@ const placeholders: Placeholder = {
       },
     ],
     apply: async (str: string, context?: LocalDataObject) => {
-      return await runAppleScript(`tell application "Finder" to return POSIX path of (insertion location as alias)`);
+      return await runAppleScript(`try
+        tell application "Finder" to return POSIX path of (insertion location as alias)
+      end try`);
     },
   },
 
@@ -423,13 +455,64 @@ const placeholders: Placeholder = {
   },
 
   /**
+   * Placeholder for a summary of the user's current location.
+   */
+  "{{location}}": {
+    name: "Location",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      const location = await LocationManager.getLocation();
+      const address = `${location.streetNumber} ${location.street}, ${location.city}, ${location.state} ${location.postalCode}`
+      return `Address: ${address}, ${location.country}${address.includes(location.name.toString()) ? `` : `\nName: ${location.name}`}\nLatitude: ${location.latitude}\nLongitude: ${location.longitude}`;
+    },
+  },
+
+  /**
+   * Placeholder for the name of the user's current latitude.
+   */
+  "{{latitude}}": {
+    name: "Latitude",
+    aliases: ["{{lat}}"],
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      return (await LocationManager.getLatitude()).toString();
+    },
+  },
+
+  /**
+   * Placeholder for the name of the user's current longitude.
+   */
+  "{{longitude}}": {
+    name: "Longitude",
+    aliases: ["{{long}}"],
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      return (await LocationManager.getLongitude()).toString();
+    },
+  },
+
+  /**
+   * Placeholder for the name of the user's street address.
+   */
+  "{{address}}": {
+    name: "Address",
+    aliases: ["{{streetAddress}}"],
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      return await LocationManager.getStreetAddress();
+    },
+  },
+
+  /**
    * Placeholder for the list of names of all Siri Shortcuts on the current machine. The list is comma-separated.
    */
   "{{shortcuts}}": {
     name: "Siri Shortcuts",
     rules: [],
     apply: async (str: string, context?: LocalDataObject) => {
-      return await runAppleScript(`tell application "Shortcuts Events" to return name of every shortcut`);
+      return await runAppleScript(`try
+        tell application "Shortcuts Events" to return name of every shortcut
+      end try`);
     },
   },
 
@@ -729,6 +812,167 @@ const placeholders: Placeholder = {
   },
 
   /**
+   * Directive to query Raycast AI and insert the response. If the query fails, the placeholder will be replaced with an empty string.
+   * 
+   * Syntax: `{{ai:prompt}}` or `{{ai model="[model]":prompt}}` or `{{ai model="[model]" creativity=[decimal]:prompt}}`
+   * 
+   * The model and creativity are optional. The default model is `gpt-3.5-turbo` and the default creativity is `1.0`. The model can be either `gpt-3.5-turbo` or `text-davinci-003`. The creativity must be a decimal between 0 and 1.
+   */
+  "{{(askAI|askai|AI|ai)( model=\"(([^{]|{(?!{)|{{[\\s\\S]*?}})*?)\")?( creativity=(([^{]|{(?!{)|{{[\\s\\S]*?}})*?))?:(([^{]|{(?!{)|{{[\\s\\S]*?}})*?)}}": {
+    name: "Ask AI",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      const matches = str.match(/{{(askAI|askai|AI|ai)( model="(([^{]|{(?!{)|{{[\s\S]*?}})*?)")?( creativity=(([^{]|{(?!{)|{{[\s\S]*?}})*?))?:(([^{]|{(?!{)|{{[\s\S]*?}})*?)}}/);
+      if (matches && environment.canAccess(AI)) {
+        const model = matches[3] == "text-davinci-003" ? "text-davinci-003" : "gpt-3.5-turbo";
+        const creativity = matches[6] || "1.0";
+        const query = matches[8];
+        const result = await AI.ask(query, { model: model, creativity: parseFloat(creativity) || 1.0 });
+        return result.trim().replaceAll('"', "'");
+      }
+      return "";
+    },
+  },
+
+  /**
+   * Directive to display an alert with the provided text. The placeholder will always be replaced with an empty string.
+   * 
+   * Syntax: `{{alert:Title,Message}}` or `{{alert timeout=[number]:Title,Message}}`
+   * 
+   * The timeout and message are optional. If no timeout is provided, the alert will timeout after 10 seconds.
+   */
+  "{{alert( timeout=([0-9]+))?:(([^{]|{(?!{)|{{[\\s\\S]*?}})*?)(,(([^{]|{(?!{)|{{[\\s\\S]*?}})*?))?}}": {
+    name: "Display Alert",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      const matches = str.match(/{{alert( timeout=([0-9]+))?:(([^{]|{(?!{)|{{[\s\S]*?}})*?)(,(([^{]|{(?!{)|{{[\s\S]*?}})*?))?}}/);
+      if (matches) {
+        const timeout = parseInt(matches[2]) || 10;
+        const query = matches[3];
+        const message = matches[6] || undefined;
+        await runAppleScript(`display alert "${query.replaceAll('"', "'")}"${ message ? ` message "${message.replaceAll('"', "'")}"` : ""} giving up after ${timeout}`);
+      }
+      return "";
+    }
+  },
+
+  /**
+   * Directive to display a dialog with the provided text. The placeholder will be replaced with an empty string unless `input=true` is provided, in which case the placeholder will be replaced with the user's input. If the user cancels the dialog, the placeholder will be replaced with an empty string.
+   * 
+   * Syntax: `{{dialog input=[true/false] timeout=[number]:Message,Title}}`
+   * 
+   * The input setting, timeout, and title are optional. If no timeout is provided, the dialog will timeout after 30 seconds. If no title is provided, the title will be "Pins". The default input setting is `false`.
+   */
+  "{{dialog( input=(true|false))?( timeout=([0-9]+))?:(([^{]|{(?!{)|{{[\\s\\S]*?}})*?)(,(([^{]|{(?!{)|{{[\\s\\S]*?}})*?))?}}": {
+    name: "Display Dialog",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      const matches = str.match(/{{dialog( input=(true|false))?( timeout=([0-9]+))?:(([^{]|{(?!{)|{{[\s\S]*?}})*?)(,(([^{]|{(?!{)|{{[\s\S]*?}})*?))?}}/);
+      if (matches) {
+        const input = matches[2] == "true";
+        const timeout = parseInt(matches[4]) || 30;
+        const message = matches[5];
+        const title = matches[8] || "Pins";
+        const result = await runAppleScript(`display dialog "${message.replaceAll('"', "'")}" with title "${title.replaceAll('"', "'")}"${input ? " default answer \"\"" : ""} giving up after ${timeout}`);
+        if (input) {
+          const textReturned = result.match(/(?<=text returned:)(.|[ \n\r\s])*?(?=,)/)?.[0] || "";
+          return textReturned.trim().replaceAll('"', "'");
+        }
+      }
+      return "";
+    }
+  },
+
+  /**
+   * Directive to speak the provided text. The placeholder will always be replaced with an empty string.
+   * 
+   * Syntax: `{{say voice="[voice]" speed=[number] pitch=[number] volume=[number]:Message}}`
+   * 
+   * All arguments are optional. If no voice, speed, pitch, or volume are provided, the system defaults will be used.
+   */
+  "{{say( voice=\"[A-Za-z)( ._-]\")?( speed=[0-9.]+?)?( pitch=([0-9.]+?))?( volume=[0-9.]+?)?:(([^{]|{(?!{)|{{[\\s\\S]*?}})*?)": {
+    name: "Speak Text",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      const matches = str.match(/{{say( voice="([A-Za-z)( ._-]+?)")?( speed=([0-9.]+?))?( pitch=([0-9.]+?))?( volume=([0-9.]+?))?:(([^{]|{(?!{)|{{[\s\S]*?}})*?)}}/);
+      if (matches) {
+        const voice = matches[2] || undefined;
+        const speed = matches[4] || undefined;
+        const pitch = matches[6] || undefined;
+        const volume = matches[8] || undefined;
+        const query = matches[9];
+        await runAppleScript(`say "${query}"${voice ? ` using "${voice}"` : ""}${speed ? ` speaking rate ${speed}` : ""}${pitch ? ` pitch ${pitch}` : ""}${volume ? ` volume ${volume}` : ""}`); 
+      }
+      return "";
+    }
+  },
+
+   /**
+   * Directive to display a toast or HUD with the provided text. The placeholder will always be replaced with an empty string. Whether a toast or HUD is displayed depends on the context (e.g. if the Raycast window is focused, a toast will be displayed; otherwise, a HUD will be displayed).
+   * 
+   * Syntax: `{{toast style="[success/failure/fail]":Title,Message}}` or `{{hud style="[success/failure/fail]":Title,Message}}`
+   * 
+   * The style and message are optional. If no style is provided, the style will be "success". If no message is provided, the message will be empty.
+   */
+   "{{(toast|hud|HUD)( style=\"(success|failure|fail)\")?:(([^{]|{(?!{)|{{[\\s\\S]*?}})*?)(,(([^{]|{(?!{)|{{[\\s\\S]*?}})*?))?}}": {
+    name: "Display Toast or HUD",
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      const matches = str.match(/{(toast|hud|HUD)( style="(success|failure|fail)")?:(([^{]|{(?!{)|{{[\s\S]*?}})*?)(,(([^{]|{(?!{)|{{[\s\S]*?}})*?))?}}/);
+      if (matches) {
+        const style = matches[3] == "failure" || matches[3] == "fail" ? Toast.Style.Failure : Toast.Style.Success;
+        const title = matches[4];
+        const message = matches[7] || undefined;
+        await showToast({ title: title, message: message, style: style });
+      }
+      return "";
+    }
+  },
+
+  // "{{(notify|notification):(([^{]|{(?!{)|{{[\\s\\S]*?}})*?)}}": {
+  //   name: "Send Notification",
+  //   rules: [],
+  //   apply: async (str: string, context?: LocalDataObject) => {
+  //     const matches = str.match(/{{(notify|notification):(([^{]|{(?!{)|{{[\s\S]*?}})*?)}}/);
+  //     if (matches) {
+  //       const query = matches[2];
+  //       try {
+  //       await runAppleScript(`(() => {
+  //         ObjC.import('UserNotifications');
+
+  //         const app = $.NSApp;
+          
+  //         const center = $.UNUserNotificationCenter.currentNotificationCenter;
+  //         center.requestAuthorizationWithOptionsCompletionHandler($.UNAuthorizationOptionAlert, (granted, error) => {
+  //           if (error.js) {
+  //             return;
+  //           }
+            
+  //           const content = $.UNMutableNotificationContent.alloc.init;
+  //           content.title = '${query}';
+  //           content.body = "oof";
+            
+  //           const trigger = $.UNTimeIntervalNotificationTrigger.triggerWithTimeIntervalRepeats(1.0, false);
+            
+  //           const request = $.UNNotificationRequest.requestWithIdentifierContentTrigger("a", content, trigger);
+  //           center.addNotificationRequestWithCompletionHandler(request, (error) => {
+  //             if (error.js) {
+  //               return;
+  //             }
+  //             return;
+  //           });
+  //         })
+  //       })();`, { language: "JavaScript" });
+  //       // return result.trim().replaceAll('"', "'");
+  //     } catch (e) {
+  //       console.log(e);
+  //     }
+  //   }
+  //     return "";
+  //   },
+  // },
+
+  /**
    * Placeholder for output of an AppleScript script. If the script fails, this placeholder will be replaced with an empty string. No sanitization is done in the script input; the expectation is that users will only use this placeholder with trusted scripts.
    */
   "{{(as|AS):(.|[ \\n\\r\\s])*?}}": {
@@ -739,7 +983,7 @@ const placeholders: Placeholder = {
         const script = str.match(/(?<=(as|AS):)(.|[ \n\r\s])*?(?=}})/)?.[0];
         if (!script) return "";
         return await runAppleScript(`try
-          ${script}
+            ${script}
           end try`);
       } catch (e) {
         return "";
@@ -851,6 +1095,17 @@ const placeholders: Placeholder = {
           copy: async (text: string) => await Placeholders.allPlaceholders["{{copy:[^}]*?}}"].apply(`{{copy:${text}}}`),
           paste: async (text: string) => await Placeholders.allPlaceholders["{{paste:[^}]*?}}"].apply(`{{paste:${text}}}`),
           ignore: async (text: string) => await Placeholders.allPlaceholders["{{(ignore|IGNORE):[^}]*?}}"].apply(`{{ignore:${text}}}`),
+          ai: async (prompt: string, model?: string, creativity?: number) => await Placeholders.allPlaceholders["{{(askAI|askai|AI|ai)( model=\"(([^{]|{(?!{)|{{[\\s\\S]*?}})*?)\")?( creativity=(([^{]|{(?!{)|{{[\\s\\S]*?}})*?))?:(([^{]|{(?!{)|{{[\\s\\S]*?}})*?)}}"].apply(`{{ai${model ? ` model="${model}"` : ""}${creativity ? ` creativity=${creativity}` : ""}:${prompt}}}`),
+          alert: async (title: string, message?: string, timeout?: number) => await Placeholders.allPlaceholders["{{alert( timeout=([0-9]+))?:(([^{]|{(?!{)|{{[\\s\\S]*?}})*?)(,(([^{]|{(?!{)|{{[\\s\\S]*?}})*?))?}}"].apply(`{{alert${timeout ? ` timeout=${timeout}` : ""}:${title}${message ? `,${message}` : ""}}}`),
+          dialog: async (message: string, input?: boolean, timeout?: number, title?: string) => await Placeholders.allPlaceholders["{{dialog( input=(true|false))?( timeout=([0-9]+))?:(([^{]|{(?!{)|{{[\\s\\S]*?}})*?)(,(([^{]|{(?!{)|{{[\\s\\S]*?}})*?))?}}"].apply(`{{dialog${input ? " input=true" : ""}${timeout ? ` timeout=${timeout}` : ""}:${message}${title ? `,${title}` : ""}}}`),
+          say: async (message: string, voice?: string, speed?: number, pitch?: number, volume?: number) => await Placeholders.allPlaceholders["{{say( voice=\"[A-Za-z)( ._-]\")?( speed=[0-9.]+?)?( pitch=([0-9.]+?))?( volume=[0-9.]+?)?:(([^{]|{(?!{)|{{[\\s\\S]*?}})*?)"].apply(`{{say${voice ? ` voice="${voice}"` : ""}${speed ? ` speed=${speed}` : ""}${pitch ? ` pitch=${pitch}` : ""}${volume ? ` volume=${volume}` : ""}:${message}}}`),
+          toast: async (title: string, message?: string) => await Placeholders.allPlaceholders["{{(toast|hud|HUD)( style=\"(success|failure|fail)\")?:(([^{]|{(?!{)|{{[\\s\\S]*?}})*?)(,(([^{]|{(?!{)|{{[\\s\\S]*?}})*?))?}}"].apply(`{{toast:${title}${message ? `,${message}` : ""}}}`),
+          hud: async (title: string, message?: string) => await Placeholders.allPlaceholders["{{(toast|hud|HUD)( style=\"(success|failure|fail)\")?:(([^{]|{(?!{)|{{[\\s\\S]*?}})*?)(,(([^{]|{(?!{)|{{[\\s\\S]*?}})*?))?}}"].apply(`{{hud:${title}${message ? `,${message}` : ""}}}`),
+          runningApplications: async (delim?: string) => await Placeholders.allPlaceholders["{{runningApplications( (delim|delimiter|delimiters|delims)=\"(([^{]|{(?!{)|{{[\\s\\S]*?}})*?)\")?}}"].apply(`{{runningApplications${delim ? ` delim="${delim}"` : ""}}}`),
+          location: async () => await Placeholders.allPlaceholders["{{location}}"].apply(`{{location}}`),
+          latitude: async () => await Placeholders.allPlaceholders["{{latitude}}"].apply(`{{latitude}}`),
+          longitude: async () => await Placeholders.allPlaceholders["{{longitude}}"].apply(`{{longitude}}`),
+          address: async () => await Placeholders.allPlaceholders["{{address}}"].apply(`{{address}}`),
         };
         return await vm.runInNewContext(script, sandbox, { timeout: 1000, displayErrors: true });
       } catch (e) {

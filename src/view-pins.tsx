@@ -208,7 +208,7 @@ export default function Command() {
         const dateString = expirationDate.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "numeric", hour12: true });
         accessories.push({ date: expirationDate, tooltip: `Expires On ${dateString}` });
       }
-      if (preferences.showApplication && pin.application != "None") {
+      if (preferences.showApplication && pin.application != "None" && pin.application != undefined) {
         // Application accessory
         accessories.push({ icon: { fileIcon: pin.application }, tooltip: `Opens With ${path.basename(pin.application, ".app")}` });
       } else if (preferences.showApplication && !pin.fragment && !pin.url?.startsWith("/") && !pin.url?.startsWith("~") && !pin.url?.match(/^[a-zA-Z0-9]*?:.*/g)) {

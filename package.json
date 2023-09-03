@@ -212,10 +212,8 @@
     }
   ],
   "dependencies": {
-    "@raycast/api": "^1.53.4",
-    "@raycast/utils": "^1.8.0",
-    "run-applescript": "^6.1.0",
-    "uuid": "^9.0.0"
+    "@raycast/api": "^1.57.2",
+    "@raycast/utils": "^1.9.1"
   },
   "devDependencies": {
     "@types/node": "16.10.3",

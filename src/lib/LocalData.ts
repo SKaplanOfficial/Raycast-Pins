@@ -1,8 +1,7 @@
 import { Application, getFrontmostApplication, getPreferenceValues, getSelectedText } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { SupportedBrowsers, getCurrentTabs, getCurrentURL } from "./browser-utils";
-import { useCachedState } from "@raycast/utils";
-import { runAppleScript } from "run-applescript";
+import { runAppleScript, useCachedState } from "@raycast/utils";
 import { ExtensionPreferences, getStorage, runCommand, setStorage } from "./utils";
 import { StorageKey } from "./constants";
 
@@ -79,14 +78,16 @@ const dummyData = (): LocalDataObject => {
  * @returns A promise resolving to the path of the current directory as a string.
  */
 const getCurrentDirectory = async (): Promise<{ name: string; path: string }> => {
-  const data = await runAppleScript(`tell application "Finder"
-    set oldDelims to AppleScript's text item delimiters
-    set AppleScript's text item delimiters to "\`\`\`"
-    set theData to {name, POSIX path} of (insertion location as alias)
-    set theData to theData as string
-    set AppleScript's text item delimiters to oldDelims
-    return theData
-  end tell`);
+  const data = await runAppleScript(`try
+    tell application "Finder"
+      set oldDelims to AppleScript's text item delimiters
+      set AppleScript's text item delimiters to "\`\`\`"
+      set theData to {name, POSIX path} of (insertion location as alias)
+      set theData to theData as string
+      set AppleScript's text item delimiters to oldDelims
+      return theData
+    end tell
+  end try`);
   const entries = data.split("```");
   if (entries.length == 2) {
     return { name: entries[0], path: entries[1] };
@@ -99,15 +100,16 @@ const getCurrentDirectory = async (): Promise<{ name: string; path: string }> =>
  * @returns A promise resolving to an array of objects containing the name and path of each selected item.
  */
 export const getFinderSelection = async (): Promise<{ name: string; path: string }[]> => {
-  const data = await runAppleScript(
-    `tell application "Finder"
-    set theSelection to selection
-    set thePath to {}
-    repeat with i in theSelection
-      set end of thePath to {name, POSIX path} of (i as alias)
-    end repeat
-    return thePath
-  end tell`,
+  const data = await runAppleScript(`try
+    tell application "Finder"
+      set theSelection to selection
+      set thePath to {}
+      repeat with i in theSelection
+        set end of thePath to {name, POSIX path} of (i as alias)
+      end repeat
+      return thePath
+    end tell
+  end try`,
     { humanReadableOutput: true }
   );
 

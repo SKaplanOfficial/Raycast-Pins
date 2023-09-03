@@ -1,8 +1,7 @@
 import { LocalStorage, Icon, Clipboard, showToast, Toast, useNavigation, Application, getPreferenceValues, Form, ActionPanel, Action, environment, getApplications, showHUD } from "@raycast/api";
-import { runAppleScript } from "run-applescript";
 import { exec, execSync } from "child_process";
 import { StorageKey } from "./constants";
-import { getFavicon } from "@raycast/utils";
+import { getFavicon, runAppleScript } from "@raycast/utils";
 import { Pin, createNewPin, deletePin, getPins, modifyPin } from "./Pins";
 import { Group, useGroups } from "./Groups";
 import { useState } from "react";
@@ -93,8 +92,10 @@ export const runCommandSync = (command: string) => {
  */
 export const runCommandInTerminal = async (command: string): Promise<string> => {
   const output = await runAppleScript(`tell application "Terminal"
-    activate
-    do script "${command.replaceAll('"', '\\"')}"
+    try
+      activate
+      do script "${command.replaceAll('"', '\\"')}"
+    end try
   end tell`);
   return output;
 };
