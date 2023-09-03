@@ -192,7 +192,34 @@
       "name": "view-groups",
       "title": "View Pin Groups",
       "description": "View and modify groups for pins",
-      "mode": "view"
+      "mode": "view",
+      "preferences": [
+        {
+          "name": "showIDs",
+          "type": "checkbox",
+          "title": "General Settings",
+          "label": "Show IDs",
+          "description": "Whether to show the ID for each group.",
+          "default": true,
+          "required": false
+        },
+        {
+          "name": "showSortStrategy",
+          "type": "checkbox",
+          "label": "Show Sort Method",
+          "description": "Whether to show the sort method for each group.",
+          "default": true,
+          "required": false
+        },
+        {
+          "name": "showParentGroup",
+          "type": "checkbox",
+          "label": "Show Parent Group",
+          "description": "Whether to show a label for the parent group of each group, if applicable.",
+          "default": false,
+          "required": false
+        }
+      ]
     },
     {
       "name": "copy-pins",

@@ -469,3 +469,22 @@ export const getPinKeywords = (pin: Pin) => {
       .filter((term) => term.trim().length > 0),
   ];
 };
+
+
+/**
+ * Copies the pin data to the clipboard.
+ * @returns A promise resolving to the JSON string of the pin data.
+ */
+export const copyPinData = async () => {
+  const pins = await getStorage(StorageKey.LOCAL_PINS);
+  const groups = await getStorage(StorageKey.LOCAL_GROUPS);
+
+  const data = {
+    groups: groups,
+    pins: pins,
+  };
+
+  const jsonData = JSON.stringify(data);
+  await Clipboard.copy(jsonData);
+  return jsonData;
+};

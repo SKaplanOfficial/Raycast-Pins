@@ -11,6 +11,7 @@
 - Added setting to hide/show the "Preferences..." menu item.
 - Added setting for sorting pins alphabetically, by frequency, date last used, creation date, or manually. Groups can be controlled separately from non-grouped pins.
 - Improved group deletion logic -- now hands children off to the parent group, if one exists.
+- Added setting for showing/hiding the ID, parent, and sort method of groups.
 
 ### 2023-09-02
 

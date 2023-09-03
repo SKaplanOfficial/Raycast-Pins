@@ -62,11 +62,9 @@ export const useGroups = () => {
 };
 
 /**
- * Creates a new group; updates local storage.
- * @param name The name of the group.
- * @param icon The icon for the group.
+ * Gets the next available group ID.
  */
-export const createNewGroup = async (name: string, icon: string, parent?: number, sortStrategy?: SortStrategy) => {
+export const getNextGroupID = async () => {
   // Get the stored groups
   const storedGroups = await getStorage(StorageKey.LOCAL_GROUPS);
 
@@ -76,6 +74,17 @@ export const createNewGroup = async (name: string, icon: string, parent?: number
     newID++;
   }
   setStorage(StorageKey.NEXT_GROUP_ID, [newID + 1]);
+  return newID;
+}
+
+/**
+ * Creates a new group; updates local storage.
+ * @param name The name of the group.
+ * @param icon The icon for the group.
+ */
+export const createNewGroup = async (name: string, icon: string, parent?: number, sortStrategy?: SortStrategy) => {
+  const storedGroups = await getStorage(StorageKey.LOCAL_GROUPS);
+  const newID = await getNextGroupID();
 
   // Add the new group to the stored groups
   const newData = [...storedGroups];
@@ -198,4 +207,43 @@ export const deleteGroup = async (group: Group, setGroups: (groups: Group[]) => 
   await setStorage(StorageKey.LOCAL_GROUPS, filteredGroups);
   await setStorage(StorageKey.LOCAL_PINS, updatedPins);
   await showToast({ title: `Removed pin group!` });
+};
+
+/**
+ * Checks that the name field is not empty and that the name is not already taken.
+ * @param name The value of the name field.
+ * @param setNameError A function to set the name error.
+ * @param groupNames The names of the existing groups.
+ */
+export const checkGroupNameField = (name: string, setNameError: (error: string | undefined) => void, groupNames: string[]) => {
+  // Checks for non-empty (non-spaces-only) name
+  if (name.trim().length == 0) {
+    setNameError("Name cannot be empty!");
+  } else if (groupNames.includes(name)) {
+    setNameError("A group with this name already exists!");
+  } else {
+    setNameError(undefined);
+  }
+};
+
+/**
+ * Checks that the entered parent ID is valid (i.e. that a group with that ID exists, and that the group is not the group currently being created).
+ * @param suggestedID The value of the parent ID field.
+ * @param setParentError A function to set the parent error.
+ */
+export const checkGroupParentField = async (
+  suggestedID: string,
+  setParentError: React.Dispatch<React.SetStateAction<string | undefined>>,
+  groups: Group[]
+) => {
+  const nextID = await getStorage(StorageKey.NEXT_GROUP_ID);
+  if (suggestedID.trim().length == 0) {
+    setParentError(undefined);
+  } else if (!groups.map((g) => g.id).includes(parseInt(suggestedID))) {
+    setParentError("No group with this ID exists!");
+  } else if (parseInt(suggestedID) == nextID) {
+    setParentError("Group cannot be its own parent!");
+  } else {
+    setParentError(undefined);
+  }
 };

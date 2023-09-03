@@ -1,5 +1,5 @@
 import { Clipboard, showToast, Toast } from "@raycast/api";
-import { copyPinData } from "./lib/utils";
+import { copyPinData } from "./lib/Pins";
 
 export default async function Command() {
   const data = await copyPinData();

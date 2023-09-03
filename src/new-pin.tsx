@@ -1,4 +1,4 @@
-import { PinForm } from "./lib/utils";
+import { PinForm } from "./components/PinForm";
 
 export default function Command() {
   return <PinForm />;

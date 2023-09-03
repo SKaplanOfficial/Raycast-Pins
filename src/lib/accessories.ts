@@ -1,11 +1,11 @@
 /**
- * @module lib/accessories A collection of functions for managing accessories on list items.
+ * @module lib/accessories.ts A collection of functions for managing accessories on list items.
  *
  * @summary List item accessory utilities.
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
  * Created at     : 2023-09-03 08:28:07 
- * Last modified  : 2023-09-03 08:29:02
+ * Last modified  : 2023-09-03 13:43:49
  */
 
 import path from 'path';
@@ -17,14 +17,14 @@ import { Group } from './Groups';
 import { Pin } from './Pins';
 
 /**
- * Maps the number of times a pin has been opened to a color indicating relative frequency.
- * @param timesOpened The number of times the pin has been opened.
- * @param maxTimesOpened The maximum number of times any pin has been opened.
+ * Maps an amount to a color, based on the maximum amount, hinting at relative intensity.
+ * @param amount The amount to map to a color.
+ * @param maxAmount The maximum amount.
  * @returns A color.
  */
-export const mapTimesOpenedToColor = (timesOpened: number, maxTimesOpened: number) => {
+export const mapAmountToColor = (amount: number, maxAmount: number) => {
   const colors = [Color.Red, Color.Orange, Color.Yellow, Color.Green, Color.Blue, Color.Purple];
-  const index = Math.floor((timesOpened / maxTimesOpened) * (colors.length - 1));
+  const index = Math.floor((amount / maxAmount) * (colors.length - 1));
   return colors[index % colors.length];
 };
 
@@ -37,7 +37,7 @@ export const mapTimesOpenedToColor = (timesOpened: number, maxTimesOpened: numbe
 export const addFrequencyAccessory = (pin: Pin, accessories: List.Item.Accessory[], maxFrequency: number) => {
   if (pin.timesOpened) {
     accessories.push({
-      tag: { value: pin.timesOpened.toString(), color: mapTimesOpenedToColor(pin.timesOpened, maxFrequency) },
+      tag: { value: pin.timesOpened.toString(), color: mapAmountToColor(pin.timesOpened, maxFrequency) },
       tooltip: `Opened ${pin.timesOpened} Time${pin.timesOpened == 1 ? "" : "s"}`,
     });
   }
@@ -121,4 +121,26 @@ export const addTextFragmentAccessory = (pin: Pin, accessories: List.Item.Access
  */
 export const addSortingStrategyAccessory = (group: Group, accessories: List.Item.Accessory[]) => {
   accessories.push({ tag: { value: SORT_STRATEGY[group.sortStrategy || "manual"], color: Color.SecondaryText } })
+}
+
+/**
+ * Adds an ID accessory tag to the given list of accessories.
+ * @param group The group to add the accessory for.
+ * @param accessories The list of accessories to add the ID accessory to.
+ * @param maxID The maximum ID of any group.
+ */
+export const addIDAccessory = (group: Group, accessories: List.Item.Accessory[], maxID: number) => {
+  accessories.push({ tag: { value: `ID: ${group.id.toString()}`, color: mapAmountToColor(group.id, maxID) } })
+}
+
+/**
+ * Adds a parent group accessory tag to the given list of accessories.
+ * @param group The group to add the accessory for.
+ * @param accessories The list of accessories to add the parent group accessory to.
+ */
+export const addParentGroupAccessory = (group: Group, accessories: List.Item.Accessory[], groups: Group[]) => {
+  if (group.parent != undefined) {
+    const parentName = groups.find((g) => g.id == group.parent)?.name;
+    accessories.push({ tag: { value: `Parent: ${parentName}`, color: Color.SecondaryText } });
+  }
 }

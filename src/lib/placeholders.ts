@@ -7,12 +7,7 @@ import * as os from "os";
 import * as crypto from "crypto";
 import * as vm from "vm";
 import {
-  deletePersistentVariable,
-  getPersistentVariable,
   getStorage,
-  resetPersistentVariable,
-  scheduleTargetEvaluation,
-  setPersistentVariable,
   setStorage,
 } from "./utils";
 import { StorageKey } from "./constants";
@@ -22,6 +17,7 @@ import { LocalDataObject, getFinderSelection } from "./LocalData";
 import path from "path";
 import { runAppleScript } from "@raycast/utils";
 import { LocationManager } from "./scripts";
+import { scheduleTargetEvaluation } from "./scheduled-execution";
 
 /**
  * A placeholder type that associates Regex patterns with functions that applies the placeholder to a string, rules that determine whether or not the placeholder should be replaced, and aliases that can be used to achieve the same result.
@@ -1173,4 +1169,75 @@ export const Placeholders = {
   applyToStrings: applyToStrings,
   applyToObjectValueWithKey: applyToObjectValueWithKey,
   applyToObjectValuesWithKeys: applyToObjectValuesWithKeys,
+};
+
+/**
+ * A user-defined variable created via the {{set:...}} placeholder. These variables are stored in the extension's persistent local storage.
+ */
+export interface PersistentVariable {
+  name: string;
+  value: string;
+  initialValue: string;
+}
+
+/**
+ * Gets the current value of persistent variable from the extension's persistent local storage.
+ * @param name The name of the variable to get.
+ * @returns The value of the variable, or an empty string if the variable does not exist.
+ */
+export const getPersistentVariable = async (name: string): Promise<string> => {
+  const vars: PersistentVariable[] = await getStorage(StorageKey.PERSISTENT_VARS);
+  const variable = vars.find((variable) => variable.name == name);
+  if (variable) {
+    return variable.value;
+  }
+  return "";
+};
+
+/**
+ * Sets the value of a persistent variable in the extension's persistent local storage. If the variable does not exist, it will be created. The most recently set variable will be always be placed at the end of the list.
+ * @param name The name of the variable to set.
+ * @param value The initial value of the variable.
+ */
+export const setPersistentVariable = async (name: string, value: string) => {
+  const vars: PersistentVariable[] = await getStorage(StorageKey.PERSISTENT_VARS);
+  const variable = vars.find((variable) => variable.name == name);
+  if (variable) {
+    vars.splice(vars.indexOf(variable), 1);
+    variable.value = value;
+    vars.push(variable);
+  } else {
+    vars.push({ name: name, value: value, initialValue: value });
+  }
+  await setStorage(StorageKey.PERSISTENT_VARS, vars);
+};
+
+/**
+ * Resets the value of a persistent variable to its initial value. If the variable does not exist, nothing will happen.
+ * @param name The name of the variable to reset.
+ */
+export const resetPersistentVariable = async (name: string): Promise<string> => {
+  const vars: PersistentVariable[] = await getStorage(StorageKey.PERSISTENT_VARS);
+  const variable = vars.find((variable) => variable.name == name);
+  if (variable) {
+    vars.splice(vars.indexOf(variable), 1);
+    variable.value = variable.initialValue;
+    vars.push(variable);
+    await setStorage(StorageKey.PERSISTENT_VARS, vars);
+    return variable.value;
+  }
+  return "";
+};
+
+/**
+ * Deletes a persistent variable from the extension's persistent local storage. If the variable does not exist, nothing will happen.
+ * @param name The name of the variable to delete.
+ */
+export const deletePersistentVariable = async (name: string) => {
+  const vars: PersistentVariable[] = await getStorage(StorageKey.PERSISTENT_VARS);
+  const variable = vars.find((variable) => variable.name == name);
+  if (variable) {
+    vars.splice(vars.indexOf(variable), 1);
+    await setStorage(StorageKey.PERSISTENT_VARS, vars);
+  }
 };

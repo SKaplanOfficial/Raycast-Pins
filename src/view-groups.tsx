@@ -1,11 +1,31 @@
 import { useState } from "react";
-import { Icon, Form, List, useNavigation, Action, ActionPanel, confirmAlert, Alert } from "@raycast/api";
+import { Icon, Form, List, useNavigation, Action, ActionPanel, confirmAlert, Alert, getPreferenceValues, Clipboard, showHUD } from "@raycast/api";
 import { setStorage, getStorage } from "./lib/utils";
 import { SORT_STRATEGY, StorageKey } from "./lib/constants";
-import { Group, deleteGroup, modifyGroup, useGroups } from "./lib/Groups";
+import { Group, checkGroupNameField, checkGroupParentField, deleteGroup, modifyGroup, useGroups } from "./lib/Groups";
 import { Pin, usePins } from "./lib/Pins";
-import { addSortingStrategyAccessory } from "./lib/accessories";
+import { addIDAccessory, addParentGroupAccessory, addSortingStrategyAccessory } from "./lib/accessories";
 import { getGroupIcon, getIcon } from "./lib/icons";
+
+/**
+ * Preferences for the view groups command.
+ */
+type ViewGroupsPreferences = {
+  /**
+   * Whether to display the ID of each group as an accessory.
+   */
+  showIDs: boolean;
+
+  /**
+   * Whether to display the current sort strategy of each group as an accessory.
+   */
+  showSortStrategy: boolean;
+
+  /**
+   * Whether to display the parent group of each group as an accessory.
+   */
+  showParentGroup: boolean;
+}
 
 /**
  * Form view for editing a group.
@@ -18,6 +38,7 @@ const EditGroupView = (props: { group: Group; setGroups: (groups: Group[]) => vo
   const setGroups = props.setGroups;
   const [nameError, setNameError] = useState<string | undefined>();
   const [parentError, setParentError] = useState<string | undefined>();
+  const { groups } = useGroups();
   const { pop } = useNavigation();
 
   return (
@@ -50,14 +71,8 @@ const EditGroupView = (props: { group: Group; setGroups: (groups: Group[]) => vo
         title="Group Name"
         placeholder="Enter the group name"
         error={nameError}
-        onChange={() => (nameError !== undefined ? setNameError(undefined) : null)}
-        onBlur={(event) => {
-          if (event.target.value?.length == 0) {
-            setNameError("Name cannot be empty!");
-          } else if (nameError !== undefined) {
-            setNameError(undefined);
-          }
-        }}
+        onChange={(value) => checkGroupNameField(value, setNameError, groups.filter((g) => g.id != group.id).map((group) => group.name))}
+        onBlur={(event) => checkGroupNameField(event.target.value as string, setNameError, groups.filter((g) => g.id != group.id).map((group) => group.name))}
         defaultValue={group.name}
       />
 
@@ -92,20 +107,17 @@ const EditGroupView = (props: { group: Group; setGroups: (groups: Group[]) => vo
         defaultValue={(group.parent || "").toString()}
         info="The ID of this group's parent. You can use this to create multi-layer groupings within the menu bar dropdown menu."
         error={parentError}
-        onChange={(value) => {
-          if (value != group.id.toString()) {
-            setParentError(undefined);
-          }
-        }}
+        onChange={(value) => checkGroupParentField(value, setParentError, groups)}
+        onBlur={(event) => checkGroupParentField(event.target.value as string, setParentError, groups)}
       />
 
-      <Form.TextField
+      {group.id > -1 ? <Form.TextField
         id="idField"
         title="Group ID"
         value={group.id.toString()}
         info="The ID of this group. You can use this to specify this group as a parent of other groups."
         onChange={() => null}
-      />
+      /> : null}
     </Form>
   );
 };
@@ -168,7 +180,7 @@ const moveGroupDown = async (index: number, setGroups: React.Dispatch<React.SetS
 export default function Command() {
   const { groups, setGroups } = useGroups();
   const { pins } = usePins();
-  const { push } = useNavigation();
+  const preferences = getPreferenceValues<ViewGroupsPreferences>();
 
   return (
     <List
@@ -183,9 +195,11 @@ export default function Command() {
       <List.EmptyView title="No Groups Found" icon="no-view.png" />
       {((groups as Group[]) || []).map((group, index) => {
         const groupPins = pins.filter((pin: Pin) => pin.group == group.name);
-
+        const maxID = Math.max(...groups.map((group) => group.id));
         const accessories: List.Item.Accessory[] = [];
-        addSortingStrategyAccessory(group, accessories);
+        if (preferences.showSortStrategy) addSortingStrategyAccessory(group, accessories);
+        if (preferences.showIDs) addIDAccessory(group, accessories, maxID);
+        if (preferences.showParentGroup) addParentGroupAccessory(group, accessories, groups);
 
         return (
           <List.Item
@@ -197,12 +211,10 @@ export default function Command() {
             actions={
               <ActionPanel>
                 <ActionPanel.Section title="Group Actions">
-                  <Action
+                  <Action.Push
                     title="Edit"
                     icon={Icon.Pencil}
-                    onAction={() =>
-                      push(<EditGroupView group={group} setGroups={setGroups as (groups: Group[]) => void} />)
-                    }
+                    target={<EditGroupView group={group} setGroups={setGroups as (groups: Group[]) => void} />}
                   />
 
                   <Action.CopyToClipboard
@@ -214,6 +226,21 @@ export default function Command() {
                     title="Copy Group ID"
                     content={group.id.toString()}
                     shortcut={{ modifiers: ["cmd", "shift"], key: "i" }}
+                  />
+                  <Action
+                    title="Copy Group JSON"
+                    icon={Icon.Clipboard}
+                    shortcut={{ modifiers: ["cmd", "shift"], key: "j" }}
+                    onAction={async () => {
+                      const data = {
+                        groups: [group],
+                        pins: pins.filter((pin: Pin) => pin.group == group.name),
+                      };
+
+                      const jsonData = JSON.stringify(data);
+                      await Clipboard.copy(jsonData);
+                      await showHUD("Copied JSON to Clipboard");
+                    }}
                   />
 
                   <Action

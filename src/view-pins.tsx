@@ -9,7 +9,8 @@ import {
   showToast,
   environment,
 } from "@raycast/api";
-import { setStorage, getStorage, ExtensionPreferences, installExamples, PinForm } from "./lib/utils";
+import { setStorage, getStorage, ExtensionPreferences } from "./lib/utils";
+import { PinForm } from "./components/PinForm";
 import { StorageKey } from "./lib/constants";
 import {
   Pin,
@@ -34,6 +35,7 @@ import {
 } from "./lib/accessories";
 import { getPinIcon } from "./lib/icons";
 import RecentApplicationsList from "./components/RecentApplicationsList";
+import { installExamples } from "./lib/defaults";
 
 /**
  * Move a pin up in the list. If the pin is in a group, it will be moved up within the group. Otherwise, it will be moved up in the overall list of pins.

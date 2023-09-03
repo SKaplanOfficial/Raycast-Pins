@@ -9,13 +9,13 @@ import {
   launchCommand,
   LaunchType,
 } from "@raycast/api";
-import { setStorage, getStorage, copyPinData, ExtensionPreferences } from "./lib/utils";
+import { setStorage, getStorage, ExtensionPreferences } from "./lib/utils";
 import { KEYBOARD_SHORTCUT, StorageKey } from "./lib/constants";
 import { SupportedBrowsers } from "./lib/browser-utils";
 import * as fs from "fs";
 import { useLocalData } from "./lib/LocalData";
 import { Group, createNewGroup, useGroups } from "./lib/Groups";
-import { Pin, createNewPin, sortPins, usePins } from "./lib/Pins";
+import { Pin, copyPinData, createNewPin, sortPins, usePins } from "./lib/Pins";
 import { useCachedState } from "@raycast/utils";
 import * as os from "os";
 import { Placeholders } from "./lib/placeholders";

@@ -1,26 +1,8 @@
 import { useState } from "react";
 import { Form, Icon, ActionPanel, Action, popToRoot } from "@raycast/api";
-import { getStorage } from "./lib/utils";
-import { createNewGroup, useGroups } from "./lib/Groups";
-import { SORT_STRATEGY, StorageKey } from "./lib/constants";
+import { checkGroupNameField, checkGroupParentField, createNewGroup, useGroups } from "./lib/Groups";
+import { SORT_STRATEGY } from "./lib/constants";
 import { iconMap } from "./lib/icons";
-
-/**
- * Checks that the name field is not empty and that the name is not already taken.
- * @param name The value of the name field.
- * @param setNameError A function to set the name error.
- * @param groupNames The names of the existing groups.
- */
-const checkNameField = (name: string, setNameError: (error: string | undefined) => void, groupNames: string[]) => {
-  // Checks for non-empty (non-spaces-only) name
-  if (name.trim().length == 0) {
-    setNameError("Name cannot be empty!");
-  } else if (groupNames.includes(name)) {
-    setNameError("A group with this name already exists!");
-  } else {
-    setNameError(undefined);
-  }
-};
 
 /**
  * Form view for creating a new group.
@@ -41,11 +23,6 @@ const NewGroupForm = () => {
           <Action.SubmitForm
             icon={Icon.ChevronRight}
             onSubmit={async (values) => {
-              const nextID = await getStorage(StorageKey.NEXT_GROUP_ID);
-              if (values.parentField == nextID.toString()) {
-                setParentError("Group cannot be its own parent!");
-                return false;
-              }
               await createNewGroup(
                 values.nameField,
                 values.iconField,
@@ -63,8 +40,8 @@ const NewGroupForm = () => {
         title="Group Name"
         placeholder="Enter the group name"
         error={nameError}
-        onChange={(value) => checkNameField(value, setNameError, groupNames)}
-        onBlur={(event) => checkNameField(event.target.value as string, setNameError, groupNames)}
+        onChange={(value) => checkGroupNameField(value, setNameError, groupNames)}
+        onBlur={(event) => checkGroupNameField(event.target.value as string, setNameError, groupNames)}
       />
 
       <Form.Dropdown id="iconField" title="Group Icon" defaultValue="BulletPoints">
@@ -94,12 +71,8 @@ const NewGroupForm = () => {
         defaultValue=""
         info="The ID of this group's parent. You can use this to create multi-layer groupings within the menu bar dropdown menu."
         error={parentError}
-        onChange={async (value) => {
-          const nextID = await getStorage(StorageKey.NEXT_GROUP_ID);
-          if (value != nextID.toString()) {
-            setParentError(undefined);
-          }
-        }}
+        onChange={(value) => checkGroupParentField(value, setParentError, groups)}
+        onBlur={(event) => checkGroupParentField(event.target.value as string, setParentError, groups)}
       />
     </Form>
   );
