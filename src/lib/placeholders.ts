@@ -1,3 +1,13 @@
+/**
+ * @module lib/placeholders.ts Placeholders specification and utilities for applying/interacting with them.
+ *
+ * @summary Placeholder utilities.
+ * @author Stephen Kaplan <skaplanofficial@gmail.com>
+ *
+ * Created at     : 2023-09-04 17:38:00 
+ * Last modified  : 2023-09-04 17:39:05
+ */
+
 /* eslint-disable @typescript-eslint/no-unused-vars */ // Disable since many placeholder functions have unused parameters that are kept for consistency.
 import { AI, Toast, environment, getFrontmostApplication, showHUD, showToast } from "@raycast/api";
 import { Clipboard } from "@raycast/api";
@@ -494,6 +504,7 @@ const placeholders: Placeholder = {
     aliases: ["{{streetAddress}}"],
     rules: [],
     apply: async (str: string, context?: LocalDataObject) => {
+      console.log("ahh")
       return await LocationManager.getStreetAddress();
     },
   },
@@ -763,6 +774,7 @@ const placeholders: Placeholder = {
     rules: [],
     apply: async (str: string, context?: LocalDataObject) => {
       const text = str.match(/(?<=(copy:))[^}]*?(?=}})/)?.[0];
+      console.log(text)
       if (!text) return "";
       await Clipboard.copy(text);
       if (environment.commandName == "index") {
@@ -821,7 +833,7 @@ const placeholders: Placeholder = {
       if (matches && environment.canAccess(AI)) {
         const model = matches[3] == "text-davinci-003" ? "text-davinci-003" : "gpt-3.5-turbo";
         const creativity = matches[6] || "1.0";
-        const query = matches[8];
+        const query = matches[8].substring(0, 2000);
         const result = await AI.ask(query, { model: model, creativity: parseFloat(creativity) || 1.0 });
         return result.trim().replaceAll('"', "'");
       }

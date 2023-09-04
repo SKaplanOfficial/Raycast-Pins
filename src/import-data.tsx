@@ -179,6 +179,9 @@ const ImportDataForm = () => {
   );
 };
 
-export default function Command() {
+/**
+ * Raycast command for importing pins and groups from a JSON string.
+ */
+export default function ImportPinsDataCommand() {
   return <ImportDataForm />;
 }

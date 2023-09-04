@@ -1,3 +1,13 @@
+/**
+ * @module lib/constants.ts Constants used throughout the Pins extension, including storage keys, keyboard shortcuts, and sorting strategies.
+ *
+ * @summary Constants used throughout the extension.
+ * @author Stephen Kaplan <skaplanofficial@gmail.com>
+ *
+ * Created at     : 2023-09-04 17:31:40 
+ * Last modified  : 2023-09-04 17:47:55
+ */
+
 import { Keyboard } from "@raycast/api";
 
 /**
@@ -70,6 +80,7 @@ export const KEYBOARD_SHORTCUT: { [key: string]: Keyboard.Shortcut } = {
 
   CREATE_NEW_PIN: { modifiers: ["cmd"], key: "n" },
   COPY_PINS_JSON: { modifiers: ["cmd"], key: "j" },
+  OPEN_PLACEHOLDERS_GUIDE: { modifiers: ["cmd"], key: "g" },
   OPEN_PREFERENCES: { modifiers: ["cmd"], key: "," },
 }
 
@@ -82,4 +93,12 @@ export const SORT_STRATEGY: { [key: string]: string } = {
   frequency: "Frequency",
   manual: "Manual",
   recency: "Recency",
+}
+
+/**
+ * Directions in which pins and groups can be moved.
+ */
+export enum Direction {
+  DOWN,
+  UP,
 }

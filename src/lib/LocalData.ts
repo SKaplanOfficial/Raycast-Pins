@@ -1,3 +1,13 @@
+/**
+ * @module lib/LocalData.ts A collection of functions for getting contextual information about the user's system. This includes the frontmost application, the current Finder directory, the selected Finder items, the selected text, the current document in document-based apps, etc.
+ *
+ * @summary Local data and context utilities.
+ * @author Stephen Kaplan <skaplanofficial@gmail.com>
+ *
+ * Created at     : 2023-09-04 17:36:31 
+ * Last modified  : 2023-09-04 17:37:04
+ */
+
 import { Application, getFrontmostApplication, getPreferenceValues, getSelectedText } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { SupportedBrowsers, getCurrentTabs, getCurrentURL } from "./browser-utils";

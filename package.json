@@ -37,6 +37,14 @@
       "mode": "menu-bar",
       "preferences": [
         {
+          "name": "iconColor",
+          "type": "textfield",
+          "title": "Main Icon Color",
+          "description": "The color of the main Pin icon in the menu bar. Most color names and hex codes are supported, e.g. \"red\", \"#ff0000\", and \"rgb(255, 0, 0)\" all work.",
+          "default": "system",
+          "required": false
+        },
+        {
           "name": "showCategories",
           "type": "checkbox",
           "title": "General Settings",
@@ -78,6 +86,14 @@
           "required": false
         },
         {
+          "name": "showOpenPlaceholdersGuide",
+          "type": "checkbox",
+          "label": "Show \"Open Placeholders Guide\" Item",
+          "description": "Whether to show an \"Open Placeholders Guide\" item in the menu dropdown that opens a guide to using placeholders in Pins.",
+          "default": false,
+          "required": false
+        },
+        {
           "name": "showPreferences",
           "type": "checkbox",
           "label": "Show \"Preferences...\" Item",
@@ -92,6 +108,24 @@
           "description": "Whether to show pins that are not applicable to the current context (e.g. a pin using the {{selectedText}} placeholder when no text is selected).",
           "default": false,
           "required": false
+        },
+        {
+          "name": "rightClickAction",
+          "type": "dropdown",
+          "title": "Right Click Action",
+          "description": "Specifies the action to take when right-clicking a pin. \"Open\" will open the pin's target. \"Edit\" will open the pin's edit window. \"Delete\" will delete the pin.",
+          "default": "delete",
+          "required": false,
+          "data": [
+            {
+              "title": "Open",
+              "value": "open"
+            },
+            {
+              "title": "Delete",
+              "value": "delete"
+            }
+          ]
         }
       ]
     },
@@ -143,7 +177,7 @@
           "type": "checkbox",
           "label": "Show Creation Date",
           "description": "Whether to show the creation date of each pin.",
-          "default": true,
+          "default": false,
           "required": false
         },
         {
@@ -223,9 +257,45 @@
     },
     {
       "name": "copy-pins",
-      "title": "Copy Pin Data",
-      "description": "Copy all pins and groups in JSON format",
-      "mode": "no-view"
+      "title": "Export Pin Data",
+      "description": "Export pins and groups in JSON, CSV, YAML, or XML format",
+      "mode": "no-view",
+      "preferences": [
+        {
+          "name": "exportLocation",
+          "type": "directory",
+          "title": "Export Location",
+          "description": "The optional location to export Pins data to. If not specified, the data will be copied to the clipboard.",
+          "default": "",
+          "required": false
+        },
+        {
+          "name": "exportFormat",
+          "type": "dropdown",
+          "title": "Export Format",
+          "description": "The format to export Pins data in. JSON is the default format, but CSV, YAML, and XML are also supported.",
+          "default": "json",
+          "required": false,
+          "data": [
+            {
+              "title": "JSON",
+              "value": "json"
+            },
+            {
+              "title": "CSV",
+              "value": "csv"
+            },
+            {
+              "title": "YAML",
+              "value": "yaml"
+            },
+            {
+              "title": "XML",
+              "value": "xml"
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "import-data",
@@ -238,7 +308,7 @@
       "title": "Check For Expirations",
       "description": "Check for expired pins and remove them",
       "mode": "no-view",
-      "interval": "1m"      
+      "interval": "1m"
     }
   ],
   "preferences": [
@@ -265,6 +335,10 @@
         {
           "title": "Groups First",
           "value": "groups"
+        },
+        {
+          "title": "Quick Pins First",
+          "value": "quickPins"
         }
       ]
     },
@@ -310,7 +384,10 @@
   ],
   "dependencies": {
     "@raycast/api": "^1.57.2",
-    "@raycast/utils": "^1.9.1"
+    "@raycast/utils": "^1.9.1",
+    "@json2csv/plainjs": "^7.0.3",
+    "json-to-pretty-yaml": "^1.2.2",
+    "jstoxml": "^3.2.8"
   },
   "devDependencies": {
     "@types/node": "16.10.3",

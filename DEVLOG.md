@@ -2,6 +2,16 @@
 
 ## 1.4.0 Release, TBD
 
+### 2023-09-04
+
+- Added settings to export Pins data in CSV, JSON, YAML, or XML format, and/or to save the data to a file.
+- Added support for customizing the icon color of pins and groups.
+- Added setting for customizing the color of the main menu bar icon.
+- The "Preferences..." menu item now opens the preferences for the menu bar command specifically
+- Added pin statistics based on their creation date, last used date, frequency of use, placeholder usage, average execution time, and more. Statistics can be viewed while editing a pin.
+- Added actions for copying pin statistics as formatted text or JSON.
+- Added "Open Placeholders Guide" menu item, along with a setting to show/hide it. Hidden by default.
+
 ### 2023-09-03
 
 - Added keyboard shortcuts for quick pins
@@ -12,6 +22,8 @@
 - Added setting for sorting pins alphabetically, by frequency, date last used, creation date, or manually. Groups can be controlled separately from non-grouped pins.
 - Improved group deletion logic -- now hands children off to the parent group, if one exists.
 - Added setting for showing/hiding the ID, parent, and sort method of groups.
+- Fixed a bug where moving pins up and down would sometimes rearrange pins in other groups.
+- Added ability to have Quick Pins at the top of the menu bar dropdown.
 
 ### 2023-09-02
 

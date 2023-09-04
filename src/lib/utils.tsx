@@ -92,3 +92,13 @@ export const runCommandInTerminal = async (command: string): Promise<string> => 
   end tell`);
   return output;
 };
+
+/**
+ * Cuts off a string at a certain length, adding an ellipsis if necessary.
+ * @param str The string to modify.
+ * @param cutoff The maximum length of the string.
+ * @returns The modified string.
+ */
+export const cutoff = (str: string, cutoff: number) => {
+  return `${str.substring(0, cutoff)}${str.length > cutoff ? "..." : ""}`
+}

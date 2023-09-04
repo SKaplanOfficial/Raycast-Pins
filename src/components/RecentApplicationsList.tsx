@@ -1,13 +1,3 @@
-/**
- * @file components/RecentApplicationsList.tsx A submenu/sublist of recent application "pins" supporting the menu bar and the 'view pins' command.
- *
- * @summary A submenu for recent applications.
- * @author Stephen Kaplan <skaplanofficial@gmail.com>
- *
- * Created at     : 2023-09-03 09:45:13
- * Last modified  : 2023-09-03 09:52:57
- */
-
 import { Action, ActionPanel, environment, getPreferenceValues, Icon, List, MenuBarExtra, open } from "@raycast/api";
 
 import { getIcon } from "../lib/icons";
@@ -16,6 +6,11 @@ import { openPin } from "../lib/Pins";
 import { ExtensionPreferences } from "../lib/utils";
 import OpenAllMenuItem from "./OpenAllMenuItem";
 
+/**
+ * A list of recent applications as menu bar extra items (default) or list items (in the 'View Pins' command).
+ * @param props.pinActions The actions to display for each pin. Only used in list view.
+ * @returns A list of menu items or list items.
+ */
 export default function RecentApplicationsList(props: { pinActions?: JSX.Element }) {
   const { pinActions } = props;
   const { recentApplications, loadingRecentApplications } = useRecentApplications();

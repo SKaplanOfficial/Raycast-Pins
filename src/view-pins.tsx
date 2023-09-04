@@ -9,20 +9,19 @@ import {
   showToast,
   environment,
 } from "@raycast/api";
-import { setStorage, getStorage, ExtensionPreferences } from "./lib/utils";
+import { setStorage, getStorage, ExtensionPreferences, cutoff } from "./lib/utils";
 import { PinForm } from "./components/PinForm";
-import { StorageKey } from "./lib/constants";
+import { Direction, StorageKey } from "./lib/constants";
 import {
   Pin,
   checkExpirations,
-  deletePin,
   getLastOpenedPin,
   getPinKeywords,
   openPin,
   sortPins,
   usePins,
 } from "./lib/Pins";
-import { Group, useGroups } from "./lib/Groups";
+import { useGroups } from "./lib/Groups";
 import path from "path";
 import {
   addApplicationAccessory,
@@ -36,70 +35,30 @@ import {
 import { getPinIcon } from "./lib/icons";
 import RecentApplicationsList from "./components/RecentApplicationsList";
 import { installExamples } from "./lib/defaults";
+import CopyPinActionsSubmenu from "./components/actions/CopyPinActionsSubmenu";
+import DeletePinAction from "./components/actions/DeletePinAction";
 
 /**
- * Move a pin up in the list. If the pin is in a group, it will be moved up within the group. Otherwise, it will be moved up in the overall list of pins.
- * @param index The current index of the pin.
- * @param setPins The function to set the list of pins.
+ * Moves a pin up or down in the list of pins. Pins stay within their groups unless grouping is disabled in preferences.
+ * @param pin The pin to move.
+ * @param direction The direction to move the pin in. One of {@link Direction}.
+ * @param setPins The function to update the list of pins.
  */
-const movePinUp = async (index: number, setPins: React.Dispatch<React.SetStateAction<Pin[]>>) => {
+const movePin = async (pin: Pin, direction: Direction, setPins: React.Dispatch<React.SetStateAction<Pin[]>>) => {
   const storedPins: Pin[] = await getStorage(StorageKey.LOCAL_PINS);
-  const storedGroups: Group[] = await getStorage(StorageKey.LOCAL_GROUPS);
   const preferences = getPreferenceValues<ExtensionPreferences & CommandPreferences>();
-  if (preferences.showGroups) {
-    // Move pin up within its group
-    const otherGroup = { name: "Other", icon: "Minus", id: -1 };
-    const pinsSortedByGroup = storedGroups.concat(otherGroup).reduce((acc, current) => {
-      const groupPins = storedPins.filter(
-        (pin) => pin.group == current.name || (pin.group == "None" && current.name == "Other")
-      );
-      if (groupPins.length > index) {
-        [groupPins[index - 1], groupPins[index]] = [groupPins[index], groupPins[index - 1]];
-      }
-      return [...acc, ...groupPins];
-    }, [] as Pin[]);
-    setPins(pinsSortedByGroup);
-    await setStorage(StorageKey.LOCAL_PINS, pinsSortedByGroup);
-  } else {
-    // Move pin up in overall list
-    if (storedPins.length > index) {
-      [storedPins[index - 1], storedPins[index]] = [storedPins[index], storedPins[index - 1]];
-      setPins(storedPins);
-      await setStorage(StorageKey.LOCAL_PINS, storedPins);
-    }
-  }
-};
 
-/**
- * Moves a pin down in the list of pins. If the pin is in a group, it will be moved down within its group. Otherwise, it will be moved down in the overall list of pins.
- * @param index The current index of the pin.
- * @param setPins The function to set the list of pins.
- */
-const movePinDown = async (index: number, setPins: React.Dispatch<React.SetStateAction<Pin[]>>) => {
-  const storedPins: Pin[] = await getStorage(StorageKey.LOCAL_PINS);
-  const storedGroups: Group[] = await getStorage(StorageKey.LOCAL_GROUPS);
-  const preferences = getPreferenceValues<ExtensionPreferences & CommandPreferences>();
-  if (preferences.showGroups) {
-    // Move pin down within its group
-    const otherGroup = { name: "Other", icon: "Minus", id: -1 };
-    const pinsSortedByGroup = storedGroups.concat(otherGroup).reduce((acc, current) => {
-      const groupPins = storedPins.filter(
-        (pin) => pin.group == current.name || (pin.group == "None" && current.name == "Other")
-      );
-      if (groupPins.length > index + 1) {
-        [groupPins[index], groupPins[index + 1]] = [groupPins[index + 1], groupPins[index]];
-      }
-      return [...acc, ...groupPins];
-    }, [] as Pin[]);
-    setPins(pinsSortedByGroup);
-    await setStorage(StorageKey.LOCAL_PINS, pinsSortedByGroup);
-  } else {
-    // Move pin down in overall list
-    if (storedPins.length > index + 1) {
-      [storedPins[index], storedPins[index + 1]] = [storedPins[index + 1], storedPins[index]];
-      setPins(storedPins);
-      await setStorage(StorageKey.LOCAL_PINS, storedPins);
-    }
+  const localPinGroup = storedPins.filter((p) => p.group == pin.group || !preferences.showGroups);
+  const positionInGroup = localPinGroup.findIndex((p) => p.id == pin.id);
+  const positionOverall = storedPins.findIndex((p) => p.id == pin.id);
+  const targetPosition = direction == Direction.UP ? positionInGroup - 1 : positionInGroup + 1;
+
+  if (direction == Direction.UP ? targetPosition >= 0 : targetPosition < localPinGroup.length) {
+    const targetPin = localPinGroup[targetPosition];
+    const targetGlobalIndex = storedPins.findIndex((p) => p.id == targetPin.id);
+    storedPins.splice(targetGlobalIndex, 0, storedPins.splice(positionOverall, 1)[0]);
+    setPins(storedPins);
+    await setStorage(StorageKey.LOCAL_PINS, storedPins);
   }
 };
 
@@ -214,7 +173,10 @@ interface CommandPreferences {
   showLastOpened: boolean;
 }
 
-export default function Command() {
+/**
+ * Raycast command to view all pins in a list within the Raycast window.
+ */
+export default function ViewPinsCommand() {
   const { pins, setPins, loadingPins, revalidatePins } = usePins();
   const { groups, loadingGroups, revalidateGroups } = useGroups();
   const [examplesInstalled, setExamplesInstalled] = useState<LocalStorage.Value | undefined>(true);
@@ -227,7 +189,6 @@ export default function Command() {
     Promise.resolve(checkExpirations());
   }, []);
 
-  const mostRecentPin = getLastOpenedPin(pins);
   const maxTimesOpened = Math.max(...pins.map((pin) => pin.timesOpened || 0));
 
   /**
@@ -239,22 +200,19 @@ export default function Command() {
     return sortPins(pins, groups).map((pin, index) => {
       // Add accessories based on the user's preferences
       const accessories: List.Item.Accessory[] = [];
-      if (preferences.showFrequency) addFrequencyAccessory(pin, accessories, maxTimesOpened);
-      if (preferences.showLastOpened) addLastOpenedAccessory(pin, accessories, mostRecentPin?.id);
+      if (preferences.showLastOpened) addLastOpenedAccessory(pin, accessories, getLastOpenedPin(pins)?.id);
       if (preferences.showCreationDate) addCreationDateAccessory(pin, accessories);
       if (preferences.showExpiration) addExpirationDateAccessory(pin, accessories);
       if (preferences.showApplication) addApplicationAccessory(pin, accessories);
       if (preferences.showExecutionVisibility) addExecutionVisibilityAccessory(pin, accessories);
       if (preferences.showFragment) addTextFragmentAccessory(pin, accessories);
+      if (preferences.showFrequency) addFrequencyAccessory(pin, accessories, maxTimesOpened);
 
       const group = groups.find((group) => group.name == pin.group);
-
       return (
         <List.Item
-          title={pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url)}
-          subtitle={
-            preferences.showSubtitles ? pin.url.substring(0, 30) + (pin.url.length > 30 ? "..." : "") : undefined
-          }
+          title={pin.name || cutoff(pin.url, 20)}
+          subtitle={preferences.showSubtitles ? cutoff(pin.url, 30) : undefined}
           keywords={getPinKeywords(pin)}
           key={pin.id}
           icon={getPinIcon(pin)}
@@ -262,66 +220,52 @@ export default function Command() {
           actions={
             <ActionPanel>
               <ActionPanel.Section title="Pin Actions">
-                <Action title="Open" icon={Icon.ChevronRight} onAction={() => openPin(pin, preferences)} />
-
-                <Action.CopyToClipboard
-                  title="Copy Pin Name"
-                  content={pin.name}
-                  shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
-                />
-
-                <Action.CopyToClipboard
-                  title="Copy Pin URL"
-                  content={pin.url}
-                  shortcut={{ modifiers: ["cmd", "shift"], key: "u" }}
-                />
+                <Action title="Open" icon={Icon.ChevronRight} onAction={async () => await openPin(pin, preferences)} />
 
                 <Action.Push
                   title="Edit"
                   icon={Icon.Pencil}
                   shortcut={{ modifiers: ["cmd"], key: "e" }}
-                  target={<PinForm pin={pin} setPins={setPins} />}
+                  target={<PinForm pin={pin} setPins={setPins} pins={pins} />}
                 />
                 <Action.Push
                   title="Duplicate"
                   icon={Icon.EyeDropper}
                   shortcut={{ modifiers: ["cmd", "ctrl"], key: "d" }}
-                  target={<PinForm pin={{ ...pin, name: pin.name + " Copy", id: -1 }} setPins={setPins} />}
+                  target={<PinForm pin={{ ...pin, name: pin.name + " Copy", id: -1 }} setPins={setPins} pins={pins} />}
                 />
 
-                {(index > 0 && !group?.sortStrategy) || group?.sortStrategy == "manual" ? (
+                {index > 0 &&
+                (group?.sortStrategy == "manual" ||
+                  (!group?.sortStrategy && preferences.defaultSortStrategy == "manual") ||
+                  (group?.name == undefined && preferences.defaultSortStrategy == "manual")) ? (
                   <Action
                     title="Move Up"
                     icon={Icon.ArrowUp}
                     shortcut={{ modifiers: ["cmd", "shift"], key: "u" }}
                     onAction={async () => {
-                      await movePinUp(index, setPins);
+                      await movePin(pin, Direction.UP, setPins);
                     }}
                   />
                 ) : null}
-                {(index < pins.length - 1 && !group?.sortStrategy) || group?.sortStrategy == "manual" ? (
+                {index < pins.length - 1 &&
+                (group?.sortStrategy == "manual" ||
+                  (!group?.sortStrategy && preferences.defaultSortStrategy == "manual") ||
+                  (group?.name == undefined && preferences.defaultSortStrategy == "manual")) ? (
                   <Action
                     title="Move Down"
                     icon={Icon.ArrowDown}
                     shortcut={{ modifiers: ["cmd", "shift"], key: "d" }}
                     onAction={async () => {
-                      await movePinDown(index, setPins);
+                      await movePin(pin, Direction.DOWN, setPins);
                     }}
                   />
                 ) : null}
-
-                <Action
-                  title="Delete Pin"
-                  icon={Icon.Trash}
-                  onAction={async () => {
-                    await deletePin(pin, setPins);
-                  }}
-                  shortcut={{ modifiers: ["cmd"], key: "d" }}
-                  style={Action.Style.Destructive}
-                />
+                <DeletePinAction pin={pin} setPins={setPins} />
               </ActionPanel.Section>
               <CreateNewPinAction setPins={setPins} />
               <PlaceholdersGuideAction />
+              <CopyPinActionsSubmenu pin={pin} pins={pins} />
             </ActionPanel>
           }
         />
@@ -362,7 +306,7 @@ export default function Command() {
 
       <RecentApplicationsList
         pinActions={
-            <>
+          <>
             <CreateNewPinAction setPins={setPins} />
             {!examplesInstalled && pins.length == 0 ? (
               <InstallExamplesAction

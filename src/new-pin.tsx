@@ -1,5 +1,8 @@
 import { PinForm } from "./components/PinForm";
 
-export default function Command() {
+/**
+ * Raycast command for creating a new pin.
+ */
+export default function NewPinCommand() {
   return <PinForm />;
 }

@@ -1,3 +1,13 @@
+/**
+ * @module lib/icons.ts Utility functions for getting icons from various sources.
+ *
+ * @summary Icon utilities.
+ * @author Stephen Kaplan <skaplanofficial@gmail.com>
+ *
+ * Created at     : 2023-09-04 17:35:54 
+ * Last modified  : 2023-09-04 17:36:23
+ */
+
 import { Icon } from "@raycast/api";
 import { getFavicon } from "@raycast/utils";
 import { Pin } from "./Pins";
@@ -11,19 +21,20 @@ export const iconMap = Icon as Record<string, Icon>;
 /**
  * Converts a vague icon reference to an icon object.
  * @param iconRef The icon reference to convert.
+ * @param color The color to tint the icon.
  * @returns The icon object.
  */
-export const getIcon = (iconRef: string) => {
+export const getIcon = (iconRef: string, color?: string) => {
   if (iconRef in iconMap) {
-    return iconMap[iconRef];
+    return { source: iconMap[iconRef], tintColor: color };
   } else if (iconRef.startsWith("/") || iconRef.startsWith("~")) {
     return { fileIcon: iconRef };
   } else if (iconRef.match(/^[a-zA-Z0-9]*?:.*/g)) {
     return getFavicon(iconRef);
   } else if (iconRef == "None") {
-    return Icon.Minus;
+    return { source: Icon.Minus, tintColor: color };
   }
-  return Icon.Terminal;
+  return {source: Icon.Terminal, tintColor:  color };
 };
 
 /**
@@ -32,7 +43,7 @@ export const getIcon = (iconRef: string) => {
  * @returns The icon object.
  */
 export const getPinIcon = (pin: Pin) => {
-  return pin.icon in iconMap || pin.icon == "None" || pin.icon.startsWith("/") ? getIcon(pin.icon) : getIcon(pin.url);
+  return pin.icon in iconMap || pin.icon == "None" || pin.icon.startsWith("/") ? getIcon(pin.icon, pin.iconColor) : getIcon(pin.url);
 };
 
 /**
@@ -41,5 +52,5 @@ export const getPinIcon = (pin: Pin) => {
  * @returns The icon object.
  */
 export const getGroupIcon = (group: Group) => {
-  return group.name == "Recent Applications" ? Icon.Clock : group.icon in iconMap ? iconMap[group.icon] : Icon.Minus;
+  return group.name == "Recent Applications" ? Icon.Clock : group.icon in iconMap ? { source: iconMap[group.icon], tintColor: group.iconColor } : Icon.Minus;
 };

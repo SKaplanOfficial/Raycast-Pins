@@ -1,3 +1,13 @@
+/**
+ * @module lib/Groups.ts A collection of functions for managing groups. This includes creating, modifying, and deleting groups, as well as getting the next available group ID.
+ *
+ * @summary Group utilities.
+ * @author Stephen Kaplan <skaplanofficial@gmail.com>
+ *
+ * Created at     : 2023-09-04 17:35:11 
+ * Last modified  : 2023-09-04 17:35:47
+ */
+
 import { useEffect, useState } from "react";
 import { getStorage, setStorage } from "./utils";
 import { useCachedState } from "@raycast/utils";
@@ -5,8 +15,14 @@ import { StorageKey } from "./constants";
 import { showToast } from "@raycast/api";
 import { Pin } from "./Pins";
 
+/**
+ * The method used to sort a group's pins.
+ */
 export type SortStrategy = "manual" | "alphabetical" | "frequency" | "recency" | "dateCreated";
 
+/**
+ * A group of pins.
+ */
 export type Group = {
   /**
    * The name of the group.
@@ -33,6 +49,11 @@ export type Group = {
    * The method used to sort the group's pins.
    */
   sortStrategy?: SortStrategy;
+
+  /**
+   * The color to tint the icon.
+   */
+  iconColor?: string;
 };
 
 /**
@@ -82,7 +103,7 @@ export const getNextGroupID = async () => {
  * @param name The name of the group.
  * @param icon The icon for the group.
  */
-export const createNewGroup = async (name: string, icon: string, parent?: number, sortStrategy?: SortStrategy) => {
+export const createNewGroup = async (name: string, icon: string, parent?: number, sortStrategy?: SortStrategy, iconColor?: string) => {
   const storedGroups = await getStorage(StorageKey.LOCAL_GROUPS);
   const newID = await getNextGroupID();
 
@@ -94,12 +115,24 @@ export const createNewGroup = async (name: string, icon: string, parent?: number
     id: newID,
     parent: parent,
     sortStrategy: sortStrategy,
+    iconColor: iconColor,
   });
 
   // Update the stored groups
   await setStorage(StorageKey.LOCAL_GROUPS, newData);
 };
 
+/**
+ * Modifies the properties of a group.
+ * @param group The group to modify (used to source the group's ID)
+ * @param name The (new) name of the group.
+ * @param icon The (new) icon for the group.
+ * @param pop Function to pop the current view off the navigation stack.
+ * @param setGroups Function to update the list of groups.
+ * @param parent The (new) parent group ID for the group.
+ * @param sortStrategy The (new) sort strategy for the group.
+ * @param iconColor The (new) icon color for the group.
+ */
 export const modifyGroup = async (
   group: Group,
   name: string,
@@ -107,7 +140,8 @@ export const modifyGroup = async (
   pop: () => void,
   setGroups: (groups: Group[]) => void,
   parent?: number,
-  sortStrategy?: SortStrategy
+  sortStrategy?: SortStrategy,
+  iconColor?: string
 ) => {
   const storedGroups = await getStorage(StorageKey.LOCAL_GROUPS);
 
@@ -120,6 +154,7 @@ export const modifyGroup = async (
         id: group.id,
         parent: parent,
         sortStrategy: sortStrategy,
+        iconColor: iconColor,
       };
     } else {
       return oldGroup;
@@ -140,6 +175,7 @@ export const modifyGroup = async (
       id: group.id,
       parent: parent,
       sortStrategy: sortStrategy,
+      iconColor: iconColor,
     });
   }
 

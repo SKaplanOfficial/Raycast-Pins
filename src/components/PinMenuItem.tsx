@@ -1,23 +1,22 @@
-/**
- * @file components/PinMenuItem.tsx A menu item for a pin that handles on-click and on-right-click events, as well as de-referencing the pin's icon and shortcut.
- *
- * @summary Menu item for a pin.
- * @author Stephen Kaplan <skaplanofficial@gmail.com>
- *
- * Created at     : 2023-09-03 10:13:41 
- * Last modified  : 2023-09-03 10:14:42
- */
-
 import { MenuBarExtra } from "@raycast/api";
 import { getPinIcon } from "../lib/icons";
 import { Pin, deletePin, openPin } from "../lib/Pins";
 import { ExtensionPreferences } from "../lib/utils";
 import { LocalDataObject } from "../lib/LocalData";
 
+/**
+ * A menu item for a pin.
+ * @param props.pin The pin to display.
+ * @param props.preferences The preferences for the extension.
+ * @param props.relevant Whether or not the pin is relevant to the current context.
+ * @param props.localData The local data object specifying the current context.
+ * @param props.setPins The function to call to update the list of pins.
+ * @returns A menu item component.
+ */
 export default function PinMenuItem(props: {
   pin: Pin;
+  preferences: ExtensionPreferences & { rightClickAction: "open" | "delete" };
   relevant: boolean;
-  preferences: ExtensionPreferences;
   localData: LocalDataObject;
   setPins: React.Dispatch<React.SetStateAction<Pin[]>>;
 }) {
@@ -33,7 +32,15 @@ export default function PinMenuItem(props: {
         if (event.type == "left-click") {
           await openPin(pin, preferences, localData);
         } else {
-          await deletePin(pin, setPins);
+          // Handle right-click based on user's preferences
+          switch (preferences.rightClickAction) {
+            case "open":
+              await openPin(pin, preferences, localData);
+              break;
+            case "delete":
+              await deletePin(pin, setPins);
+              break;
+          }
         }
       }}
     />

@@ -1,3 +1,13 @@
+/**
+ * @module lib/pins.ts A collection of functions for managing pins. This includes creating, modifying, and deleting pins, as well as getting the next available pin ID.
+ *
+ * @summary Pin utilities.
+ * @author Stephen Kaplan <skaplanofficial@gmail.com>
+ *
+ * Created at     : 2023-09-04 17:37:42 
+ * Last modified  : 2023-09-04 17:37:42 
+ */
+
 import { useCachedState } from "@raycast/utils";
 import {
   Clipboard,
@@ -21,6 +31,9 @@ import path from "path";
 import { LocalDataObject } from "./LocalData";
 import { Group } from "./Groups";
 
+/**
+ * A pin object.
+ */
 export type Pin = {
   /**
    * The name of the pin. This should generally be unique.
@@ -86,6 +99,16 @@ export type Pin = {
    * The date that the pin was initially created.
    */
   dateCreated?: string;
+
+  /**
+   * The color of the icon. Only applies to built-in Raycast icons.
+   */
+  iconColor?: string;
+
+  /**
+   * The average time, in milliseconds, for every execution of the pin.
+   */
+  averageExecutionTime?: number;
 };
 
 /**
@@ -154,28 +177,7 @@ export const usePins = () => {
  * @param preferences The extension preferences object.
  */
 export const openPin = async (pin: Pin, preferences: { preferredBrowser: string }, context?: LocalDataObject) => {
-  await modifyPin(
-    pin,
-    pin.name,
-    pin.url,
-    pin.icon,
-    pin.group,
-    pin.application,
-    pin.expireDate ? new Date(pin.expireDate) : undefined,
-    pin.execInBackground,
-    pin.fragment,
-    pin.shortcut,
-    new Date(),
-    (pin.timesOpened || 0) + 1,
-    pin.dateCreated ? new Date(pin.dateCreated) : undefined,
-    () => {
-      null;
-    },
-    () => {
-      null;
-    },
-    false
-  );
+  const startDate = new Date();
   try {
     if (pin.fragment) {
       // Copy the text fragment to the clipboard
@@ -232,6 +234,33 @@ export const openPin = async (pin: Pin, preferences: { preferredBrowser: string 
       await showHUD(`Failed to open ${pin.name || pin.url}: ${(error as Error).message}`);
     }
   }
+
+  const endDate = new Date();
+  const timeElapsed = endDate.getTime() - startDate.getTime();
+  await modifyPin(
+    pin,
+    pin.name,
+    pin.url,
+    pin.icon,
+    pin.group,
+    pin.application,
+    pin.expireDate ? new Date(pin.expireDate) : undefined,
+    pin.execInBackground,
+    pin.fragment,
+    pin.shortcut,
+    new Date(),
+    (pin.timesOpened || 0) + 1,
+    pin.dateCreated ? new Date(pin.dateCreated) : new Date(),
+    pin.iconColor,
+    pin.averageExecutionTime ? Math.round(((pin.averageExecutionTime * (pin.timesOpened || 0)) + timeElapsed) / ((pin.timesOpened || 0) + 1)) : timeElapsed,
+    () => {
+      null;
+    },
+    () => {
+      null;
+    },
+    false
+  );
 };
 
 /**
@@ -255,7 +284,8 @@ export const createNewPin = async (
   expireDate: Date | undefined,
   execInBackground: boolean | undefined,
   fragment: boolean | undefined,
-  shortcut: Keyboard.Shortcut | undefined
+  shortcut: Keyboard.Shortcut | undefined,
+  iconColor: string | undefined
 ) => {
   // Get the stored pins
   const storedPins = await getStorage(StorageKey.LOCAL_PINS);
@@ -281,6 +311,7 @@ export const createNewPin = async (
     fragment: fragment,
     shortcut: shortcut,
     dateCreated: new Date().toUTCString(),
+    iconColor: iconColor,
   });
 
   // Update the stored pins
@@ -316,6 +347,8 @@ export const modifyPin = async (
   lastOpened: Date | undefined,
   timesOpened: number | undefined,
   dateCreated: Date | undefined,
+  iconColor: string | undefined,
+  averageExecutionTime: number | undefined,
   pop: () => void,
   setPins: React.Dispatch<React.SetStateAction<Pin[]>>,
   notify = true
@@ -338,7 +371,9 @@ export const modifyPin = async (
         lastOpened: lastOpened?.toUTCString(),
         timesOpened: timesOpened,
         dateCreated: dateCreated?.toUTCString(),
-      };
+        iconColor: iconColor,
+        averageExecutionTime: averageExecutionTime,
+      } as Pin;
     } else {
       return oldPin;
     }
@@ -366,6 +401,8 @@ export const modifyPin = async (
       lastOpened: lastOpened?.toUTCString(),
       timesOpened: timesOpened,
       dateCreated: dateCreated?.toUTCString(),
+      iconColor: iconColor,
+      averageExecutionTime: averageExecutionTime,
     });
   }
 
@@ -416,7 +453,7 @@ export const getPreviousPin = async (): Promise<Pin | undefined> => {
  */
 export const sortPins = (pins: Pin[], groups: Group[]) => {
   const preferences = getPreferenceValues<ExtensionPreferences>();
-  return pins.sort((p1, p2) => {
+  return [...pins].sort((p1, p2) => {
     const group = groups.find((group) => group.name == p1.group);
     if (group?.sortStrategy == "alphabetical" || (!group && preferences.defaultSortStrategy == "alphabetical")) {
       return p1.name.localeCompare(p2.name);
@@ -443,7 +480,7 @@ export const sortPins = (pins: Pin[], groups: Group[]) => {
  * @returns The {@link Pin} that was most recently opened, or undefined if no pins have been created yet.
  */
 export const getLastOpenedPin = (pins: Pin[]) => {
-  const sortedPins = pins.sort((p1, p2) => {
+  const sortedPins = [...pins].sort((p1, p2) => {
     return (
       (p2.lastOpened ? new Date(p2.lastOpened) : new Date(0)).getTime() -
       (p1.lastOpened ? new Date(p1.lastOpened) : new Date(0)).getTime()
@@ -454,6 +491,75 @@ export const getLastOpenedPin = (pins: Pin[]) => {
   }
   return undefined;
 };
+
+/**
+ * Gets the most recently created pin.
+ * @param pins The list of pins to search.
+ * @returns The {@link Pin} that was most recently created, or undefined if no pins have been created yet.
+ */
+export const getNewestPin = (pins: Pin[]) => {
+  const sortedPins = [...pins].sort((p1, p2) => {
+    return (
+      (p2.dateCreated ? new Date(p2.dateCreated) : new Date(0)).getTime() -
+      (p1.dateCreated ? new Date(p1.dateCreated) : new Date(0)).getTime()
+    );
+  });
+  if (sortedPins.length > 0) {
+    return sortedPins[0];
+  }
+  return undefined;
+};
+
+/**
+ * Gets the oldest pin (the pin with the earliest creation date).
+ * @param pins The list of pins to search.
+ * @returns The {@link Pin} that was created first, or undefined if no pins have been created yet.
+ */
+export const getOldestPin = (pins: Pin[]) => {
+  const sortedPins = [...pins].sort((p1, p2) => {
+    return (
+      (p1.dateCreated ? new Date(p1.dateCreated) : new Date(0)).getTime() -
+      (p2.dateCreated ? new Date(p2.dateCreated) : new Date(0)).getTime()
+    );
+  });
+  if (sortedPins.length > 0) {
+    return sortedPins[0];
+  }
+  return undefined;
+};
+
+/**
+ * Gets the total number of times that all pins have been used.
+ * @param pins The list of all pins.
+ * @returns The total execution count.
+ */
+export const getTotalPinExecutions = (pins: Pin[]) => {
+  return pins.reduce((total, pin) => total + (pin.timesOpened || 0), 0);
+}
+
+/**
+ * Calculates the percentile of a pin's frequency compared to all other pins.
+ * @param pin The pin to calculate the percentile for.
+ * @param pins All pins to compare the pin to.
+ * @returns The percentile of the pin's frequency compared to all other pins.
+ */
+export const calculatePinFrequencyPercentile = (pin: Pin, pins: Pin[]) => {
+  const pinsSortedByFrequency = pins.sort((a, b) => (a.timesOpened || 0) - (b.timesOpened || 0));
+  const pinIndex = pinsSortedByFrequency.findIndex((p) => p.id == pin.id || ((p.timesOpened || 0) >= (pin.timesOpened || 0)));
+  return Math.round((pinIndex / pinsSortedByFrequency.length) * 100);
+}
+
+/**
+ * Calculates the percentile of a pin's execution time compared to all other pins.
+ * @param pin The pin to calculate the percentile for.
+ * @param pins All pins to compare the pin to.
+ * @returns The percentile of the pin's execution time compared to all other pins.
+ */
+export const calculatePinExecutionTimePercentile = (pin: Pin, pins: Pin[]) => {
+  const pinsSortedByExecutionTime = pins.sort((a, b) => (a.averageExecutionTime || 0) - (b.averageExecutionTime || 0));
+  const pinIndex = pinsSortedByExecutionTime.findIndex((p) => p.id == pin.id || ((p.averageExecutionTime || 0) >= (pin.averageExecutionTime || 0)));
+  return Math.round((pinIndex / pinsSortedByExecutionTime.length) * 100);
+}
 
 /**
  * Gets keywords for a given pin. Keywords are derived from the pin's name, group name, and URL/target.
@@ -470,6 +576,19 @@ export const getPinKeywords = (pin: Pin) => {
   ];
 };
 
+/**
+ * Gets all pins and groups in JSON format.
+ * @returns A promise resolving to the JSON object containing all pins and groups.
+ */
+export const getPinsJSON = async () => {
+  const pins = await getStorage(StorageKey.LOCAL_PINS);
+  const groups = await getStorage(StorageKey.LOCAL_GROUPS);
+  const data = {
+    groups: groups,
+    pins: pins,
+  };
+  return data;
+};
 
 /**
  * Copies the pin data to the clipboard.
@@ -487,4 +606,83 @@ export const copyPinData = async () => {
   const jsonData = JSON.stringify(data);
   await Clipboard.copy(jsonData);
   return jsonData;
+};
+
+/**
+ * Gets the statistics (i.e. usage and creation info, not just raw stats) for a given pin as either a string (default) or an object. In string form, each statistic is separated by two newlines.
+ *
+ * @param pin The pin to get statistics for.
+ * @param pins All pins to compare the pin to.
+ * @param format The format to return the statistics in. Defaults to "string".
+ * @returns The statistics for the pin.
+ */
+export const getPinStatistics = (pin: Pin, pins: Pin[], format: "string" | "object" = "string") => {
+  const dateFormat: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+  };
+
+  const formattedDateCreated = pin.dateCreated
+    ? new Date(pin.dateCreated).toLocaleDateString(undefined, dateFormat)
+    : new Date().toLocaleDateString(undefined, dateFormat);
+
+  const formattedDateLastOpened = pin.lastOpened
+    ? new Date(pin.lastOpened).toLocaleDateString(undefined, dateFormat)
+    : "Never";
+
+  const percentOfAllExecutions = `${Math.round(((pin.timesOpened || 0) / getTotalPinExecutions(pins)) * 100)}%`;
+
+  const averageExecutionTime = pin.averageExecutionTime ? `${pin.averageExecutionTime / 1000} seconds` : "N/A";
+
+  const placeholdersUsed = Object.entries(Placeholders.allPlaceholders).filter(([regex]) => {
+    return pin.url.match(new RegExp(regex, "g")) != null;
+  });
+  const placeholdersSummary = `${
+    placeholdersUsed.length > 0
+      ? `${placeholdersUsed.length} (${placeholdersUsed.map(([, placeholder]) => placeholder.name)})`
+      : `None`
+  }`;
+
+  if (format == "object") {
+    return {
+      dateCreated: formattedDateCreated,
+      isNewestPin: getNewestPin(pins)?.id == pin.id,
+      timesUsed: pin?.timesOpened || 0,
+      percentOfAllExecutions: percentOfAllExecutions,
+      isOldestPin: getOldestPin(pins)?.id == pin.id,
+      frequencyPercentile: `${calculatePinFrequencyPercentile(pin, pins)}%`,
+      lastUsed: formattedDateLastOpened,
+      isMostRecent: getLastOpenedPin(pins)?.id == pin.id,
+      placeholdersUsed: placeholdersSummary,
+      averageExecutionTime: averageExecutionTime,
+      executionTimePercentile: `${calculatePinExecutionTimePercentile(pin, pins)}%`,
+    };
+  }
+
+  const newestPinText = getNewestPin(pins)?.id == pin.id ? ` (Newest Pin)` : ``;
+  const oldestPinText = getOldestPin(pins)?.id == pin.id ? ` (Oldest Pin)` : ``;
+  const dateCreatedText = `Date Created: ${formattedDateCreated}${newestPinText}${oldestPinText}`;
+
+  const mostRecentText = getLastOpenedPin(pins)?.id == pin.id ? ` (Most Recent)` : ``;
+  const lastUsedText = `Last Used: ${pin.lastOpened ? `${formattedDateLastOpened}${mostRecentText}` : "Never"}`;
+
+  const frequencyPercentile = calculatePinFrequencyPercentile(pin, pins);
+  const timesUsedText = `Times Used: ${
+    pin?.timesOpened
+      ? `${pin.timesOpened} ${frequencyPercentile > 0 ? `(More than ${frequencyPercentile}% of Other Pins)` : ``}`
+      : 0
+  }`;
+
+  const percentOfAllExecutionsText = `${percentOfAllExecutions} of All Pin Executions`;
+
+  const executionTimePercentile = calculatePinExecutionTimePercentile(pin, pins);
+  const averageExecutionTimeText = `Average Execution Time: ${averageExecutionTime}${executionTimePercentile > 0 ? ` (Faster than ${executionTimePercentile}% of Other Pins)` : ``}`;
+
+  const placeholdersUsedText = `Placeholders Used: ${placeholdersSummary}`;
+
+  return [dateCreatedText, lastUsedText, timesUsedText, percentOfAllExecutionsText].concat(pin.averageExecutionTime ? [averageExecutionTimeText, placeholdersUsedText] : [placeholdersUsedText]).join("\n\n");
 };
