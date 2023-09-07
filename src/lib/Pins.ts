@@ -4,8 +4,8 @@
  * @summary Pin utilities.
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
- * Created at     : 2023-09-04 17:37:42 
- * Last modified  : 2023-09-04 17:37:42 
+ * Created at     : 2023-09-04 17:37:42
+ * Last modified  : 2023-09-04 17:37:42
  */
 
 import { useCachedState } from "@raycast/utils";
@@ -29,7 +29,7 @@ import * as os from "os";
 import { Placeholders } from "./placeholders";
 import path from "path";
 import { LocalDataObject } from "./LocalData";
-import { Group } from "./Groups";
+import { Group, SortStrategy } from "./Groups";
 
 /**
  * A pin object.
@@ -178,6 +178,7 @@ export const usePins = () => {
  */
 export const openPin = async (pin: Pin, preferences: { preferredBrowser: string }, context?: LocalDataObject) => {
   const startDate = new Date();
+
   try {
     if (pin.fragment) {
       // Copy the text fragment to the clipboard
@@ -189,41 +190,42 @@ export const openPin = async (pin: Pin, preferences: { preferredBrowser: string 
         await showToast({ title: "Copied To Clipboard" });
       }
       await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
-      return;
-    }
-
-    const targetRaw = pin.url.startsWith("~") ? pin.url.replace("~", os.homedir()) : pin.url;
-    const target = await Placeholders.applyToString(targetRaw, context);
-    if (target == "") return;
-
-    const isPath = pin.url.startsWith("/") || pin.url.startsWith("~");
-    const targetApplication = !pin.application || pin.application == "None" ? undefined : pin.application;
-    if (isPath) {
-      // Open the path in the target application (fallback to default application for the file type)
-      if (fs.existsSync(target)) {
-        await open(path.resolve(target), targetApplication);
-        await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
-      } else {
-        throw new Error("File does not exist.");
-      }
     } else {
-      if (target.match(/^[a-zA-Z](?![%])[a-zA-Z0-9+.-]+?:.*/g)) {
-        // Open the URL in the target application (fallback to preferred browser, then default browser)
-        await open(encodeURI(target), targetApplication || preferences.preferredBrowser);
-        await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
-      } else {
-        // Open Terminal command in the default Terminal application
-        await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
-        if (pin.execInBackground) {
-          // Run the Terminal command in the background
-          await runCommand(target);
+      const targetRaw = pin.url.startsWith("~") ? pin.url.replace("~", os.homedir()) : pin.url;
+      const target = await Placeholders.applyToString(targetRaw, context);
+
+      if (target != "") {
+        const isPath = pin.url.startsWith("/") || pin.url.startsWith("~");
+        const targetApplication = !pin.application || pin.application == "None" ? undefined : pin.application;
+        if (isPath) {
+          // Open the path in the target application (fallback to default application for the file type)
+          if (fs.existsSync(target)) {
+            await open(path.resolve(target), targetApplication);
+            await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
+          } else {
+            throw new Error("File does not exist.");
+          }
         } else {
-          // Run the Terminal command in a new Terminal tab
-          await runCommandInTerminal(target);
+          if (target.match(/^[a-zA-Z](?![%])[a-zA-Z0-9+.-]+?:.*/g)) {
+            // Open the URL in the target application (fallback to preferred browser, then default browser)
+            await open(encodeURI(target), targetApplication || preferences.preferredBrowser);
+            await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
+          } else {
+            // Open Terminal command in the default Terminal application
+            await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
+            if (pin.execInBackground) {
+              // Run the Terminal command in the background
+              await runCommand(target);
+            } else {
+              // Run the Terminal command in a new Terminal tab
+              await runCommandInTerminal(target);
+            }
+          }
         }
       }
     }
   } catch (error) {
+    console.error(error);
     if (environment.commandName == "view-pins") {
       await showToast({
         title: "Failed to open " + (pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url)),
@@ -252,7 +254,9 @@ export const openPin = async (pin: Pin, preferences: { preferredBrowser: string 
     (pin.timesOpened || 0) + 1,
     pin.dateCreated ? new Date(pin.dateCreated) : new Date(),
     pin.iconColor,
-    pin.averageExecutionTime ? Math.round(((pin.averageExecutionTime * (pin.timesOpened || 0)) + timeElapsed) / ((pin.timesOpened || 0) + 1)) : timeElapsed,
+    pin.averageExecutionTime
+      ? Math.round((pin.averageExecutionTime * (pin.timesOpened || 0) + timeElapsed) / ((pin.timesOpened || 0) + 1))
+      : timeElapsed,
     () => {
       null;
     },
@@ -451,20 +455,36 @@ export const getPreviousPin = async (): Promise<Pin | undefined> => {
  * @param groups The list of groups to sort by.
  * @returns The sorted list of pins.
  */
-export const sortPins = (pins: Pin[], groups: Group[]) => {
+export const sortPins = (pins: Pin[], groups: Group[], sortMethod?: SortStrategy) => {
   const preferences = getPreferenceValues<ExtensionPreferences>();
   return [...pins].sort((p1, p2) => {
     const group = groups.find((group) => group.name == p1.group);
-    if (group?.sortStrategy == "alphabetical" || (!group && preferences.defaultSortStrategy == "alphabetical")) {
+    if (
+      sortMethod == "alphabetical" ||
+      (sortMethod == undefined &&
+        (group?.sortStrategy == "alphabetical" || (!group && preferences.defaultSortStrategy == "alphabetical")))
+    ) {
       return p1.name.localeCompare(p2.name);
-    } else if (group?.sortStrategy == "frequency" || (!group && preferences.defaultSortStrategy == "frequency")) {
+    } else if (
+      sortMethod == "frequency" ||
+      (sortMethod == undefined &&
+        (group?.sortStrategy == "frequency" || (!group && preferences.defaultSortStrategy == "frequency")))
+    ) {
       return (p2.timesOpened || 0) - (p1.timesOpened || 0);
-    } else if (group?.sortStrategy == "recency" || (!group && preferences.defaultSortStrategy == "recency")) {
+    } else if (
+      sortMethod == "recency" ||
+      (sortMethod == undefined &&
+        (group?.sortStrategy == "recency" || (!group && preferences.defaultSortStrategy == "recency")))
+    ) {
       return (p1.lastOpened ? new Date(p1.lastOpened) : new Date(0)).getTime() >
         (p2.lastOpened ? new Date(p2.lastOpened) : new Date(0)).getTime()
         ? -1
         : 1;
-    } else if (group?.sortStrategy == "dateCreated" || (!group && preferences.defaultSortStrategy == "dateCreated")) {
+    } else if (
+      sortMethod == "dateCreated" ||
+      (sortMethod == undefined &&
+        (group?.sortStrategy == "dateCreated" || (!group && preferences.defaultSortStrategy == "dateCreated")))
+    ) {
       return (p1.dateCreated ? new Date(p1.dateCreated) : new Date(0)).getTime() >
         (p2.dateCreated ? new Date(p2.dateCreated) : new Date(0)).getTime()
         ? -1
@@ -535,7 +555,7 @@ export const getOldestPin = (pins: Pin[]) => {
  */
 export const getTotalPinExecutions = (pins: Pin[]) => {
   return pins.reduce((total, pin) => total + (pin.timesOpened || 0), 0);
-}
+};
 
 /**
  * Calculates the percentile of a pin's frequency compared to all other pins.
@@ -545,9 +565,11 @@ export const getTotalPinExecutions = (pins: Pin[]) => {
  */
 export const calculatePinFrequencyPercentile = (pin: Pin, pins: Pin[]) => {
   const pinsSortedByFrequency = pins.sort((a, b) => (a.timesOpened || 0) - (b.timesOpened || 0));
-  const pinIndex = pinsSortedByFrequency.findIndex((p) => p.id == pin.id || ((p.timesOpened || 0) >= (pin.timesOpened || 0)));
+  const pinIndex = pinsSortedByFrequency.findIndex(
+    (p) => p.id == pin.id || (p.timesOpened || 0) >= (pin.timesOpened || 0)
+  );
   return Math.round((pinIndex / pinsSortedByFrequency.length) * 100);
-}
+};
 
 /**
  * Calculates the percentile of a pin's execution time compared to all other pins.
@@ -557,9 +579,11 @@ export const calculatePinFrequencyPercentile = (pin: Pin, pins: Pin[]) => {
  */
 export const calculatePinExecutionTimePercentile = (pin: Pin, pins: Pin[]) => {
   const pinsSortedByExecutionTime = pins.sort((a, b) => (a.averageExecutionTime || 0) - (b.averageExecutionTime || 0));
-  const pinIndex = pinsSortedByExecutionTime.findIndex((p) => p.id == pin.id || ((p.averageExecutionTime || 0) >= (pin.averageExecutionTime || 0)));
+  const pinIndex = pinsSortedByExecutionTime.findIndex(
+    (p) => p.id == pin.id || (p.averageExecutionTime || 0) >= (pin.averageExecutionTime || 0)
+  );
   return Math.round((pinIndex / pinsSortedByExecutionTime.length) * 100);
-}
+};
 
 /**
  * Gets keywords for a given pin. Keywords are derived from the pin's name, group name, and URL/target.
@@ -581,8 +605,8 @@ export const getPinKeywords = (pin: Pin) => {
  * @returns A promise resolving to the JSON object containing all pins and groups.
  */
 export const getPinsJSON = async () => {
-  const pins = await getStorage(StorageKey.LOCAL_PINS);
-  const groups = await getStorage(StorageKey.LOCAL_GROUPS);
+  const pins: Pin[] = await getStorage(StorageKey.LOCAL_PINS);
+  const groups: Group[] = await getStorage(StorageKey.LOCAL_GROUPS);
   const data = {
     groups: groups,
     pins: pins,
@@ -680,9 +704,13 @@ export const getPinStatistics = (pin: Pin, pins: Pin[], format: "string" | "obje
   const percentOfAllExecutionsText = `${percentOfAllExecutions} of All Pin Executions`;
 
   const executionTimePercentile = calculatePinExecutionTimePercentile(pin, pins);
-  const averageExecutionTimeText = `Average Execution Time: ${averageExecutionTime}${executionTimePercentile > 0 ? ` (Faster than ${executionTimePercentile}% of Other Pins)` : ``}`;
+  const averageExecutionTimeText = `Average Execution Time: ${averageExecutionTime}${
+    executionTimePercentile > 0 ? ` (Faster than ${executionTimePercentile}% of Other Pins)` : ``
+  }`;
 
   const placeholdersUsedText = `Placeholders Used: ${placeholdersSummary}`;
 
-  return [dateCreatedText, lastUsedText, timesUsedText, percentOfAllExecutionsText].concat(pin.averageExecutionTime ? [averageExecutionTimeText, placeholdersUsedText] : [placeholdersUsedText]).join("\n\n");
+  return [dateCreatedText, lastUsedText, timesUsedText, percentOfAllExecutionsText]
+    .concat(pin.averageExecutionTime ? [averageExecutionTimeText, placeholdersUsedText] : [placeholdersUsedText])
+    .join("\n\n");
 };

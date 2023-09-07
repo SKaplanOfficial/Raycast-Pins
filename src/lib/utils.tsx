@@ -100,5 +100,5 @@ export const runCommandInTerminal = async (command: string): Promise<string> => 
  * @returns The modified string.
  */
 export const cutoff = (str: string, cutoff: number) => {
-  return `${str.substring(0, cutoff)}${str.length > cutoff ? "..." : ""}`
-}
+  return `${str.substring(0, cutoff)}${str.length > cutoff ? "..." : ""}`;
+};

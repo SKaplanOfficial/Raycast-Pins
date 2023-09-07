@@ -2,9 +2,22 @@
 
 ## 1.4.0 Release, TBD
 
+### 2023-09-05
+
+- Various bug fixes and improvements
+- Added `{{currentApplicationBundleID}}` placeholder, which inserts the bundle ID of the current application
+  - Aliases: `{{currentAppBundleID}}`, `{{currentApplicationID}}`, `{{currentAppID}}`
+- Added `{{pinNames}}` placeholder, which inserts a list of all pin names. Use `amount=[number]` argument to randomly select a number of names from the list.
+- Added `{{pinTargets}}` placeholder, which inserts a list of all pin targets. Can also specify amount here.
+- Added `{{groupNames}}` placeholder, which inserts a list of all group names. Can also specify amount here.
+- Added `{{pins}}` and `{{groups}}` placeholders for inserting the JSON representation of pins and groups, respectively. Can also specify amount here.
+- Added `{{statistics}}` placeholder for inserting pin statistics such as frequency of use, average execution time, and more. Use `sort=[alpha|alphabetical|freq|frequency|recency|dateCreated]` argument to sort the list. Also supports the `amount` argument.
+- Added the `{{type:...}}` directive to type text into the frontmost application.
+- Fixed bug where pin keyboard shortcuts would incorrectly get flagged as reserved by the extension.
+
 ### 2023-09-04
 
-- Added settings to export Pins data in CSV, JSON, YAML, or XML format, and/or to save the data to a file.
+- Added settings to export Pins data in CSV, JSON, TOML, YAML, or XML format, and/or to save the data to a file.
 - Added support for customizing the icon color of pins and groups.
 - Added setting for customizing the color of the main menu bar icon.
 - The "Preferences..." menu item now opens the preferences for the menu bar command specifically

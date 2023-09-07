@@ -4,7 +4,7 @@
  * @summary Local data and context utilities.
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
- * Created at     : 2023-09-04 17:36:31 
+ * Created at     : 2023-09-04 17:36:31
  * Last modified  : 2023-09-04 17:37:04
  */
 
@@ -110,7 +110,8 @@ const getCurrentDirectory = async (): Promise<{ name: string; path: string }> =>
  * @returns A promise resolving to an array of objects containing the name and path of each selected item.
  */
 export const getFinderSelection = async (): Promise<{ name: string; path: string }[]> => {
-  const data = await runAppleScript(`try
+  const data = await runAppleScript(
+    `try
     tell application "Finder"
       set theSelection to selection
       set thePath to {}
@@ -350,7 +351,7 @@ export const getTextSelection = async (): Promise<string> => {
   const oldVolume = await runAppleScript(`set oldVolume to output volume of (get volume settings)
     set volume output volume 0
     return oldVolume`);
-  let text = ""
+  let text = "";
   try {
     text = await getSelectedText();
   } catch (error) {

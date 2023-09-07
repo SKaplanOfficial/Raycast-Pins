@@ -4,7 +4,7 @@
  * @summary Group utilities.
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
- * Created at     : 2023-09-04 17:35:11 
+ * Created at     : 2023-09-04 17:35:11
  * Last modified  : 2023-09-04 17:35:47
  */
 
@@ -43,7 +43,6 @@ export type Group = {
    * The ID of the parent group.
    */
   parent?: number;
-
 
   /**
    * The method used to sort the group's pins.
@@ -96,14 +95,20 @@ export const getNextGroupID = async () => {
   }
   setStorage(StorageKey.NEXT_GROUP_ID, [newID + 1]);
   return newID;
-}
+};
 
 /**
  * Creates a new group; updates local storage.
  * @param name The name of the group.
  * @param icon The icon for the group.
  */
-export const createNewGroup = async (name: string, icon: string, parent?: number, sortStrategy?: SortStrategy, iconColor?: string) => {
+export const createNewGroup = async (
+  name: string,
+  icon: string,
+  parent?: number,
+  sortStrategy?: SortStrategy,
+  iconColor?: string
+) => {
   const storedGroups = await getStorage(StorageKey.LOCAL_GROUPS);
   const newID = await getNextGroupID();
 
@@ -209,18 +214,20 @@ export const modifyGroup = async (
 export const deleteGroup = async (group: Group, setGroups: (groups: Group[]) => void) => {
   const storedGroups: Group[] = await getStorage(StorageKey.LOCAL_GROUPS);
 
-  const filteredGroups = storedGroups.filter((oldGroup: Group) => {
-    return oldGroup.id != group.id;
-  }).map((g) => {
-    if (g.parent == group.id) {
-      if (group.parent != undefined) {
-        g.parent = group.parent;
-      } else {
-        g.parent = undefined;
+  const filteredGroups = storedGroups
+    .filter((oldGroup: Group) => {
+      return oldGroup.id != group.id;
+    })
+    .map((g) => {
+      if (g.parent == group.id) {
+        if (group.parent != undefined) {
+          g.parent = group.parent;
+        } else {
+          g.parent = undefined;
+        }
       }
-    }
-    return g;
-  });
+      return g;
+    });
 
   const isDuplicate =
     filteredGroups.filter((oldGroup: Group) => {
@@ -251,7 +258,11 @@ export const deleteGroup = async (group: Group, setGroups: (groups: Group[]) => 
  * @param setNameError A function to set the name error.
  * @param groupNames The names of the existing groups.
  */
-export const checkGroupNameField = (name: string, setNameError: (error: string | undefined) => void, groupNames: string[]) => {
+export const checkGroupNameField = (
+  name: string,
+  setNameError: (error: string | undefined) => void,
+  groupNames: string[]
+) => {
   // Checks for non-empty (non-spaces-only) name
   if (name.trim().length == 0) {
     setNameError("Name cannot be empty!");

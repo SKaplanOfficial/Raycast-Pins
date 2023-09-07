@@ -4,7 +4,7 @@
  * @summary Icon utilities.
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
- * Created at     : 2023-09-04 17:35:54 
+ * Created at     : 2023-09-04 17:35:54
  * Last modified  : 2023-09-04 17:36:23
  */
 
@@ -34,7 +34,7 @@ export const getIcon = (iconRef: string, color?: string) => {
   } else if (iconRef == "None") {
     return { source: Icon.Minus, tintColor: color };
   }
-  return {source: Icon.Terminal, tintColor:  color };
+  return { source: Icon.Terminal, tintColor: color };
 };
 
 /**
@@ -43,7 +43,9 @@ export const getIcon = (iconRef: string, color?: string) => {
  * @returns The icon object.
  */
 export const getPinIcon = (pin: Pin) => {
-  return pin.icon in iconMap || pin.icon == "None" || pin.icon.startsWith("/") ? getIcon(pin.icon, pin.iconColor) : getIcon(pin.url);
+  return pin.icon in iconMap || pin.icon == "None" || pin.icon.startsWith("/")
+    ? getIcon(pin.icon, pin.iconColor)
+    : getIcon(pin.url);
 };
 
 /**
@@ -52,5 +54,9 @@ export const getPinIcon = (pin: Pin) => {
  * @returns The icon object.
  */
 export const getGroupIcon = (group: Group) => {
-  return group.name == "Recent Applications" ? Icon.Clock : group.icon in iconMap ? { source: iconMap[group.icon], tintColor: group.iconColor } : Icon.Minus;
+  return group.name == "Recent Applications"
+    ? Icon.Clock
+    : group.icon in iconMap
+    ? { source: iconMap[group.icon], tintColor: group.iconColor }
+    : Icon.Minus;
 };

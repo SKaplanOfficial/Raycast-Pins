@@ -29,8 +29,6 @@
 	</dict>
 	<key>LSRequiresCarbon</key>
 	<true/>
-	<key>LSUIElement</key>
-	<true/>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>This script needs to control other applications to run.</string>
 	<key>NSAppleMusicUsageDescription</key>
@@ -70,7 +68,7 @@
 		<key>positionOfDivider</key>
 		<real>724</real>
 		<key>savedFrame</key>
-		<string>-1 110 900 1014 0 0 1800 1125 </string>
+		<string>900 111 900 1014 0 0 1800 1125 </string>
 		<key>selectedTab</key>
 		<string>result</string>
 	</dict>

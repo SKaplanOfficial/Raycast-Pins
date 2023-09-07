@@ -4,17 +4,17 @@
  * @summary List item accessory utilities.
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
- * Created at     : 2023-09-03 08:28:07 
+ * Created at     : 2023-09-03 08:28:07
  * Last modified  : 2023-09-03 13:43:49
  */
 
-import path from 'path';
+import path from "path";
 
-import { Color, Icon, List } from '@raycast/api';
+import { Color, Icon, List } from "@raycast/api";
 
-import { SORT_STRATEGY } from './constants';
-import { Group } from './Groups';
-import { Pin } from './Pins';
+import { SORT_STRATEGY } from "./constants";
+import { Group } from "./Groups";
+import { Pin } from "./Pins";
 
 /**
  * Maps an amount to a color, based on the maximum amount, hinting at relative intensity.
@@ -53,7 +53,7 @@ export const addLastOpenedAccessory = (pin: Pin, accessories: List.Item.Accessor
   if (pin.lastOpened && pin.id == mostRecentPinID) {
     accessories.push({ icon: Icon.Clock, tooltip: `Last Opened ${new Date(pin.lastOpened).toLocaleString()}` });
   }
-}
+};
 
 /**
  * Adds a creation date accessory to the given list of accessories, indicating when exactly the pin was created.
@@ -64,7 +64,7 @@ export const addCreationDateAccessory = (pin: Pin, accessories: List.Item.Access
   if (pin.dateCreated) {
     accessories.push({ icon: Icon.Calendar, tooltip: `Created On ${new Date(pin.dateCreated).toLocaleString()}` });
   }
-}
+};
 
 /**
  * Adds an expiration date accessory to the given list of accessories, indicating when exactly the pin will expire.
@@ -74,10 +74,17 @@ export const addCreationDateAccessory = (pin: Pin, accessories: List.Item.Access
 export const addExpirationDateAccessory = (pin: Pin, accessories: List.Item.Accessory[]) => {
   if (pin.expireDate) {
     const expirationDate = new Date(pin.expireDate);
-    const dateString = expirationDate.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "numeric", hour12: true });
+    const dateString = expirationDate.toLocaleDateString(undefined, {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    });
     accessories.push({ date: expirationDate, tooltip: `Expires On ${dateString}` });
   }
-}
+};
 
 /**
  * Adds an application accessory to the given list of accessories, indicating which application the pin will open with. If the pin is a terminal command, the terminal icon is added instead.
@@ -86,11 +93,19 @@ export const addExpirationDateAccessory = (pin: Pin, accessories: List.Item.Acce
  */
 export const addApplicationAccessory = (pin: Pin, accessories: List.Item.Accessory[]) => {
   if (pin.application != "None" && pin.application != undefined) {
-    accessories.push({ icon: { fileIcon: pin.application }, tooltip: `Opens With ${path.basename(pin.application, ".app")}` });
-  } else if (!pin.fragment && !pin.url?.startsWith("/") && !pin.url?.startsWith("~") && !pin.url?.match(/^[a-zA-Z0-9]*?:.*/g)) {
+    accessories.push({
+      icon: { fileIcon: pin.application },
+      tooltip: `Opens With ${path.basename(pin.application, ".app")}`,
+    });
+  } else if (
+    !pin.fragment &&
+    !pin.url?.startsWith("/") &&
+    !pin.url?.startsWith("~") &&
+    !pin.url?.match(/^[a-zA-Z0-9]*?:.*/g)
+  ) {
     accessories.push({ icon: Icon.Terminal, tooltip: "Runs Terminal Command" });
   }
-}
+};
 
 /**
  * Adds an execution visibility accessory to the given list of accessories, indicating whether the pin will execute in the background or in a new terminal tab.
@@ -98,10 +113,18 @@ export const addApplicationAccessory = (pin: Pin, accessories: List.Item.Accesso
  * @param accessories The list of accessories to add the execution visibility accessory to.
  */
 export const addExecutionVisibilityAccessory = (pin: Pin, accessories: List.Item.Accessory[]) => {
-  if (!pin.fragment && !pin.url?.startsWith("/") && !pin.url?.startsWith("~") && !pin.url?.match(/^[a-zA-Z0-9]*?:.*/g)) {
-    accessories.push({ icon: pin.execInBackground ? Icon.EyeDisabled : Icon.Eye, tooltip: pin.execInBackground ? "Executes in Background" : "Executes In New Terminal Tab" });
+  if (
+    !pin.fragment &&
+    !pin.url?.startsWith("/") &&
+    !pin.url?.startsWith("~") &&
+    !pin.url?.match(/^[a-zA-Z0-9]*?:.*/g)
+  ) {
+    accessories.push({
+      icon: pin.execInBackground ? Icon.EyeDisabled : Icon.Eye,
+      tooltip: pin.execInBackground ? "Executes in Background" : "Executes In New Terminal Tab",
+    });
   }
-}
+};
 
 /**
  * Adds a text fragment accessory to the given list of accessories, indicating that the pin will copy raw text to the clipboard.
@@ -112,7 +135,7 @@ export const addTextFragmentAccessory = (pin: Pin, accessories: List.Item.Access
   if (pin.fragment) {
     accessories.push({ icon: Icon.Text, tooltip: "Text Fragment" });
   }
-}
+};
 
 /**
  * Adds a sorting strategy accessory to the given list of accessories, indicating how a group is sorted.
@@ -120,8 +143,8 @@ export const addTextFragmentAccessory = (pin: Pin, accessories: List.Item.Access
  * @param accessories The list of accessories to add the sorting strategy accessory to.
  */
 export const addSortingStrategyAccessory = (group: Group, accessories: List.Item.Accessory[]) => {
-  accessories.push({ tag: { value: SORT_STRATEGY[group.sortStrategy || "Not Set"], color: Color.SecondaryText } })
-}
+  accessories.push({ tag: { value: SORT_STRATEGY[group.sortStrategy || "Not Set"], color: Color.SecondaryText } });
+};
 
 /**
  * Adds an ID accessory tag to the given list of accessories.
@@ -130,8 +153,8 @@ export const addSortingStrategyAccessory = (group: Group, accessories: List.Item
  * @param maxID The maximum ID of any group.
  */
 export const addIDAccessory = (group: Group, accessories: List.Item.Accessory[], maxID: number) => {
-  accessories.push({ tag: { value: `ID: ${group.id.toString()}`, color: mapAmountToColor(group.id, maxID) } })
-}
+  accessories.push({ tag: { value: `ID: ${group.id.toString()}`, color: mapAmountToColor(group.id, maxID) } });
+};
 
 /**
  * Adds a parent group accessory tag to the given list of accessories.
@@ -143,4 +166,4 @@ export const addParentGroupAccessory = (group: Group, accessories: List.Item.Acc
     const parentName = groups.find((g) => g.id == group.parent)?.name;
     accessories.push({ tag: { value: `Parent: ${parentName}`, color: Color.SecondaryText } });
   }
-}
+};

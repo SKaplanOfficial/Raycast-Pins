@@ -4,12 +4,12 @@
  * @summary Script utilities.
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
- * Created at     : 2023-09-04 17:39:13 
+ * Created at     : 2023-09-04 17:39:13
  * Last modified  : 2023-09-04 17:39:47
  */
 
 import { environment } from "@raycast/api";
-import { execSync } from "child_process"
+import { execSync } from "child_process";
 import path from "path";
 
 /**
@@ -25,7 +25,7 @@ export type Location = {
   state: string;
   postalCode: string;
   country: string;
-}
+};
 
 /**
  * The entry point for location-related scripts.
@@ -36,18 +36,25 @@ export const LocationManager = {
    * @returns {Promise<Location | Record<string, string | number>>} A promise that resolves to a dictionary of location data.
    */
   getLocation: async (): Promise<Location | Record<string, string | number>> => {
-    const LMAppPath = path.join(environment.assetsPath, "scripts", "PinsLocationManager.app", "Contents", "MacOS", "applet");
-      try {
-        // Ensure the script is executable
-        execSync(`chmod +x ${LMAppPath}`);
+    const LMAppPath = path.join(
+      environment.assetsPath,
+      "scripts",
+      "PinsLocationManager.app",
+      "Contents",
+      "MacOS",
+      "applet"
+    );
+    try {
+      // Ensure the script is executable
+      execSync(`chmod +x ${LMAppPath}`);
 
-        // Run the script and parse the result
-        const result = JSON.parse(execSync(LMAppPath).toString());
-        return result;
-      } catch (e) {
-        console.error(e)
-        return {}
-      }
+      // Run the script and parse the result
+      const result = JSON.parse(execSync(LMAppPath).toString());
+      return result;
+    } catch (e) {
+      console.error(e);
+      return {};
+    }
   },
 
   /**
@@ -119,5 +126,5 @@ export const LocationManager = {
     } else {
       return 0;
     }
-  }
-}
+  },
+};

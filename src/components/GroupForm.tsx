@@ -1,4 +1,14 @@
-import { Action, ActionPanel, Color, Form, Icon, LaunchType, environment, launchCommand, useNavigation } from "@raycast/api";
+import {
+  Action,
+  ActionPanel,
+  Color,
+  Form,
+  Icon,
+  LaunchType,
+  environment,
+  launchCommand,
+  useNavigation,
+} from "@raycast/api";
 import {
   Group,
   checkGroupNameField,
@@ -47,14 +57,13 @@ export default function GroupForm(props: { group?: Group; setGroups?: (groups: G
                 setParentError("Group cannot be its own parent!");
                 return false;
               }
-              console.log(values.idField);
               if (environment.commandName == "new-group") {
                 await createNewGroup(
                   values.nameField,
                   values.iconField,
                   values.parentField ? values.parentField : undefined,
                   values.sortStrategyField && values.sortStrategyField != "none" ? values.sortStrategyField : undefined,
-                  values.iconColorField,
+                  values.iconColorField
                 );
                 await launchCommand({
                   name: "view-groups",
@@ -69,7 +78,7 @@ export default function GroupForm(props: { group?: Group; setGroups?: (groups: G
                   setGroups as (groups: Group[]) => void,
                   values.parentField ? values.parentField : undefined,
                   values.sortStrategyField && values.sortStrategyField != "none" ? values.sortStrategyField : undefined,
-                  values.iconColorField,
+                  values.iconColorField
                 );
               }
             }}
@@ -105,9 +114,21 @@ export default function GroupForm(props: { group?: Group; setGroups?: (groups: G
         })}
       </Form.Dropdown>
 
-      <Form.Dropdown id="iconColorField" title="Icon Color" onChange={(value) => setIconColor(value)} defaultValue={group?.iconColor ?? Color.PrimaryText}>
+      <Form.Dropdown
+        id="iconColorField"
+        title="Icon Color"
+        onChange={(value) => setIconColor(value)}
+        defaultValue={group?.iconColor ?? Color.PrimaryText}
+      >
         {Object.entries(Color).map(([key, color]) => {
-          return <Form.Dropdown.Item key={key} title={key} value={color as string} icon={{ source: Icon.Circle, tintColor: color }} />;
+          return (
+            <Form.Dropdown.Item
+              key={key}
+              title={key}
+              value={color as string}
+              icon={{ source: Icon.Circle, tintColor: color }}
+            />
+          );
         })}
       </Form.Dropdown>
 
@@ -117,7 +138,9 @@ export default function GroupForm(props: { group?: Group; setGroups?: (groups: G
         defaultValue={targetGroup.sortStrategy}
         info="The sorting rule applied to the group. You can manually adjust the order of pins, but you can choose to have them automatically sorted alphabetically, by frequency of usage, by most recent usage, or by initial creation date."
       >
-        {targetGroup.sortStrategy ? null : <Form.Dropdown.Item key="none" title="Not Set (Global Preference)" value="none" />}
+        {targetGroup.sortStrategy ? null : (
+          <Form.Dropdown.Item key="none" title="Not Set (Global Preference)" value="none" />
+        )}
         {Object.entries(SORT_STRATEGY).map(([key, value]) => {
           return <Form.Dropdown.Item key={key} title={value} value={key} />;
         })}

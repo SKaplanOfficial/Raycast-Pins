@@ -49,9 +49,7 @@ const CreateNewGroupAction = (props: { setGroups: (groups: Group[]) => void }) =
       title="Create New Group"
       icon={Icon.PlusCircle}
       shortcut={{ modifiers: ["cmd"], key: "n" }}
-      target={
-        <GroupForm setGroups={setGroups} />
-      }
+      target={<GroupForm setGroups={setGroups} />}
     />
   );
 };
@@ -70,7 +68,7 @@ const moveGroup = async (index: number, dir: Direction, setGroups: React.Dispatc
     setGroups(storedGroups);
     await setStorage(StorageKey.LOCAL_GROUPS, storedGroups);
   }
-}
+};
 
 /**
  * Raycast command to view all pin groups in a list within the Raycast window.

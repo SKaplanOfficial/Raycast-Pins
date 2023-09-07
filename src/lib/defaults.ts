@@ -182,7 +182,7 @@ const examplePins: Pin[] = [
     group: "Placeholder Examples",
     application: "None",
     execInBackground: true,
-  }
+  },
 ];
 
 const exampleGroups: Group[] = [
@@ -216,7 +216,7 @@ const exampleGroups: Group[] = [
     icon: "Stars",
     iconColor: "raycast-purple",
     parent: 4,
-  }
+  },
 ];
 
 /**

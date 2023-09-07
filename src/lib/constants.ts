@@ -4,7 +4,7 @@
  * @summary Constants used throughout the extension.
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
- * Created at     : 2023-09-04 17:31:40 
+ * Created at     : 2023-09-04 17:31:40
  * Last modified  : 2023-09-04 17:47:55
  */
 
@@ -82,7 +82,7 @@ export const KEYBOARD_SHORTCUT: { [key: string]: Keyboard.Shortcut } = {
   COPY_PINS_JSON: { modifiers: ["cmd"], key: "j" },
   OPEN_PLACEHOLDERS_GUIDE: { modifiers: ["cmd"], key: "g" },
   OPEN_PREFERENCES: { modifiers: ["cmd"], key: "," },
-}
+};
 
 /**
  * Sorting strategies and their display names.
@@ -93,7 +93,7 @@ export const SORT_STRATEGY: { [key: string]: string } = {
   frequency: "Frequency",
   manual: "Manual",
   recency: "Recency",
-}
+};
 
 /**
  * Directions in which pins and groups can be moved.

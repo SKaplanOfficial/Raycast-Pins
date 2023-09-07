@@ -12,6 +12,7 @@ import {
   getApplications,
   getPreferenceValues,
   Icon,
+  Keyboard,
   showToast,
   useNavigation,
 } from "@raycast/api";
@@ -59,26 +60,29 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
             onSubmit={async (values) => {
               const shortcut = { modifiers: values.modifiersField, key: values.keyField };
 
-              // Check if the shortcut is reserved by the extension
-              const reservedShortcut = Object.entries(KEYBOARD_SHORTCUT).find(
-                ([, reservedShortcut]) =>
-                  reservedShortcut.modifiers.every((modifier) => shortcut.modifiers.includes(modifier)) &&
-                  reservedShortcut.key == shortcut.key
-              );
-              if (reservedShortcut) {
-                setShortcutError(`This shortcut is reserved by the extension! (${reservedShortcut[0]})`);
-                return false;
-              }
+              if (values.modifiersField.length > 0) {
+                // Check if the shortcut is reserved by the extension
+                const reservedShortcut = Object.entries(KEYBOARD_SHORTCUT).find(
+                  ([, reservedShortcut]) =>
+                    shortcut.modifiers.every((modifier: Keyboard.KeyModifier) =>
+                      reservedShortcut.modifiers.includes(modifier)
+                    ) && reservedShortcut.key == shortcut.key
+                );
+                if (reservedShortcut) {
+                  setShortcutError(`This shortcut is reserved by the extension! (${reservedShortcut[0]})`);
+                  return false;
+                }
 
-              // Check if the shortcut is already in use by another pin
-              const usedShortcut = pins?.find(
-                (pin) =>
-                  pin.shortcut?.modifiers.every((modifier) => shortcut.modifiers.includes(modifier)) &&
-                  pin.shortcut?.key == shortcut.key
-              );
-              if (usedShortcut && (!pin || usedShortcut.id != pin.id)) {
-                setShortcutError(`This shortcut is already in use by another pin! (${usedShortcut.name})`);
-                return false;
+                // Check if the shortcut is already in use by another pin
+                const usedShortcut = pins?.find(
+                  (pin) =>
+                    pin.shortcut?.modifiers.every((modifier) => shortcut.modifiers.includes(modifier)) &&
+                    pin.shortcut?.key == shortcut.key
+                );
+                if (usedShortcut && (!pin || usedShortcut.id != pin.id)) {
+                  setShortcutError(`This shortcut is already in use by another pin! (${usedShortcut.name})`);
+                  return false;
+                }
               }
 
               if (pin && setPins) {
@@ -92,7 +96,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
                   values.dateField,
                   values.execInBackgroundField,
                   values.fragmentField,
-                  { modifiers: values.modifiersField, key: values.keyField },
+                  values.modifiersField.length ? { modifiers: values.modifiersField, key: values.keyField } : undefined,
                   pin.lastOpened ? new Date(pin.lastOpened) : undefined,
                   pin.timesOpened,
                   pin.dateCreated ? new Date(pin.dateCreated) : new Date(),
@@ -128,9 +132,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
             target={path.resolve(environment.assetsPath, "placeholders_guide.md")}
             shortcut={{ modifiers: ["cmd"], key: "g" }}
           />
-          {pin && setPins ? (
-            <DeletePinAction pin={pin} setPins={setPins} pop={pop} />
-          ) : null}
+          {pin && setPins ? <DeletePinAction pin={pin} setPins={setPins} pop={pop} /> : null}
           {pin && pins ? <CopyPinActionsSubmenu pin={pin} pins={pins} /> : null}
         </ActionPanel>
       }

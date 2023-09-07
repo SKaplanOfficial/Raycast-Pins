@@ -1,8 +1,9 @@
 import * as fs from "fs";
-import YAML from "json-to-pretty-yaml";
-import { toXML } from "jstoxml";
+import * as XML from "xml-js";
+import YAML from "yaml";
+import Papa from "papaparse";
 
-import { Parser } from "@json2csv/plainjs";
+import * as TOML from "@iarna/toml";
 import { Clipboard, getPreferenceValues, showToast, Toast } from "@raycast/api";
 
 import { getPinsJSON } from "./lib/Pins";
@@ -31,19 +32,28 @@ export default async function ExportPinsCommand() {
 
   let data = "";
   const jsonData = await getPinsJSON();
-  if (preferences.exportFormat == "csv") {
-    try {
-      const parser = new Parser();
-      data = parser.parse(jsonData.pins) + "\n\n\n" + parser.parse(jsonData.groups);
-    } catch (err) {
-      console.error(err);
+  try {
+    if (preferences.exportFormat == "csv") {
+      const d1 = Papa.unparse(jsonData.pins);
+      const d2 = Papa.unparse(jsonData.groups);
+      data = `${d1}\n\n\n${d2}`;
+    } else if (preferences.exportFormat == "json") {
+      data = JSON.stringify(jsonData, null, 2);
+    } else if (preferences.exportFormat == "yaml") {
+      data = YAML.stringify(jsonData);
+    } else if (preferences.exportFormat == "xml") {
+      data = XML.json2xml(JSON.stringify({ data: jsonData }), { spaces: 2, compact: true });
+    } else if (preferences.exportFormat == "toml") {
+      data = TOML.stringify(jsonData);
     }
-  } else if (preferences.exportFormat == "json") {
-    data = JSON.stringify(jsonData, null, 2);
-  } else if (preferences.exportFormat == "yaml") {
-    data = YAML.stringify(jsonData);
-  } else if (preferences.exportFormat == "xml") {
-    data = toXML(jsonData, { indent: "  " });
+  } catch (err) {
+    await showToast({
+      title: "Failed to export pin data.",
+      message: `Could not convert data into target type (${preferences.exportFormat})`,
+      style: Toast.Style.Failure,
+    });
+    console.error(err);
+    return;
   }
 
   if (
@@ -56,15 +66,28 @@ export default async function ExportPinsCommand() {
       // JSON and YAML files are fine to export all at once
       const exports = data.split("\n\n\n");
       for (let i = 0; i < exports.length; i++) {
-        const exportPath = preferences.exportLocation.trim();
-        const filename = `pins-export-${new Date().toISOString()}${exports.length > 1 ? `-${i + 1}` : ""}`;
-        const exportFile = `${exportPath}/${filename}.${preferences.exportFormat}`;
+        let subpart = "";
+        if (exports.length > 1) {
+          if (i == 0) subpart = "_pins";
+          else if (i == 1) subpart = "_groups";
+        }
+
+        const exportDir = preferences.exportLocation.trim();
+        const filename = `pins_export_${new Date().toLocaleDateString().replaceAll("/", ".")}${subpart}`;
+
+        let attempt = 2;
+        let exportFile = `${exportDir}/${filename}.${preferences.exportFormat}`;
+        while (fs.existsSync(exportFile)) {
+          exportFile = `${exportDir}/${filename} ${attempt}.${preferences.exportFormat}`;
+          attempt++;
+        }
+
         fs.writeFileSync(exportFile, exports[i]);
-        await showToast({ title: `Exported pins to ${exportFile}!` });
+        await showToast({ title: `Exported pin data to ${exportFile}!` });
       }
     } catch (err) {
       console.error(err);
-      await showToast({ title: "Failed to export pins.", style: Toast.Style.Failure });
+      await showToast({ title: "Failed to export pin data.", style: Toast.Style.Failure });
     }
   } else {
     // When using the clipboard, just copy all of the data at once
@@ -73,7 +96,7 @@ export default async function ExportPinsCommand() {
     if (text == data) {
       await showToast({ title: "Copied pin data to clipboard!" });
     } else {
-      await showToast({ title: "Failed to copy pins to clipboard.", style: Toast.Style.Failure });
+      await showToast({ title: "Failed to copy pin data to clipboard.", style: Toast.Style.Failure });
     }
   }
 }

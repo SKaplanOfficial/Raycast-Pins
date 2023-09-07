@@ -7,7 +7,11 @@ import { Pin, deletePin } from "../../lib/Pins";
  * @param props.setPins The function to update the list of pins.
  * @returns An action component.
  */
-export default function DeletePinAction(props: { pin: Pin; setPins: React.Dispatch<React.SetStateAction<Pin[]>>, pop?: () => void }) {
+export default function DeletePinAction(props: {
+  pin: Pin;
+  setPins: React.Dispatch<React.SetStateAction<Pin[]>>;
+  pop?: () => void;
+}) {
   const { pin, setPins, pop } = props;
 
   return (

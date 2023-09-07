@@ -1,31 +1,33 @@
+import * as fs from "fs";
+import * as os from "os";
+import path from "path";
 import { useEffect } from "react";
+
 import {
-  MenuBarExtra,
+  Clipboard,
+  environment,
   getPreferenceValues,
   Icon,
-  Clipboard,
-  showHUD,
   launchCommand,
   LaunchType,
-  openCommandPreferences,
+  MenuBarExtra,
   open,
-  environment,
+  openCommandPreferences,
+  showHUD,
 } from "@raycast/api";
-import { setStorage, getStorage, ExtensionPreferences, cutoff } from "./lib/utils";
-import { KEYBOARD_SHORTCUT, StorageKey } from "./lib/constants";
-import { SupportedBrowsers } from "./lib/browser-utils";
-import * as fs from "fs";
-import { useLocalData } from "./lib/LocalData";
-import { Group, createNewGroup, useGroups } from "./lib/Groups";
-import { Pin, copyPinData, createNewPin, sortPins, usePins } from "./lib/Pins";
 import { useCachedState } from "@raycast/utils";
-import * as os from "os";
-import { Placeholders } from "./lib/placeholders";
-import { getGroupIcon } from "./lib/icons";
-import RecentApplicationsList from "./components/RecentApplicationsList";
+
 import OpenAllMenuItem from "./components/OpenAllMenuItem";
 import PinMenuItem from "./components/PinMenuItem";
-import path from "path";
+import RecentApplicationsList from "./components/RecentApplicationsList";
+import { SupportedBrowsers } from "./lib/browser-utils";
+import { KEYBOARD_SHORTCUT, StorageKey } from "./lib/constants";
+import { createNewGroup, Group, useGroups } from "./lib/Groups";
+import { getGroupIcon } from "./lib/icons";
+import { useLocalData } from "./lib/LocalData";
+import { copyPinData, createNewPin, Pin, sortPins, usePins } from "./lib/Pins";
+import { Placeholders } from "./lib/placeholders";
+import { cutoff, ExtensionPreferences, getStorage, setStorage } from "./lib/utils";
 
 /**
  * Preferences for the menu bar extra.
@@ -203,9 +205,9 @@ export default function ShowPinsCommand() {
   return (
     <MenuBarExtra icon={pinIcon} isLoading={loadingPins || loadingGroups || loadingLocalData}>
       {[
-        allPins.length == 0 ? <MenuBarExtra.Item title="No pins yet!" /> : null,
         [
           <MenuBarExtra.Section title={preferences.showCategories ? "Pins" : undefined} key="pins">
+            {allPins.length == 0 ? <MenuBarExtra.Item title="No pins yet!" /> : null}
             {allPins
               .filter((p) => p.group == "None")
               .map((pin: Pin) => (
@@ -525,9 +527,7 @@ export default function ShowPinsCommand() {
             icon={Icon.QuestionMark}
             tooltip="Open the guide to using placeholders in Pins"
             shortcut={KEYBOARD_SHORTCUT.OPEN_PLACEHOLDERS_GUIDE}
-            onAction={async () =>
-              await open(path.resolve(environment.assetsPath, "placeholders_guide.md"))
-            }
+            onAction={async () => await open(path.resolve(environment.assetsPath, "placeholders_guide.md"))}
           />
         ) : null}
         {preferences.showPreferences ? (

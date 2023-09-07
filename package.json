@@ -258,7 +258,7 @@
     {
       "name": "copy-pins",
       "title": "Export Pin Data",
-      "description": "Export pins and groups in JSON, CSV, YAML, or XML format",
+      "description": "Export pins and groups in JSON, CSV, TOML, YAML, or XML format",
       "mode": "no-view",
       "preferences": [
         {
@@ -273,7 +273,7 @@
           "name": "exportFormat",
           "type": "dropdown",
           "title": "Export Format",
-          "description": "The format to export Pins data in. JSON is the default format, but CSV, YAML, and XML are also supported.",
+          "description": "The format to export Pins data in. JSON is the default format, but CSV, TOML, YAML, and XML are also supported.",
           "default": "json",
           "required": false,
           "data": [
@@ -284,6 +284,10 @@
             {
               "title": "CSV",
               "value": "csv"
+            },
+            {
+              "title": "TOML",
+              "value": "toml"
             },
             {
               "title": "YAML",
@@ -383,11 +387,14 @@
     }
   ],
   "dependencies": {
+    "@iarna/toml": "^2.2.5",
     "@raycast/api": "^1.57.2",
     "@raycast/utils": "^1.9.1",
-    "@json2csv/plainjs": "^7.0.3",
-    "json-to-pretty-yaml": "^1.2.2",
-    "jstoxml": "^3.2.8"
+    "@types/papaparse": "^5.3.8",
+    "@types/xml-js": "^1.0.0",
+    "papaparse": "^5.4.1",
+    "xml-js": "^1.6.11",
+    "yaml": "^2.3.2"
   },
   "devDependencies": {
     "@types/node": "16.10.3",

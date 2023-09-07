@@ -17,8 +17,8 @@ export default function OpenAllMenuItem(props: { pins: Pin[]; submenuName: strin
     <MenuBarExtra.Section>
       {preferences.showOpenAll ? (
         <MenuBarExtra.Item
-          title={`Open All (${submenuName})`}
-          key={`open_all_${submenuName.replaceAll(" ", "_")})}`}
+          title={`Open All ${submenuName ? `(${submenuName})` : ``}`}
+          key={`open_all_${(submenuName || "").replaceAll(" ", "_")})}`}
           onAction={async () => {
             for (const pin of pins) {
               await openPin(pin, preferences);
