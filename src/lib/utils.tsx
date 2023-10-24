@@ -1,4 +1,4 @@
-import { LocalStorage } from "@raycast/api";
+import { Application, LocalStorage } from "@raycast/api";
 import { exec, execSync } from "child_process";
 import { runAppleScript } from "@raycast/utils";
 
@@ -9,7 +9,7 @@ export interface ExtensionPreferences {
   /**
    * The user's preferred browser. This is used to open URL pins.
    */
-  preferredBrowser: string;
+  preferredBrowser: Application;
 
   /**
    * The first section displayed in lists of pins, e.g. grouped-pins-first or ungrouped-pins-first.

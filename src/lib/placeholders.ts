@@ -17,7 +17,7 @@ import * as os from "os";
 import * as crypto from "crypto";
 import * as vm from "vm";
 import { getStorage, setStorage } from "./utils";
-import { StorageKey } from "./constants";
+import { SORT_FN, StorageKey, SORT_STRATEGY } from "./constants";
 import { execSync } from "child_process";
 import { Pin, getPinStatistics, getPreviousPin, sortPins } from "./Pins";
 import { LocalDataObject, getFinderSelection } from "./LocalData";
@@ -25,7 +25,7 @@ import path from "path";
 import { runAppleScript } from "@raycast/utils";
 import { LocationManager } from "./scripts";
 import { scheduleTargetEvaluation } from "./scheduled-execution";
-import { Group, SortStrategy } from "./Groups";
+import { Group } from "./Groups";
 
 /**
  * A placeholder type that associates Regex patterns with functions that applies the placeholder to a string, rules that determine whether or not the placeholder should be replaced, and aliases that can be used to achieve the same result.
@@ -783,9 +783,7 @@ const placeholders: Placeholder = {
             pins.splice(Math.floor(Math.random() * pins.length), 1);
           }
         }
-        const pinTargets = pins
-          .sort((a, b) => new Date(b.lastOpened || 0).getTime() - new Date(a.lastOpened || 0).getTime())
-          .map((pin) => pin.url);
+        const pinTargets = sortPins(pins, [], undefined, SORT_FN.LAST_OPENED).map((pin) => pin.url);
         return pinTargets.join(", ").replaceAll("{{", "[[").replaceAll("}}", "]]");
       } catch (e) {
         return "";
@@ -845,7 +843,7 @@ const placeholders: Placeholder = {
             }
           }
 
-          const stats = sortPins(pins, groups, sortMethod as SortStrategy).map(
+          const stats = sortPins(pins, groups, sortMethod as keyof typeof SORT_STRATEGY).map(
             (pin) => `${pin.name}:\n\t${(getPinStatistics(pin, pins) as string).replaceAll("\n\n", "\n\t")}`
           );
           return stats.join("\n\n");

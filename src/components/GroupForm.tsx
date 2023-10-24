@@ -14,12 +14,14 @@ import {
   checkGroupNameField,
   checkGroupParentField,
   createNewGroup,
+  getGroupStatistics,
   modifyGroup,
   useGroups,
 } from "../lib/Groups";
 import { useState } from "react";
 import { getIcon } from "../lib/icons";
 import { SORT_STRATEGY } from "../lib/constants";
+import { usePins } from "../lib/Pins";
 
 /**
  * Form for editing a group.
@@ -29,6 +31,7 @@ import { SORT_STRATEGY } from "../lib/constants";
  */
 export default function GroupForm(props: { group?: Group; setGroups?: (groups: Group[]) => void }) {
   const { group, setGroups } = props;
+  const { pins } = usePins();
   const [iconColor, setIconColor] = useState<string | undefined>(group?.iconColor);
   const [nameError, setNameError] = useState<string | undefined>();
   const [parentError, setParentError] = useState<string | undefined>();
@@ -165,6 +168,13 @@ export default function GroupForm(props: { group?: Group; setGroups?: (groups: G
           info="The ID of this group. You can use this to specify this group as a parent of other groups."
           onChange={() => null}
         />
+      ) : null}
+      
+      {group?.id != undefined && group.id > -1 ? (
+        <>
+          <Form.Separator />
+          <Form.Description title="Statistics" text={getGroupStatistics(group, groups, pins) as string} />
+        </>
       ) : null}
     </Form>
   );

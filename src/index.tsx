@@ -151,6 +151,7 @@ export default function ShowPinsCommand() {
       });
   }, []);
 
+  console.log(localData.selectedFiles)
   const selectedFiles = localData.selectedFiles.filter(
     (file) =>
       file.path && ((fs.existsSync(file.path) && fs.statSync(file.path).isFile()) || file.path.endsWith(".app/"))
@@ -169,6 +170,11 @@ export default function ShowPinsCommand() {
    */
   const getSubsections = (group: Group, groups: Group[]) => {
     const children = groups.filter((g) => g.parent == group.id);
+    const memberPins = allPins.filter((pin) => pin.group == group.name);
+    const subgroupPins = allPins.filter((pin) => children.some((g) => g.name == pin.group));
+    if (memberPins.length == 0 && subgroupPins.length == 0) {
+      return null;
+    }
     return (
       <MenuBarExtra.Submenu
         title={
@@ -196,10 +202,17 @@ export default function ShowPinsCommand() {
               />
             )),
         ].sort(() => (preferences.topSection == "pins" ? -1 : 1))}
-        <OpenAllMenuItem pins={allPins.filter((p) => p.group == group.name)} submenuName={group.name} />
+        {memberPins.length > 0 ? (
+          <OpenAllMenuItem pins={allPins.filter((p) => p.group == group.name)} submenuName={group.name} />
+        ) : null}
       </MenuBarExtra.Submenu>
     );
   };
+
+  const groupSubmenus = groups
+    .filter((g) => g.parent == undefined)
+    .map((group) => getSubsections(group, groups))
+    .filter((g) => g != null);
 
   // Display the menu
   return (
@@ -221,9 +234,9 @@ export default function ShowPinsCommand() {
                 />
               ))}
           </MenuBarExtra.Section>,
-          groups?.length ? (
+          groupSubmenus?.length ? (
             <MenuBarExtra.Section title={preferences.showCategories ? "Groups" : undefined} key="groups">
-              {groups.filter((g) => g.parent == undefined).map((group) => getSubsections(group, groups))}
+              {groupSubmenus}
               <RecentApplicationsList />
             </MenuBarExtra.Section>
           ) : null,
@@ -278,7 +291,7 @@ export default function ShowPinsCommand() {
             ) : null}
             {SupportedBrowsers.includes(localData.currentApplication.name) ? (
               <MenuBarExtra.Item
-                title={`Pin This Tab (${(localData.currentTab.name, 20)})`}
+                title={`Pin This Tab (${cutoff(localData.currentTab.name, 20)})`}
                 icon={Icon.AppWindow}
                 tooltip="Add a pin whose target URL is the URL of the current browser tab"
                 shortcut={KEYBOARD_SHORTCUT.PIN_CURRENT_TAB}
@@ -337,7 +350,7 @@ export default function ShowPinsCommand() {
                 title={`Pin ${
                   selectedFiles.length > 1
                     ? `These Files (${selectedFiles.length})`
-                    : `This File (${(selectedFiles[0].name, 20)})`
+                    : `This File (${cutoff(selectedFiles[0].name, 20)})`
                 }`}
                 icon={{ fileIcon: selectedFiles[0].path }}
                 tooltip="Create a pin for each selected file, pinned to a new group"

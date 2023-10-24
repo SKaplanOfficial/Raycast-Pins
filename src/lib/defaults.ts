@@ -11,9 +11,9 @@
 import { LocalStorage, showToast, Toast } from "@raycast/api";
 
 import { StorageKey } from "./constants";
-import { Group } from "./Groups";
-import { Pin } from "./Pins";
-import { setStorage } from "./utils";
+import { getNextGroupID, Group } from "./Groups";
+import { getNextPinID, Pin } from "./Pins";
+import { getStorage, setStorage } from "./utils";
 
 /**
  * A set of example pins and groups to help users get started.
@@ -222,9 +222,40 @@ const exampleGroups: Group[] = [
 /**
  * Imports default pins and groups into local storage.
  */
-export const installExamples = async () => {
-  await setStorage(StorageKey.LOCAL_PINS, examplePins);
-  await setStorage(StorageKey.LOCAL_GROUPS, exampleGroups);
-  await LocalStorage.setItem(StorageKey.EXAMPLES_INSTALLED, true);
+export const installExamples = async (kind: "pins" | "groups") => {
+  if (kind == "pins") {
+    const storedPins: Pin[] = await getStorage(StorageKey.LOCAL_PINS) || [];
+
+    let nextPinID = await getNextPinID();
+    const examplesWithValidIDs = examplePins.map((pin) => {
+      if (pin.id < nextPinID) {
+        pin.id = nextPinID;
+        nextPinID++;
+      }
+      pin.dateCreated = new Date().toUTCString();
+      return pin;
+    }).filter((pin) => !storedPins.some((storedPin) => storedPin.url == pin.url));
+
+    const allPins = [ ...storedPins, ...examplesWithValidIDs ];
+    await setStorage(StorageKey.LOCAL_PINS, allPins);
+    await LocalStorage.setItem(StorageKey.EXAMPLE_PINS_INSTALLED, true);
+  }
+
+  const storedGroups: Group[] = await getStorage(StorageKey.LOCAL_GROUPS) || [];
+
+  let nextGroupID = await getNextGroupID();
+    const examplesWithValidIDs = exampleGroups.map((group) => {
+      if (group.id < nextGroupID) {
+        group.id = nextGroupID;
+        nextGroupID++;
+      }
+      group.dateCreated = new Date().toUTCString();
+      return group;
+    }).filter((group) => !storedGroups.some((storedGroup) => storedGroup.name == group.name));
+
+  const allGroups = [ ...storedGroups, ...examplesWithValidIDs ];
+  await setStorage(StorageKey.LOCAL_GROUPS, allGroups);
+  await LocalStorage.setItem(StorageKey.EXAMPLE_GROUPS_INSTALLED, true);
+
   await showToast({ title: "Examples Installed!", style: Toast.Style.Success });
 };

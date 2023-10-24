@@ -35,15 +35,18 @@ import DeletePinAction from "./actions/DeletePinAction";
  */
 export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetStateAction<Pin[]>>; pins?: Pin[] }) => {
   const { pin, setPins, pins } = props;
-  const [url, setURL] = useState<string | undefined>(pin ? pin.url : undefined);
-  const [icon, setIcon] = useState<string | undefined>(pin ? pin.icon : undefined);
-  const [iconColor, setIconColor] = useState<string | undefined>(pin ? pin.iconColor : undefined);
-  const [urlError, setUrlError] = useState<string | undefined>();
-  const [shortcutError, setShortcutError] = useState<string | undefined>();
-  const [isFragment, setIsFragment] = useState<boolean>(pin && pin.fragment ? true : false);
-  const [applications, setApplications] = useState<Application[]>([]);
   const { groups } = useGroups();
   const { pop } = useNavigation();
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [urlError, setUrlError] = useState<string | undefined>();
+  const [shortcutError, setShortcutError] = useState<string | undefined>();
+  const [values, setValues] = useState<Record<string, unknown>>({
+    url: pin ? pin.url : undefined,
+    icon: pin ? pin.icon : undefined,
+    iconColor: pin ? pin.iconColor : undefined,
+    isFragment: pin && pin.fragment ? true : false,
+    application: pin ? pin.application : undefined,
+  });
 
   const iconList = Object.keys(Icon);
   iconList.unshift("Favicon / File Icon");
@@ -152,7 +155,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         info="The target URL, path, script, or text of the pin. Placeholders can be used to insert dynamic values into the target. See the Placeholders Guide (⌘G) for more information."
         error={urlError}
         onChange={async (value) => {
-          setURL(value);
+          setValues({ ...values, url: value });
           if (value.startsWith("~")) {
             value = value.replace("~", os.homedir());
           }
@@ -162,13 +165,19 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
           } catch (error) {
             const allApplications = await getApplications();
             if (value.match(/^[a-zA-Z0-9]*?:.*/g)) {
-              const preferredBrowser = preferences.preferredBrowser ? preferences.preferredBrowser : "Safari";
-              const browser = allApplications.find((app) => app.name == preferredBrowser);
+              const preferredBrowser = preferences.preferredBrowser ? preferences.preferredBrowser : { name: "Safari" };
+              const browser = allApplications.find((app) => app.name == preferredBrowser.name);
               if (browser) {
-                setApplications([browser, ...allApplications.filter((app) => app.name != preferredBrowser)]);
+                setApplications([browser, ...allApplications.filter((app) => app.name != preferredBrowser.name)]);
+                if (values.application == undefined || values.application == "None") {
+                  setValues({ ...values, application: browser.path });
+                }
+              } else {
+                setApplications(allApplications);
               }
             } else {
               setApplications(allApplications);
+              setValues({ ...values, application: "None" });
             }
           }
 
@@ -192,13 +201,17 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         label="Treat as Text Fragment"
         id="fragmentField"
         info="If checked, the target will be treated as a text fragment, regardless of its format. Text fragments are copied to the clipboard when the pin is opened."
-        onChange={(value) => setIsFragment(value)}
+        onChange={(value) => setValues({ ...values, isFragment: value })}
         defaultValue={pin ? pin.fragment : false}
       />
 
-      {!isFragment && !url?.startsWith("/") && !url?.startsWith("~") && !url?.match(/^[a-zA-Z0-9]*?:.*/g) ? (
+      {!values.isFragment &&
+      (values.url as string)?.length == 0 &&
+      !(values.url as string)?.startsWith("/") &&
+      !(values.url as string)?.startsWith("~") &&
+      !(values.url as string)?.match(/^[a-zA-Z0-9]*?:.*/g) ? (
         <Form.Checkbox
-          label="Execute in Background"
+          label={values.url as string}
           id="execInBackgroundField"
           defaultValue={pin ? pin.execInBackground : false}
           info="If checked, the pinned Terminal command will be executed in the background instead of in a new Terminal tab."
@@ -210,14 +223,14 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         title="Icon"
         info="The icon to display next to the pin in the list/menu. Favicons and file icons are automatically fetched. When an icon other than Favicon / File Icon is selected, the icon color can be changed (a color field will appear below)."
         defaultValue={pin ? pin.icon : "Favicon / File Icon"}
-        onChange={(value) => setIcon(value)}
+        onChange={(value) => setValues({ ...values, icon: value })}
       >
         {iconList.map((icon) => {
-          const urlIcon = url
-            ? url.startsWith("/") || url.startsWith("~")
-              ? { fileIcon: url }
-              : url.match(/^[a-zA-Z0-9]*?:.*/g)
-              ? getFavicon(url)
+          const urlIcon = (values.url as string)
+            ? (values.url as string).startsWith("/") || (values.url as string).startsWith("~")
+              ? { fileIcon: values.url as string }
+              : (values.url as string).match(/^[a-zA-Z0-9]*?:.*/g)
+              ? getFavicon(values.url as string)
               : Icon.Terminal
             : iconMap["Minus"];
 
@@ -228,7 +241,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
               value={icon}
               icon={
                 icon in iconMap
-                  ? { source: iconMap[icon], tintColor: iconColor }
+                  ? { source: iconMap[icon], tintColor: values.iconColor as string }
                   : icon == "Favicon / File Icon"
                   ? urlIcon
                   : iconMap["Minus"]
@@ -238,12 +251,12 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         })}
       </Form.Dropdown>
 
-      {!icon || ["Favicon / File Icon", "None"].includes(icon) ? null : (
+      {!values.icon || ["Favicon / File Icon", "None"].includes(values.icon as string) ? null : (
         <Form.Dropdown
           id="iconColorField"
           title="Icon Color"
           info="The color of the Pin's icon when displayed in the list/menu."
-          onChange={(value) => setIconColor(value)}
+          onChange={(value) => setValues({ ...values, iconColor: value })}
           defaultValue={pin?.iconColor ?? Color.PrimaryText}
         >
           {Object.entries(Color).map(([key, color]) => {
@@ -259,12 +272,16 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         </Form.Dropdown>
       )}
 
-      {!isFragment ? (
+      {!values.isFragment ? (
         <Form.Dropdown
           title="Open With"
           id="openWithField"
           info="The application to open the pin with"
           defaultValue={pin ? pin.application : undefined}
+          value={values.application ? (values.application as string) : undefined}
+          onChange={(value) => {
+            setValues({ ...values, application: value });
+          }}
         >
           <Form.Dropdown.Item key="None" title="None" value="None" icon={Icon.Minus} />
           {applications.map((app) => {
