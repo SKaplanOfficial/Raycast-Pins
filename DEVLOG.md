@@ -6,6 +6,8 @@
 
 - Fixed bug where inputting web URLs in the target field would prevent the list of 'Open With' applications from properly updating and leaving only a "None" option
 - Fixed bug where editing a pin could cause its ID to be nullified, effectively deleting the pin
+- Adjusted the `{{alert:...}}`, `{{dialog:...}}`, and `{{toast:...}}` placeholders to accept a `title` argument instead of specifying the title alongside the message in the placeholder content.
+- Added `{{timezone}}` placeholder. Inserts the long name of the user's timezone.
 
 ### 2023-09-06
 
