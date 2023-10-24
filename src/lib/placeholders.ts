@@ -600,6 +600,18 @@ const placeholders: Placeholder = {
   },
 
   /**
+   * Placeholder for the current time supporting an optional format argument. Defaults to "Hour:Minute:Second AM/PM". Barring any issues, this should always be replaced.
+   */
+  "{{timezone}}": {
+    name: "Timezone",
+    aliases: ["{{timezone}}"],
+    rules: [],
+    apply: async (str: string, context?: LocalDataObject) => {
+      return (new Date()).toLocaleDateString(undefined, { timeZoneName: "long" });
+    },
+  },
+
+  /**
    * Placeholder for the default language for the current user. Barring any issues, this should always be replaced.
    */
   "{{systemLanguage}}": {
@@ -1084,6 +1096,8 @@ const placeholders: Placeholder = {
   },
 
   /**
+   * @deprecated Use `{{dialog message=... title=...}}` instead.
+   * 
    * Directive to display a dialog with the provided text. The placeholder will be replaced with an empty string unless `input=true` is provided, in which case the placeholder will be replaced with the user's input. If the user cancels the dialog, the placeholder will be replaced with an empty string.
    *
    * Syntax: `{{dialog input=[true/false] timeout=[number]:Message,Title}}`
@@ -1105,6 +1119,40 @@ const placeholders: Placeholder = {
           const title = matches[8] || "Pins";
           const result = await runAppleScript(
             `display dialog "${message.replaceAll('"', "'")}" with title "${title.replaceAll('"', "'")}"${
+              input ? ' default answer ""' : ""
+            } giving up after ${timeout}`
+          );
+          if (input) {
+            const textReturned = result.match(/(?<=text returned:)(.|[ \n\r\s])*?(?=,)/)?.[0] || "";
+            return textReturned.trim().replaceAll('"', "'");
+          }
+        }
+        return "";
+      },
+    },
+
+  /**
+   * Directive to display a dialog with the provided text. The placeholder will be replaced with an empty string unless `input=true` is provided, in which case the placeholder will be replaced with the user's input. If the user cancels the dialog, the placeholder will be replaced with an empty string.
+   *
+   * Syntax: `{{dialog input=[true/false] timeout=[number] message=... title=...}}`
+   *
+   * The input setting, timeout, and title are optional. If no timeout is provided, the dialog will timeout after 30 seconds. If no title is provided, the title will be "Pins". The default input setting is `false`. You must provide a message.
+   */
+  "{{dialog( input=(true|false))?( timeout=([0-9]+))?( message=\"([^{]|{(?!{)|{{[\\s\\S]*?}})*?\")( title=(([^{]|{(?!{)|{{[\\s\\S]*?}})*?))?}}":
+    {
+      name: "Display Dialog",
+      rules: [],
+      apply: async (str: string, context?: LocalDataObject) => {
+        const matches = str.match(
+          /{{dialog( input=(true|false))?( timeout=([0-9]+))? message="(([^{]|{(?!{)|{{[\s\S]*?}})*?)"( title="(([^{]|{(?!{)|{{[\s\S]*?}})*?)")?}}/
+        );
+        if (matches) {
+          const input = matches[2] == "true";
+          const timeout = parseInt(matches[4]) || 30;
+          const message = matches[5];
+          const title = matches[8] || "Pins";
+          const result = await runAppleScript(
+            `display dialog "${message.replaceAll('"', "\\\"")}" with title "${title.replaceAll('"', "\\\"")}"${
               input ? ' default answer ""' : ""
             } giving up after ${timeout}`
           );

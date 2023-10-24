@@ -151,7 +151,6 @@ export default function ShowPinsCommand() {
       });
   }, []);
 
-  console.log(localData.selectedFiles)
   const selectedFiles = localData.selectedFiles.filter(
     (file) =>
       file.path && ((fs.existsSync(file.path) && fs.statSync(file.path).isFile()) || file.path.endsWith(".app/"))
