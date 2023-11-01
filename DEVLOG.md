@@ -1,6 +1,33 @@
 # Pins DevLog - A more detailed changelog
 
-## 1.4.0 Release, TBD
+## 1.5.0 Release, TBD
+
+### 2023-11-01
+
+- Update dependencies, including latest Raycast API version (1.60.1).
+
+### 2023-10-30
+
+- Fix bug where using "}" or "{" in a placeholder's content could cause unexpected results (including code execution).
+
+### 2023-10-24
+
+- Fixed bug where inputting web URLs in the target field would prevent the list of 'Open With' applications from properly updating and leaving only a "None" option
+- Fixed bug where editing a pin could cause its ID to be nullified, effectively deleting the pin
+- Adjusted the `{{alert:...}}`, `{{dialog:...}}`, and `{{toast:...}}` placeholders to accept a `title` argument instead of specifying the title alongside the message in the placeholder content.
+- Added `{{timezone}}` placeholder. Inserts the long name of the user's timezone.
+
+### 2023-09-06
+
+- Added action to create a subgroup of the selected group
+- Added actions for deleting all pins or groups at once
+- Added ability to install example groups separately from example pins
+- Added ability to install example groups or pins while there are already pins/groups present. Existing items will be preserved.
+- The action to install example pins will now always display when no pins are present (same for groups)
+- Groups are now properly hidden from the menu bar dropdown when they have no pins (and no pins in their subgroups)
+- Added group statistics
+
+## 1.4.0 Release, 2023-09-11
 
 ### 2023-09-05
 
