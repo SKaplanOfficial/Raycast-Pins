@@ -27,62 +27,9 @@ import { getGroupIcon } from "./lib/icons";
 import { useLocalData } from "./lib/LocalData";
 import { copyPinData, createNewPin, Pin, sortPins, usePins } from "./lib/Pins";
 import { Placeholders } from "./lib/placeholders";
-import { cutoff, ExtensionPreferences, getStorage, setStorage } from "./lib/utils";
-
-/**
- * Preferences for the menu bar extra.
- */
-interface CommandPreferences {
-  /**
-   * The color of the Pins icon in the menu bar.
-   */
-  iconColor: string;
-
-  /**
-   * Whether to show category labels (e.g. "Pins", "Groups", "Quick Pins") in the menu bar dropdown.
-   */
-  showCategories: boolean;
-
-  /**
-   * Whether to show the "Open All" button within group submenus.
-   */
-  showOpenAll: boolean;
-
-  /**
-   * Whether to show the "Create New Pin" button.
-   */
-  showCreateNewPin: boolean;
-
-  /**
-   * Whether to show the "Copy Pin Data" button.
-   */
-  showCopyPinData: boolean;
-
-  /**
-   * Whether to show the "Quick Pins" section.
-   */
-  showPinShortcut: boolean;
-
-  /**
-   * Whether to show the "Open Placeholders Guide" button.
-   */
-  showOpenPlaceholdersGuide: boolean;
-
-  /**
-   * Whether to show the "Preferences..." button.
-   */
-  showPreferences: boolean;
-
-  /**
-   * Whether to display pins that are not applicable to the current context. For example, if this is disabled, pins requiring selected text will not be shown if no text is selected.
-   */
-  showInapplicablePins: boolean;
-
-  /**
-   * The action to perform when a pin menu item is right-clicked.
-   */
-  rightClickAction: "open" | "delete";
-}
+import { cutoff, getStorage, setStorage } from "./lib/utils";
+import { ExtensionPreferences } from "./lib/preferences";
+import { PinsMenubarPreferences } from "./lib/preferences";
 
 /**
  * Raycast menu bar command providing quick access to pins.
@@ -93,7 +40,7 @@ export default function ShowPinsCommand() {
   const [relevantPins, setRelevantPins] = useCachedState<Pin[]>("relevant-pins", []);
   const [irrelevantPins, setIrrelevantPins] = useCachedState<Pin[]>("irrelevant-pins", []);
   const { localData, loadingLocalData } = useLocalData();
-  const preferences = getPreferenceValues<ExtensionPreferences & CommandPreferences>();
+  const preferences = getPreferenceValues<ExtensionPreferences & PinsMenubarPreferences>();
 
   const iconColor =
     preferences.iconColor == "System"
@@ -155,12 +102,12 @@ export default function ShowPinsCommand() {
 
   const selectedFiles = localData.selectedFiles.filter(
     (file) =>
-      file.path && ((fs.existsSync(file.path) && fs.statSync(file.path).isFile()) || file.path.endsWith(".app/"))
+      file.path && ((fs.existsSync(file.path) && fs.statSync(file.path).isFile()) || file.path.endsWith(".app/")),
   );
 
   const allPins = sortPins(
     pins.filter((p) => preferences.showInapplicablePins || !irrelevantPins.find((pin) => pin.id == p.id)),
-    groups
+    groups,
   );
 
   /**
@@ -263,7 +210,7 @@ export default function ShowPinsCommand() {
                     undefined,
                     false,
                     undefined,
-                    undefined
+                    undefined,
                   );
                 }}
               />
@@ -285,7 +232,7 @@ export default function ShowPinsCommand() {
                     undefined,
                     true,
                     undefined,
-                    undefined
+                    undefined,
                   );
                 }}
               />
@@ -307,7 +254,7 @@ export default function ShowPinsCommand() {
                     undefined,
                     false,
                     undefined,
-                    undefined
+                    undefined,
                   );
                 }}
               />
@@ -327,7 +274,7 @@ export default function ShowPinsCommand() {
                   }
                   await createNewGroup(
                     newGroupName,
-                    Object.entries(Icon).find((entry) => entry[1] == Icon.AppWindowGrid3x3)?.[0] || "None"
+                    Object.entries(Icon).find((entry) => entry[1] == Icon.AppWindowGrid3x3)?.[0] || "None",
                   );
                   for (const tab of localData.tabs) {
                     await createNewPin(
@@ -340,7 +287,7 @@ export default function ShowPinsCommand() {
                       undefined,
                       false,
                       undefined,
-                      undefined
+                      undefined,
                     );
                   }
                 }}
@@ -368,7 +315,7 @@ export default function ShowPinsCommand() {
                       undefined,
                       false,
                       undefined,
-                      undefined
+                      undefined,
                     );
                   } else {
                     let newGroupName = "New File Group";
@@ -379,7 +326,7 @@ export default function ShowPinsCommand() {
                     }
                     await createNewGroup(
                       newGroupName,
-                      Object.entries(Icon).find((entry) => entry[1] == Icon.Document)?.[0] || "None"
+                      Object.entries(Icon).find((entry) => entry[1] == Icon.Document)?.[0] || "None",
                     );
                     for (const file of selectedFiles) {
                       await createNewPin(
@@ -392,7 +339,7 @@ export default function ShowPinsCommand() {
                         undefined,
                         false,
                         undefined,
-                        undefined
+                        undefined,
                       );
                     }
                   }
@@ -416,7 +363,7 @@ export default function ShowPinsCommand() {
                     undefined,
                     false,
                     undefined,
-                    undefined
+                    undefined,
                   );
                 }}
               />
@@ -447,7 +394,7 @@ export default function ShowPinsCommand() {
                     undefined,
                     false,
                     undefined,
-                    undefined
+                    undefined,
                   );
                 }}
               />
@@ -475,7 +422,7 @@ export default function ShowPinsCommand() {
                       true,
                       false,
                       undefined,
-                      undefined
+                      undefined,
                     );
                   } else {
                     let newGroupName = "New Note Group";
@@ -497,7 +444,7 @@ export default function ShowPinsCommand() {
                         true,
                         false,
                         undefined,
-                        undefined
+                        undefined,
                       );
                     }
                   }

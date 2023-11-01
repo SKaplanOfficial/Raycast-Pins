@@ -5,14 +5,15 @@
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
  * Created at     : 2023-09-04 17:36:31
- * Last modified  : 2023-09-04 17:37:04
+ * Last modified  : 2023-11-01 00:43:57
  */
 
 import { Application, getFrontmostApplication, getPreferenceValues, getSelectedText } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { SupportedBrowsers, getCurrentTabs, getCurrentURL } from "./browser-utils";
 import { runAppleScript, useCachedState } from "@raycast/utils";
-import { ExtensionPreferences, getStorage, setStorage } from "./utils";
+import { getStorage, setStorage } from "./utils";
+import { ExtensionPreferences } from "./preferences";
 import { StorageKey } from "./constants";
 
 /**
@@ -88,12 +89,13 @@ const dummyData = (): LocalDataObject => {
  * @returns A promise resolving to an object containing the current Finder directory, the selected Finder items, the selected notes, and the current document in document-based apps.
  */
 export const requestLocalData = async (): Promise<{
-  currentDirectory: { name: string, path: string } | null;
-  finderSelection: { name: string, path: string }[];
-  selectedNotes: { name: string, id: string }[];
-  activeDocument: { name: string, path: string } | null;
+  currentDirectory: { name: string; path: string } | null;
+  finderSelection: { name: string; path: string }[];
+  selectedNotes: { name: string; id: string }[];
+  activeDocument: { name: string; path: string } | null;
 }> => {
-  const data = await runAppleScript(`function run() {
+  const data = await runAppleScript(
+    `function run() {
     let data = {
       currentDirectory: null,
       finderSelection: [],
@@ -148,9 +150,11 @@ export const requestLocalData = async (): Promise<{
     }
     
     return data;
-  }`, { language: "JavaScript", humanReadableOutput: false});
+  }`,
+    { language: "JavaScript", humanReadableOutput: false },
+  );
   return JSON.parse(data);
-}
+};
 
 /**
  * Gets the selected Finder items.
@@ -168,7 +172,7 @@ export const getFinderSelection = async (): Promise<{ name: string; path: string
       return thePath
     end tell
   end try`,
-    { humanReadableOutput: true }
+    { humanReadableOutput: true },
   );
 
   const entries = data.split(", ");
@@ -185,7 +189,7 @@ export const updateRecentApplications = async () => {
     const app = await getFrontmostApplication();
     const recentApps = await getStorage(StorageKey.RECENT_APPS);
     const newRecentApps = recentApps.filter(
-      (recentApp: Application) => recentApp.name != app.name && recentApp.name != "Raycast"
+      (recentApp: Application) => recentApp.name != app.name && recentApp.name != "Raycast",
     );
 
     if (app.name != "Raycast") {

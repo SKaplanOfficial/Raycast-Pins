@@ -1,31 +1,6 @@
-import { Application, LocalStorage } from "@raycast/api";
+import { LocalStorage } from "@raycast/api";
 import { exec, execSync } from "child_process";
 import { runAppleScript } from "@raycast/utils";
-
-/**
- * Preferences for the entire extension.
- */
-export interface ExtensionPreferences {
-  /**
-   * The user's preferred browser. This is used to open URL pins.
-   */
-  preferredBrowser: Application;
-
-  /**
-   * The first section displayed in lists of pins, e.g. grouped-pins-first or ungrouped-pins-first.
-   */
-  topSection: string;
-
-  /**
-   * Whether or not to show the recent applications section in lists of pins.
-   */
-  showRecentApplications: boolean;
-
-  /**
-   * The default sort strategy for lists of pins outside of groups.
-   */
-  defaultSortStrategy: string;
-}
 
 /**
  * Sets the value of a local storage key.

@@ -5,7 +5,7 @@
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
  * Created at     : 2023-09-04 17:37:42
- * Last modified  : 2023-09-04 17:37:42
+ * Last modified  : 2023-11-01 00:43:50
  */
 
 import { useCachedState } from "@raycast/utils";
@@ -25,7 +25,8 @@ import {
 } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { SORT_FN, StorageKey, SORT_STRATEGY } from "./constants";
-import { ExtensionPreferences, getStorage, runCommand, runCommandInTerminal, setStorage } from "./utils";
+import { getStorage, runCommand, runCommandInTerminal, setStorage } from "./utils";
+import { ExtensionPreferences } from "./preferences";
 import * as fs from "fs";
 import * as os from "os";
 import { Placeholders } from "./placeholders";
@@ -265,7 +266,7 @@ export const openPin = async (pin: Pin, preferences: { preferredBrowser: Applica
     () => {
       null;
     },
-    false
+    false,
   );
 };
 
@@ -307,7 +308,7 @@ export const createNewPin = async (
   execInBackground: boolean | undefined,
   fragment: boolean | undefined,
   shortcut: Keyboard.Shortcut | undefined,
-  iconColor: string | undefined
+  iconColor: string | undefined,
 ) => {
   // Get the stored pins
   const storedPins = await getStorage(StorageKey.LOCAL_PINS);
@@ -373,7 +374,7 @@ export const modifyPin = async (
   averageExecutionTime: number | undefined,
   pop: () => void,
   setPins: React.Dispatch<React.SetStateAction<Pin[]>>,
-  notify = true
+  notify = true,
 ) => {
   const storedPins = await getStorage(StorageKey.LOCAL_PINS);
   const newData: Pin[] = storedPins.map((oldPin: Pin) => {
@@ -442,8 +443,20 @@ export const modifyPin = async (
  * @param pin The pin to delete.
  * @param setPins The function to update the list of pins.
  */
-export const deletePin = async (pin: Pin, setPins: React.Dispatch<React.SetStateAction<Pin[]>>, showAlert = true, displayToast = true) => {
-  if (!showAlert || (await confirmAlert({ title: `Delete Pin '${pin.name}'`, message: "Are you sure?", primaryAction: { title: "Delete", style: Alert.ActionStyle.Destructive } }))) {
+export const deletePin = async (
+  pin: Pin,
+  setPins: React.Dispatch<React.SetStateAction<Pin[]>>,
+  showAlert = true,
+  displayToast = true,
+) => {
+  if (
+    !showAlert ||
+    (await confirmAlert({
+      title: `Delete Pin '${pin.name}'`,
+      message: "Are you sure?",
+      primaryAction: { title: "Delete", style: Alert.ActionStyle.Destructive },
+    }))
+  ) {
     const storedPins = await getStorage(StorageKey.LOCAL_PINS);
 
     const filteredPins = storedPins.filter((oldPin: Pin) => {
@@ -473,7 +486,12 @@ export const getPreviousPin = async (): Promise<Pin | undefined> => {
  * @param groups The list of groups to sort by.
  * @returns The sorted list of pins.
  */
-export const sortPins = (pins: Pin[], groups: Group[], sortMethod?: keyof typeof SORT_STRATEGY, sortFn?: (a: unknown, b: unknown) => number) => {
+export const sortPins = (
+  pins: Pin[],
+  groups: Group[],
+  sortMethod?: keyof typeof SORT_STRATEGY,
+  sortFn?: (a: unknown, b: unknown) => number,
+) => {
   const preferences = getPreferenceValues<ExtensionPreferences>();
   return [...pins].sort((p1, p2) => {
     const group = groups.find((group) => group.name == p1.group);
@@ -536,7 +554,7 @@ export const getLastOpenedPin = (pins: Pin[]) => {
  * @returns The {@link Pin} that was most recently created, or undefined if no pins have been created yet.
  */
 export const getNewestPin = (pins: Pin[]) => {
-  const sortedPins = sortPins(pins, [], undefined, SORT_FN.NEWEST)
+  const sortedPins = sortPins(pins, [], undefined, SORT_FN.NEWEST);
   if (sortedPins.length > 0) {
     return sortedPins[0];
   }
@@ -549,7 +567,7 @@ export const getNewestPin = (pins: Pin[]) => {
  * @returns The {@link Pin} that was created first, or undefined if no pins have been created yet.
  */
 export const getOldestPin = (pins: Pin[]) => {
-  const sortedPins = sortPins(pins, [], undefined, SORT_FN.OLDEST)
+  const sortedPins = sortPins(pins, [], undefined, SORT_FN.OLDEST);
   if (sortedPins.length > 0) {
     return sortedPins[0];
   }
@@ -574,7 +592,7 @@ export const getTotalPinExecutions = (pins: Pin[]) => {
 export const calculatePinFrequencyPercentile = (pin: Pin, pins: Pin[]) => {
   const pinsSortedByFrequency = pins.sort((a, b) => (a.timesOpened || 0) - (b.timesOpened || 0));
   const pinIndex = pinsSortedByFrequency.findIndex(
-    (p) => p.id == pin.id || (p.timesOpened || 0) >= (pin.timesOpened || 0)
+    (p) => p.id == pin.id || (p.timesOpened || 0) >= (pin.timesOpened || 0),
   );
   return Math.round((pinIndex / pinsSortedByFrequency.length) * 100);
 };
@@ -588,7 +606,7 @@ export const calculatePinFrequencyPercentile = (pin: Pin, pins: Pin[]) => {
 export const calculatePinExecutionTimePercentile = (pin: Pin, pins: Pin[]) => {
   const pinsSortedByExecutionTime = pins.sort((a, b) => (a.averageExecutionTime || 0) - (b.averageExecutionTime || 0));
   const pinIndex = pinsSortedByExecutionTime.findIndex(
-    (p) => p.id == pin.id || (p.averageExecutionTime || 0) >= (pin.averageExecutionTime || 0)
+    (p) => p.id == pin.id || (p.averageExecutionTime || 0) >= (pin.averageExecutionTime || 0),
   );
   return Math.round((pinIndex / pinsSortedByExecutionTime.length) * 100);
 };
@@ -708,7 +726,9 @@ export const getPinStatistics = (pin: Pin, pins: Pin[], format: "string" | "obje
       : 0
   }`;
 
-  const percentOfAllExecutionsText = `${percentOfAllExecutions == "NaN%" ? "0%" : percentOfAllExecutions} of All Pin Executions`;
+  const percentOfAllExecutionsText = `${
+    percentOfAllExecutions == "NaN%" ? "0%" : percentOfAllExecutions
+  } of All Pin Executions`;
 
   const executionTimePercentile = calculatePinExecutionTimePercentile(pin, pins);
   const averageExecutionTimeText = `Average Execution Time: ${averageExecutionTime}${

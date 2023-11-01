@@ -2,6 +2,14 @@
 
 ## 1.5.0 Release, TBD
 
+### 2023-11-01
+
+- Update dependencies, including latest Raycast API version (1.60.1).
+
+### 2023-10-30
+
+- Fix bug where using "}" or "{" in a placeholder's content could cause unexpected results (including code execution).
+
 ### 2023-10-24
 
 - Fixed bug where inputting web URLs in the target field would prevent the list of 'Open With' applications from properly updating and leaving only a "None" option

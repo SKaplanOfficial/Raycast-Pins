@@ -5,7 +5,7 @@
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
  * Created at     : 2023-09-03 12:43:31
- * Last modified  : 2023-09-03 23:16:39
+ * Last modified  : 2023-11-01 00:44:12
  */
 
 import { LocalStorage, showToast, Toast } from "@raycast/api";
@@ -137,7 +137,7 @@ const examplePins: Pin[] = [
   {
     id: 15,
     name: "Summarize Tab",
-    url: "{{alert title=\"Tab Summary\":{{AI:Summarize the following content sourced from {{currentURL}}: ###{{currentTabText}}###}}}}",
+    url: '{{alert title="Tab Summary":{{AI:Summarize the following content sourced from {{currentURL}}: ###{{currentTabText}}###}}}}',
     icon: "Network",
     group: "Raycast AI Examples",
     application: "None",
@@ -145,7 +145,7 @@ const examplePins: Pin[] = [
   {
     id: 16,
     name: "Summarize Clipboard",
-    url: "{{alert title=\"Clipboard Summary\":{{AI:Summarize this: ###{{clipboardText}}###}}}}",
+    url: '{{alert title="Clipboard Summary":{{AI:Summarize this: ###{{clipboardText}}###}}}}',
     icon: "Clipboard",
     group: "Raycast AI Examples",
     application: "None",
@@ -186,7 +186,7 @@ const examplePins: Pin[] = [
   {
     id: 21,
     name: "Summarize Selected Text",
-    url: "{{alert title=\"Selected Text Summary\":{{AI:Summarize this: ###{{selectedText}}###}}}}",
+    url: '{{alert title="Selected Text Summary":{{AI:Summarize this: ###{{selectedText}}###}}}}',
     icon: "Text",
     group: "Raycast AI Examples",
     application: "None",
@@ -232,36 +232,40 @@ const exampleGroups: Group[] = [
  */
 export const installExamples = async (kind: "pins" | "groups") => {
   if (kind == "pins") {
-    const storedPins: Pin[] = await getStorage(StorageKey.LOCAL_PINS) || [];
+    const storedPins: Pin[] = (await getStorage(StorageKey.LOCAL_PINS)) || [];
 
     let nextPinID = await getNextPinID();
-    const examplesWithValidIDs = examplePins.map((pin) => {
-      if (pin.id < nextPinID) {
-        pin.id = nextPinID;
-        nextPinID++;
-      }
-      pin.dateCreated = new Date().toUTCString();
-      return pin;
-    }).filter((pin) => !storedPins.some((storedPin) => storedPin.url == pin.url));
+    const examplesWithValidIDs = examplePins
+      .map((pin) => {
+        if (pin.id < nextPinID) {
+          pin.id = nextPinID;
+          nextPinID++;
+        }
+        pin.dateCreated = new Date().toUTCString();
+        return pin;
+      })
+      .filter((pin) => !storedPins.some((storedPin) => storedPin.url == pin.url));
 
-    const allPins = [ ...storedPins, ...examplesWithValidIDs ];
+    const allPins = [...storedPins, ...examplesWithValidIDs];
     await setStorage(StorageKey.LOCAL_PINS, allPins);
     await LocalStorage.setItem(StorageKey.EXAMPLE_PINS_INSTALLED, true);
   }
 
-  const storedGroups: Group[] = await getStorage(StorageKey.LOCAL_GROUPS) || [];
+  const storedGroups: Group[] = (await getStorage(StorageKey.LOCAL_GROUPS)) || [];
 
   let nextGroupID = await getNextGroupID();
-    const examplesWithValidIDs = exampleGroups.map((group) => {
+  const examplesWithValidIDs = exampleGroups
+    .map((group) => {
       if (group.id < nextGroupID) {
         group.id = nextGroupID;
         nextGroupID++;
       }
       group.dateCreated = new Date().toUTCString();
       return group;
-    }).filter((group) => !storedGroups.some((storedGroup) => storedGroup.name == group.name));
+    })
+    .filter((group) => !storedGroups.some((storedGroup) => storedGroup.name == group.name));
 
-  const allGroups = [ ...storedGroups, ...examplesWithValidIDs ];
+  const allGroups = [...storedGroups, ...examplesWithValidIDs];
   await setStorage(StorageKey.LOCAL_GROUPS, allGroups);
   await LocalStorage.setItem(StorageKey.EXAMPLE_GROUPS_INSTALLED, true);
 

@@ -10,7 +10,8 @@ import {
   Keyboard,
   showToast,
 } from "@raycast/api";
-import { setStorage, getStorage, ExtensionPreferences, cutoff } from "./lib/utils";
+import { setStorage, getStorage, cutoff } from "./lib/utils";
+import { ExtensionPreferences } from "./lib/preferences";
 import { PinForm } from "./components/PinForm";
 import { Direction, StorageKey } from "./lib/constants";
 import {
@@ -39,6 +40,7 @@ import RecentApplicationsList from "./components/RecentApplicationsList";
 import CopyPinActionsSubmenu from "./components/actions/CopyPinActionsSubmenu";
 import DeletePinAction from "./components/actions/DeletePinAction";
 import { InstallExamplesAction } from "./components/actions/InstallExamplesAction";
+import { ViewPinsPreferences } from "./lib/preferences";
 
 /**
  * Moves a pin up or down in the list of pins. Pins stay within their groups unless grouping is disabled in preferences.
@@ -48,7 +50,7 @@ import { InstallExamplesAction } from "./components/actions/InstallExamplesActio
  */
 const movePin = async (pin: Pin, direction: Direction, setPins: React.Dispatch<React.SetStateAction<Pin[]>>) => {
   const storedPins: Pin[] = await getStorage(StorageKey.LOCAL_PINS);
-  const preferences = getPreferenceValues<ExtensionPreferences & CommandPreferences>();
+  const preferences = getPreferenceValues<ExtensionPreferences & ViewPinsPreferences>();
 
   const localPinGroup = storedPins.filter((p) => p.group == pin.group || !preferences.showGroups);
   const positionInGroup = localPinGroup.findIndex((p) => p.id == pin.id);
@@ -97,63 +99,13 @@ const PlaceholdersGuideAction = () => {
 };
 
 /**
- * Preferences for the View Pins command.
- */
-interface CommandPreferences {
-  /**
-   * Whether to display groups as separate sections.
-   */
-  showGroups: boolean;
-
-  /**
-   * Whether to display subtitles for pins.
-   */
-  showSubtitles: boolean;
-
-  /**
-   * Whether to display icons for applications that pins open with, if one is specified.
-   */
-  showApplication: boolean;
-
-  /**
-   * Whether to display a the initial creation date of each pin.
-   */
-  showCreationDate: boolean;
-
-  /**
-   * Whether to display the expiration date for pins that have one.
-   */
-  showExpiration: boolean;
-
-  /**
-   * Whether to display the execution visibility for Terminal command pins.
-   */
-  showExecutionVisibility: boolean;
-
-  /**
-   * Whether to display an icon accessory for text fragments.
-   */
-  showFragment: boolean;
-
-  /**
-   * Whether to display the number of times a pin has been opened.
-   */
-  showFrequency: boolean;
-
-  /**
-   * Whether to display an indicator for the most recently opened pin.
-   */
-  showLastOpened: boolean;
-}
-
-/**
  * Raycast command to view all pins in a list within the Raycast window.
  */
 export default function ViewPinsCommand() {
   const { pins, setPins, loadingPins, revalidatePins } = usePins();
   const { groups, loadingGroups, revalidateGroups } = useGroups();
   const [examplesInstalled, setExamplesInstalled] = useState<LocalStorage.Value | undefined>(true);
-  const preferences = getPreferenceValues<ExtensionPreferences & CommandPreferences>();
+  const preferences = getPreferenceValues<ExtensionPreferences & ViewPinsPreferences>();
 
   useEffect(() => {
     Promise.resolve(LocalStorage.getItem(StorageKey.EXAMPLE_PINS_INSTALLED)).then((examplesInstalled) => {
@@ -298,7 +250,7 @@ export default function ViewPinsCommand() {
           </List.Section>
         ) : (
           getPinListItems(pins.filter((pin) => pin.group == group.name))
-        )
+        ),
       )}
 
       <RecentApplicationsList

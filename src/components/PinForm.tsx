@@ -22,7 +22,7 @@ import { KEYBOARD_SHORTCUT } from "../lib/constants";
 import { useGroups } from "../lib/Groups";
 import { iconMap } from "../lib/icons";
 import { createNewPin, getPins, getPinStatistics, modifyPin, Pin } from "../lib/Pins";
-import { ExtensionPreferences } from "../lib/utils";
+import { ExtensionPreferences } from "../lib/preferences";
 import CopyPinActionsSubmenu from "./actions/CopyPinActionsSubmenu";
 import DeletePinAction from "./actions/DeletePinAction";
 
@@ -56,6 +56,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
 
   return (
     <Form
+      navigationTitle={pin ? `Edit Pin: ${pin.name}` : "New Pin"}
       actions={
         <ActionPanel>
           <Action.SubmitForm
@@ -68,8 +69,8 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
                 const reservedShortcut = Object.entries(KEYBOARD_SHORTCUT).find(
                   ([, reservedShortcut]) =>
                     shortcut.modifiers.every((modifier: Keyboard.KeyModifier) =>
-                      reservedShortcut.modifiers.includes(modifier)
-                    ) && reservedShortcut.key == shortcut.key
+                      reservedShortcut.modifiers.includes(modifier),
+                    ) && reservedShortcut.key == shortcut.key,
                 );
                 if (reservedShortcut) {
                   setShortcutError(`This shortcut is reserved by the extension! (${reservedShortcut[0]})`);
@@ -80,7 +81,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
                 const usedShortcut = pins?.find(
                   (pin) =>
                     pin.shortcut?.modifiers.every((modifier) => shortcut.modifiers.includes(modifier)) &&
-                    pin.shortcut?.key == shortcut.key
+                    pin.shortcut?.key == shortcut.key,
                 );
                 if (usedShortcut && (!pin || usedShortcut.id != pin.id)) {
                   setShortcutError(`This shortcut is already in use by another pin! (${usedShortcut.name})`);
@@ -106,7 +107,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
                   values.iconColorField,
                   pin.averageExecutionTime,
                   pop,
-                  setPins
+                  setPins,
                 );
               } else {
                 await createNewPin(
@@ -119,7 +120,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
                   values.execInBackgroundField,
                   values.fragmentField,
                   { modifiers: values.modifiersField, key: values.keyField },
-                  values.iconColorField
+                  values.iconColorField,
                 );
                 if (setPins) {
                   setPins(await getPins());
@@ -155,10 +156,11 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         info="The target URL, path, script, or text of the pin. Placeholders can be used to insert dynamic values into the target. See the Placeholders Guide (⌘G) for more information."
         error={urlError}
         onChange={async (value) => {
-          setValues({ ...values, url: value });
           if (value.startsWith("~")) {
             value = value.replace("~", os.homedir());
           }
+
+          let app = values.application;
 
           try {
             setApplications(await getApplications(value));
@@ -170,16 +172,18 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
               if (browser) {
                 setApplications([browser, ...allApplications.filter((app) => app.name != preferredBrowser.name)]);
                 if (values.application == undefined || values.application == "None") {
-                  setValues({ ...values, application: browser.path });
+                  app = browser.path;
                 }
               } else {
                 setApplications(allApplications);
               }
             } else {
               setApplications(allApplications);
-              setValues({ ...values, application: "None" });
+              app = "None";
             }
           }
+
+          setValues({ ...values, url: value, application: app });
 
           if (urlError !== undefined) {
             setUrlError(undefined);
@@ -206,12 +210,12 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
       />
 
       {!values.isFragment &&
-      (values.url as string)?.length == 0 &&
+      (values.url as string)?.length != 0 &&
       !(values.url as string)?.startsWith("/") &&
       !(values.url as string)?.startsWith("~") &&
       !(values.url as string)?.match(/^[a-zA-Z0-9]*?:.*/g) ? (
         <Form.Checkbox
-          label={values.url as string}
+          label="Execute in Background"
           id="execInBackgroundField"
           defaultValue={pin ? pin.execInBackground : false}
           info="If checked, the pinned Terminal command will be executed in the background instead of in a new Terminal tab."
@@ -221,7 +225,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
       <Form.Dropdown
         id="iconField"
         title="Icon"
-        info="The icon to display next to the pin in the list/menu. Favicons and file icons are automatically fetched. When an icon other than Favicon / File Icon is selected, the icon color can be changed (a color field will appear below)."
+        info="The icon displayed next to the pin's name in the list/menu. Favicons and file icons are automatically fetched. When an icon other than Favicon / File Icon is selected, the icon color can be changed (a color field will appear below)."
         defaultValue={pin ? pin.icon : "Favicon / File Icon"}
         onChange={(value) => setValues({ ...values, icon: value })}
       >

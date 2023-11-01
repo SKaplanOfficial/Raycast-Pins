@@ -5,7 +5,7 @@
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
  * Created at     : 2023-09-04 17:35:11
- * Last modified  : 2023-09-04 17:35:47
+ * Last modified  : 2023-11-01 00:44:06
  */
 
 import { useEffect, useState } from "react";
@@ -57,7 +57,7 @@ export type Group = {
 
 export const isGroup = (item: object): boolean => {
   return (item as Pin).url == undefined;
-}
+};
 
 /**
  * Gets the stored groups.
@@ -111,7 +111,7 @@ export const createNewGroup = async (
   icon: string,
   parent?: number,
   sortStrategy?: keyof typeof SORT_STRATEGY,
-  iconColor?: string
+  iconColor?: string,
 ) => {
   const storedGroups = await getStorage(StorageKey.LOCAL_GROUPS);
   const newID = await getNextGroupID();
@@ -151,7 +151,7 @@ export const modifyGroup = async (
   setGroups: (groups: Group[]) => void,
   parent?: number,
   sortStrategy?: keyof typeof SORT_STRATEGY,
-  iconColor?: string
+  iconColor?: string,
 ) => {
   const storedGroups = await getStorage(StorageKey.LOCAL_GROUPS);
   const newGroups: Group[] = storedGroups.map((oldGroup: Group) => {
@@ -267,7 +267,7 @@ export const deleteGroup = async (group: Group, setGroups: (groups: Group[]) => 
 export const checkGroupNameField = (
   name: string,
   setNameError: (error: string | undefined) => void,
-  groupNames: string[]
+  groupNames: string[],
 ) => {
   // Checks for non-empty (non-spaces-only) name
   if (name.trim().length == 0) {
@@ -287,7 +287,7 @@ export const checkGroupNameField = (
 export const checkGroupParentField = async (
   suggestedID: string,
   setParentError: React.Dispatch<React.SetStateAction<string | undefined>>,
-  groups: Group[]
+  groups: Group[],
 ) => {
   const nextID = await getStorage(StorageKey.NEXT_GROUP_ID);
   if (suggestedID.trim().length == 0) {
@@ -309,14 +309,14 @@ export const checkGroupParentField = async (
  * @param recursive Whether or not to recursively search for pins.
  */
 export const getMemberPins = (group: Group, groups: Group[], pins: Pin[], recursive = false) => {
-  const memberPins: Pin[] = []
+  const memberPins: Pin[] = [];
   for (const pin of pins) {
     if (pin.group == group.name || (recursive && getSubgroups(group, groups, true).some((g) => g.name == pin.group))) {
-      memberPins.push(pin)
+      memberPins.push(pin);
     }
   }
-  return memberPins
-}
+  return memberPins;
+};
 
 /**
  * Gets the list of subgroups of a given group. If `recursive` is true, then the list of subgroups will include the subgroups of the subgroups, and so on.
@@ -326,16 +326,16 @@ export const getMemberPins = (group: Group, groups: Group[], pins: Pin[], recurs
  * @returns The list of subgroups.
  */
 export const getSubgroups = (group: Group, groups: Group[], recursive = false) => {
-  const subgroups: Group[] = []
+  const subgroups: Group[] = [];
   for (const g of groups) {
     if (recursive && g.parent == group.id) {
-      subgroups.push(g, ...getSubgroups(g, groups))
+      subgroups.push(g, ...getSubgroups(g, groups));
     } else if (g.parent == group.id) {
-      subgroups.push(g)
+      subgroups.push(g);
     }
   }
-  return subgroups
-}
+  return subgroups;
+};
 
 /**
  * Gets the statistics (i.e. usage and creation info, not just raw stats) for a given group as either a string (default) or an object. In string form, each statistic is separated by two newlines.
@@ -346,7 +346,12 @@ export const getSubgroups = (group: Group, groups: Group[], recursive = false) =
  * @param format The format to return the statistics in. Defaults to "string".
  * @returns The statistics for the group.
  */
-export const getGroupStatistics = (group: Group, groups: Group[], pins: Pin[], format: "string" | "object" = "string") => {
+export const getGroupStatistics = (
+  group: Group,
+  groups: Group[],
+  pins: Pin[],
+  format: "string" | "object" = "string",
+) => {
   const dateFormat: Intl.DateTimeFormatOptions = {
     year: "numeric",
     month: "numeric",
@@ -357,15 +362,15 @@ export const getGroupStatistics = (group: Group, groups: Group[], pins: Pin[], f
   };
 
   const formattedDateCreated = group.dateCreated
-  ? new Date(group.dateCreated).toLocaleDateString(undefined, dateFormat)
-  : new Date().toLocaleDateString(undefined, dateFormat);
+    ? new Date(group.dateCreated).toLocaleDateString(undefined, dateFormat)
+    : new Date().toLocaleDateString(undefined, dateFormat);
 
-  const subgroups = getSubgroups(group, groups, true)
-  const memberPins = getMemberPins(group, groups, pins)
-  const allMemberPins = getMemberPins(group, groups, pins, true)
+  const subgroups = getSubgroups(group, groups, true);
+  const memberPins = getMemberPins(group, groups, pins);
+  const allMemberPins = getMemberPins(group, groups, pins, true);
 
-  const mostUsedPin = sortPins(allMemberPins, groups, undefined, SORT_FN.MOST_FREQUENT)[0]
-  const leastUsedPin = sortPins(allMemberPins, groups, undefined, SORT_FN.LEAST_FREQUENT)[0]
+  const mostUsedPin = sortPins(allMemberPins, groups, undefined, SORT_FN.MOST_FREQUENT)[0];
+  const leastUsedPin = sortPins(allMemberPins, groups, undefined, SORT_FN.LEAST_FREQUENT)[0];
 
   if (format == "object") {
     return {
@@ -373,18 +378,36 @@ export const getGroupStatistics = (group: Group, groups: Group[], pins: Pin[], f
       topLevelPins: memberPins.length,
       totalPins: allMemberPins.length,
       totalSubgroups: subgroups.length,
-      mostUsedPin: `${mostUsedPin?.timesOpened ? `${mostUsedPin.name} (${mostUsedPin.timesOpened} time${mostUsedPin.timesOpened == 1 ? "" : "s"})` : "N/A"}`,
-      leastUsedPin: `${leastUsedPin?.timesOpened ? `${leastUsedPin.name} (${leastUsedPin.timesOpened} time${leastUsedPin.timesOpened == 1 ? "" : "s"})` : "N/A"}`
-    }
+      mostUsedPin: `${
+        mostUsedPin?.timesOpened
+          ? `${mostUsedPin.name} (${mostUsedPin.timesOpened} time${mostUsedPin.timesOpened == 1 ? "" : "s"})`
+          : "N/A"
+      }`,
+      leastUsedPin: `${
+        leastUsedPin?.timesOpened
+          ? `${leastUsedPin.name} (${leastUsedPin.timesOpened} time${leastUsedPin.timesOpened == 1 ? "" : "s"})`
+          : "N/A"
+      }`,
+    };
   }
- 
-  const dateCreatedText = `Date Created: ${formattedDateCreated}`
-  const topLevelPinsText = `# of Top-Level Pins: ${memberPins.length}`
-  const totalPinsText = `Total # of Pins: ${allMemberPins.length}`
-  const totalSubgroupsText = `Total # of Subgroups: ${subgroups.length}`
 
-  const mostUsedPinText = `Most Used Pin: ${mostUsedPin?.timesOpened ? `${mostUsedPin.name} (${mostUsedPin.timesOpened} time${mostUsedPin.timesOpened == 1 ? "" : "s"})` : "N/A"}`
-  const leastUsedPinText = `Least Used Pin: ${leastUsedPin?.timesOpened ? `${leastUsedPin.name} (${leastUsedPin.timesOpened} time${leastUsedPin.timesOpened == 1 ? "" : "s"})` : "N/A"}`
+  const dateCreatedText = `Date Created: ${formattedDateCreated}`;
+  const topLevelPinsText = `# of Top-Level Pins: ${memberPins.length}`;
+  const totalPinsText = `Total # of Pins: ${allMemberPins.length}`;
+  const totalSubgroupsText = `Total # of Subgroups: ${subgroups.length}`;
 
-  return [dateCreatedText, topLevelPinsText, totalPinsText, totalSubgroupsText, mostUsedPinText, leastUsedPinText].join("\n\n")
-}
+  const mostUsedPinText = `Most Used Pin: ${
+    mostUsedPin?.timesOpened
+      ? `${mostUsedPin.name} (${mostUsedPin.timesOpened} time${mostUsedPin.timesOpened == 1 ? "" : "s"})`
+      : "N/A"
+  }`;
+  const leastUsedPinText = `Least Used Pin: ${
+    leastUsedPin?.timesOpened
+      ? `${leastUsedPin.name} (${leastUsedPin.timesOpened} time${leastUsedPin.timesOpened == 1 ? "" : "s"})`
+      : "N/A"
+  }`;
+
+  return [dateCreatedText, topLevelPinsText, totalPinsText, totalSubgroupsText, mostUsedPinText, leastUsedPinText].join(
+    "\n\n",
+  );
+};

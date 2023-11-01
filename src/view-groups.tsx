@@ -20,26 +20,7 @@ import GroupForm from "./components/GroupForm";
 import { InstallExamplesAction } from "./components/actions/InstallExamplesAction";
 import { useEffect, useState } from "react";
 import CopyGroupActionsSubmenu from "./components/actions/CopyGroupActionsSubmenu";
-
-/**
- * Preferences for the view groups command.
- */
-type ViewGroupsPreferences = {
-  /**
-   * Whether to display the ID of each group as an accessory.
-   */
-  showIDs: boolean;
-
-  /**
-   * Whether to display the current sort strategy of each group as an accessory.
-   */
-  showSortStrategy: boolean;
-
-  /**
-   * Whether to display the parent group of each group as an accessory.
-   */
-  showParentGroup: boolean;
-};
+import { ViewGroupsPreferences } from "./lib/preferences";
 
 /**
  * Action to create a new group. Opens a form view with blank/default fields.

@@ -5,7 +5,7 @@
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
  * Created at     : 2023-09-04 17:35:54
- * Last modified  : 2023-09-04 17:36:23
+ * Last modified  : 2023-11-01 00:44:02
  */
 
 import { Icon } from "@raycast/api";
@@ -45,7 +45,9 @@ export const getIcon = (iconRef: string, color?: string) => {
 export const getPinIcon = (pin: Pin) => {
   return pin.icon in iconMap || pin.icon == "None" || pin.icon.startsWith("/")
     ? getIcon(pin.icon, pin.iconColor)
-    : pin.fragment ? Icon.Text : getIcon(pin.url);
+    : pin.fragment
+    ? Icon.Text
+    : getIcon(pin.url);
 };
 
 /**

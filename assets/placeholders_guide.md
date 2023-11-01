@@ -3,8 +3,8 @@
 ------------------------
 
 Author: Stephen Kaplan _(HelloImSteven)_ <br />
-Last Updated: 2023-09-05 <br />
-Pins Version: 1.4.0
+Last Updated: 2023-11-01 <br />
+Pins Version: 1.5.0
 
 ------------------------
 

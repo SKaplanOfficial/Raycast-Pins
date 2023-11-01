@@ -51,6 +51,7 @@ export default function GroupForm(props: { group?: Group; setGroups?: (groups: G
 
   return (
     <Form
+      navigationTitle={group ? `Edit Group: ${group.name}` : "New Group"}
       actions={
         <ActionPanel>
           <Action.SubmitForm
@@ -66,7 +67,7 @@ export default function GroupForm(props: { group?: Group; setGroups?: (groups: G
                   values.iconField,
                   values.parentField ? values.parentField : undefined,
                   values.sortStrategyField && values.sortStrategyField != "none" ? values.sortStrategyField : undefined,
-                  values.iconColorField
+                  values.iconColorField,
                 );
                 await launchCommand({
                   name: "view-groups",
@@ -81,7 +82,7 @@ export default function GroupForm(props: { group?: Group; setGroups?: (groups: G
                   setGroups as (groups: Group[]) => void,
                   values.parentField ? values.parentField : undefined,
                   values.sortStrategyField && values.sortStrategyField != "none" ? values.sortStrategyField : undefined,
-                  values.iconColorField
+                  values.iconColorField,
                 );
               }
             }}
@@ -98,14 +99,14 @@ export default function GroupForm(props: { group?: Group; setGroups?: (groups: G
           checkGroupNameField(
             value,
             setNameError,
-            groups.filter((g) => g.id != targetGroup.id).map((group) => group.name)
+            groups.filter((g) => g.id != targetGroup.id).map((group) => group.name),
           )
         }
         onBlur={(event) =>
           checkGroupNameField(
             event.target.value as string,
             setNameError,
-            groups.filter((g) => g.id != targetGroup.id).map((group) => group.name)
+            groups.filter((g) => g.id != targetGroup.id).map((group) => group.name),
           )
         }
         defaultValue={targetGroup.name}
@@ -169,7 +170,7 @@ export default function GroupForm(props: { group?: Group; setGroups?: (groups: G
           onChange={() => null}
         />
       ) : null}
-      
+
       {group?.id != undefined && group.id > -1 ? (
         <>
           <Form.Separator />
