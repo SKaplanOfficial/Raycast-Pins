@@ -126,6 +126,7 @@ export default function ShowPinsCommand() {
             const placeholders = Placeholders.allPlaceholders;
             let containsPlaceholder = false;
             let passesTests = true;
+            let ruleCount = 0;
             for (const [placeholderText, placeholderValue] of Object.entries(placeholders)) {
               if (
                 targetRaw.includes(placeholderText) ||
@@ -133,13 +134,14 @@ export default function ShowPinsCommand() {
               ) {
                 containsPlaceholder = true;
                 for (const rule of placeholderValue.rules) {
+                  ruleCount++;
                   if (!(await rule(targetRaw, localData))) {
                     passesTests = false;
                   }
                 }
               }
             }
-            if (containsPlaceholder && passesTests) {
+            if (containsPlaceholder && passesTests && ruleCount > 0) {
               applicablePins.push(pin);
             } else if (!passesTests) {
               inapplicablePins.push(pin);

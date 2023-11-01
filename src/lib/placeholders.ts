@@ -151,11 +151,11 @@ const placeholders: Placeholder = {
     apply: async (str: string, context?: LocalDataObject) => {
       const pinsIcon = path.join(environment.assetsPath, "pins.icns");
       const prompt = str.match(/(?<=prompt=("|')).*?(?=("|'))/)?.[0] || "Input:";
-      return await runAppleScript(`try
+      return (await runAppleScript(`try
           return text returned of (display dialog "${prompt}" default answer "" giving up after 60 with title "Input" with icon (POSIX file "${pinsIcon}"))
         on error
           return ""
-        end try`);
+        end try`)).replaceAll(/({{|}})/g, "");
     },
   },
 
@@ -180,7 +180,7 @@ const placeholders: Placeholder = {
             end if 
           end try
         end tell`);
-        return result;
+        return result.replaceAll(/({{|}})/g, "");
       }
       return "";
     },
@@ -203,7 +203,7 @@ const placeholders: Placeholder = {
     ],
     apply: async (str: string, context?: LocalDataObject) => {
       try {
-        return (await Clipboard.readText()) || "";
+        return (await Clipboard.readText())?.replaceAll(/({{|}})/g, "") || "";
       } catch (e) {
         return "";
       }
@@ -227,7 +227,7 @@ const placeholders: Placeholder = {
     ],
     apply: async (str: string, context?: LocalDataObject) => {
       try {
-        return context?.selectedText || "";
+        return context?.selectedText?.replaceAll(/({{|}})/g, "") || "";
       } catch (e) {
         return "";
       }
@@ -284,7 +284,7 @@ const placeholders: Placeholder = {
       try {
         const files = await getFinderSelection();
         const fileContents = files.map((file) => fs.readFileSync(file.path));
-        return fileContents.join("\n\n");
+        return fileContents.join("\n\n").replaceAll(/({{|}})/g, "");
       } catch (e) {
         return "";
       }
@@ -382,9 +382,9 @@ const placeholders: Placeholder = {
       },
     ],
     apply: async (str: string, context?: LocalDataObject) => {
-      return await runAppleScript(`try
+      return (await runAppleScript(`try
         tell application "Finder" to return POSIX path of (insertion location as alias)
-      end try`);
+      end try`)).replaceAll(/({{|}})/g, "");
     },
   },
 
@@ -432,7 +432,7 @@ const placeholders: Placeholder = {
         const appName = (await getFrontmostApplication()).name;
         const URL = (await getCurrentURL(appName)).url;
         const URLText = await getTextOfWebpage(URL);
-        return URLText;
+        return URLText.replaceAll(/({{|}})/g, "");
       } catch (e) {
         return "";
       }
@@ -1279,6 +1279,7 @@ const placeholders: Placeholder = {
               `{{date${format ? ` format="${format}"` : ""}}}`
             ),
           time: async () => await Placeholders.allPlaceholders[`{{time( format=("|').*?("|'))?}}`].apply("{{time}}"),
+          timezone: async () => await Placeholders.allPlaceholders["{{timezone}}"].apply("{{timezone}}"),
           day: async () => await Placeholders.allPlaceholders[`{{day( locale=("|').*?("|'))?}}`].apply("{{day}}"),
           currentTabText: async () =>
             await Placeholders.allPlaceholders["{{currentTabText}}"].apply("{{currentTabText}}"),

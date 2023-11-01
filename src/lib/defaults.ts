@@ -136,8 +136,8 @@ const examplePins: Pin[] = [
   },
   {
     id: 15,
-    name: "Website Summary",
-    url: "{{alert:{{AI:Summarize the following content sourced from {{currentURL}}: ###{{currentTabText}}###}}}}",
+    name: "Summarize Tab",
+    url: "{{alert title=\"Tab Summary\":{{AI:Summarize the following content sourced from {{currentURL}}: ###{{currentTabText}}###}}}}",
     icon: "Network",
     group: "Raycast AI Examples",
     application: "None",
@@ -145,7 +145,7 @@ const examplePins: Pin[] = [
   {
     id: 16,
     name: "Summarize Clipboard",
-    url: "{{alert:{{AI:Summarize this: ###{{clipboardText}}###}}}}",
+    url: "{{alert title=\"Clipboard Summary\":{{AI:Summarize this: ###{{clipboardText}}###}}}}",
     icon: "Clipboard",
     group: "Raycast AI Examples",
     application: "None",
@@ -182,6 +182,14 @@ const examplePins: Pin[] = [
     group: "Placeholder Examples",
     application: "None",
     execInBackground: true,
+  },
+  {
+    id: 21,
+    name: "Summarize Selected Text",
+    url: "{{alert title=\"Selected Text Summary\":{{AI:Summarize this: ###{{selectedText}}###}}}}",
+    icon: "Text",
+    group: "Raycast AI Examples",
+    application: "None",
   },
 ];
 
