@@ -1,6 +1,6 @@
 # Pins DevLog - A more detailed changelog
 
-## 1.5.0 Release, TBD
+## 1.5.0 Release, 2023-11-01
 
 ### 2023-11-01
 
