@@ -25,6 +25,8 @@ import { createNewPin, getPins, getPinStatistics, modifyPin, Pin } from "../lib/
 import { ExtensionPreferences } from "../lib/preferences";
 import CopyPinActionsSubmenu from "./actions/CopyPinActionsSubmenu";
 import DeletePinAction from "./actions/DeletePinAction";
+import { checkForPlaceholders } from "placeholders-toolkit/dist/lib/apply";
+import PinsPlaceholders from "../lib/placeholders";
 
 /**
  * Form for creating/editing a new pin.
@@ -38,6 +40,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
   const { groups } = useGroups();
   const { pop } = useNavigation();
   const [applications, setApplications] = useState<Application[]>([]);
+  const [placeholderTooltip, setPlaceholderTooltip] = useState<string>("");
   const [urlError, setUrlError] = useState<string | undefined>();
   const [shortcutError, setShortcutError] = useState<string | undefined>();
   const [values, setValues] = useState<Record<string, unknown>>({
@@ -153,7 +156,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         id="urlField"
         title="Target"
         placeholder="Filepath, URL, or Terminal command to pin"
-        info="The target URL, path, script, or text of the pin. Placeholders can be used to insert dynamic values into the target. See the Placeholders Guide (⌘G) for more information."
+        info={`The target URL, path, script, or text of the pin. Placeholders can be used to insert dynamic values into the target. See the Placeholders Guide (⌘G) for more information.${placeholderTooltip}`}
         error={urlError}
         onChange={async (value) => {
           if (value.startsWith("~")) {
@@ -181,6 +184,20 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
               setApplications(allApplications);
               app = "None";
             }
+          }
+
+          const detectedPlaceholders = await checkForPlaceholders(value, { allPlaceholders: PinsPlaceholders });
+          if (detectedPlaceholders.length > 0) {
+            setPlaceholderTooltip(
+              `\n\nDetected Placeholders:\n${detectedPlaceholders
+                .map(
+                  (placeholder) =>
+                    `${placeholder.hintRepresentation}: ${placeholder.description}\nExample: ${placeholder.example}`,
+                )
+                .join("\n\n")}`,
+            );
+          } else {
+            setPlaceholderTooltip("");
           }
 
           setValues({ ...values, url: value, application: app });

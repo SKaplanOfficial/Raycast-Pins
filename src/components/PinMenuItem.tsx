@@ -30,12 +30,12 @@ export default function PinMenuItem(props: {
       shortcut={pin.shortcut}
       onAction={async (event) => {
         if (event.type == "left-click") {
-          await openPin(pin, preferences, localData);
+          await openPin(pin, preferences, localData as unknown as { [key: string]: string });
         } else {
           // Handle right-click based on user's preferences
           switch (preferences.rightClickAction) {
             case "open":
-              await openPin(pin, preferences, localData);
+              await openPin(pin, preferences, localData as unknown as { [key: string]: string });
               break;
             case "delete":
               await deletePin(pin, setPins);

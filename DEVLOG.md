@@ -1,5 +1,12 @@
 # Pins DevLog - A more detailed changelog
 
+## 1.6.0 Release, TBD
+
+### 2023-11-07
+
+- Extract placeholders into their own node package.
+- Added placeholder tooltips, similar to PromptLab.
+
 ## 1.5.0 Release, 2023-11-01
 
 ### 2023-11-01

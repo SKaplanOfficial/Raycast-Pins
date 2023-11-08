@@ -41,6 +41,7 @@ import CopyPinActionsSubmenu from "./components/actions/CopyPinActionsSubmenu";
 import DeletePinAction from "./components/actions/DeletePinAction";
 import { InstallExamplesAction } from "./components/actions/InstallExamplesAction";
 import { ViewPinsPreferences } from "./lib/preferences";
+import { getRecentApplications, useLocalData } from "./lib/LocalData";
 
 /**
  * Moves a pin up or down in the list of pins. Pins stay within their groups unless grouping is disabled in preferences.
@@ -106,6 +107,7 @@ export default function ViewPinsCommand() {
   const { groups, loadingGroups, revalidateGroups } = useGroups();
   const [examplesInstalled, setExamplesInstalled] = useState<LocalStorage.Value | undefined>(true);
   const preferences = getPreferenceValues<ExtensionPreferences & ViewPinsPreferences>();
+  const { localData, loadingLocalData } = useLocalData();
 
   useEffect(() => {
     Promise.resolve(LocalStorage.getItem(StorageKey.EXAMPLE_PINS_INSTALLED)).then((examplesInstalled) => {
@@ -145,7 +147,10 @@ export default function ViewPinsCommand() {
           actions={
             <ActionPanel>
               <ActionPanel.Section title="Pin Actions">
-                <Action title="Open" icon={Icon.ChevronRight} onAction={async () => await openPin(pin, preferences)} />
+                <Action title="Open" icon={Icon.ChevronRight} onAction={async () => {
+                  await getRecentApplications();
+                  await openPin(pin, preferences, localData as unknown as { [key: string]: unknown })
+                }} />
 
                 <Action.Push
                   title="Edit"
@@ -221,7 +226,7 @@ export default function ViewPinsCommand() {
 
   return (
     <List
-      isLoading={loadingPins || loadingGroups}
+      isLoading={loadingPins || loadingGroups || loadingLocalData}
       searchBarPlaceholder="Search pins..."
       filtering={{ keepSectionOrder: true }}
       actions={

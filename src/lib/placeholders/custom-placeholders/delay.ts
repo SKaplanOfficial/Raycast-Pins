@@ -6,7 +6,7 @@ import PinsPlaceholders from "..";
  * Directive that delays placeholder evaluation of its content by the specified amount of time.
  */
 const DelayDirective: Placeholder = {
-  name: "Delay",
+  name: "delay",
   regex: /{{delay (\d+?)(s|ms|m|h)?:([\s\S]*?)(?=}})/,
   rules: [],
   apply: async (str: string, context?) => {
@@ -38,8 +38,13 @@ const DelayDirective: Placeholder = {
     return { result: "" };
   },
   constant: false,
-  fn: async (content: string, duration: string, unit?: string) =>
-    (await DelayDirective.apply(`{{delay ${duration}${unit || "s"}:${content}}}`)).result,
+  fn: async (duration: string, content: unknown) => {
+    if (typeof content === "function") {
+      await DelayDirective.apply(`{{delay ${duration}:${content}}}`)
+      return await Promise.resolve(content())
+    }
+    return (await DelayDirective.apply(`{{delay ${duration}:${content}}}`)).result
+  },
   example: "{{delay 5s:{{alert:Hello!}}}}",
   description:
     "Delays the execution of the script by the specified amount of time. The delay can be specified in seconds (s), milliseconds (ms), minutes (m) or hours (h).",

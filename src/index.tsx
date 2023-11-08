@@ -26,10 +26,10 @@ import { createNewGroup, Group, useGroups } from "./lib/Groups";
 import { getGroupIcon } from "./lib/icons";
 import { useLocalData } from "./lib/LocalData";
 import { copyPinData, createNewPin, Pin, sortPins, usePins } from "./lib/Pins";
-import { Placeholders } from "./lib/placeholders2";
 import { cutoff, getStorage, setStorage } from "./lib/utils";
 import { ExtensionPreferences } from "./lib/preferences";
 import { PinsMenubarPreferences } from "./lib/preferences";
+import PinsPlaceholders from "./lib/placeholders";
 
 /**
  * Raycast menu bar command providing quick access to pins.
@@ -70,19 +70,16 @@ export default function ShowPinsCommand() {
           const inapplicablePins = [];
           for (const pin of pins) {
             const targetRaw = pin.url.startsWith("~") ? pin.url.replace("~", os.homedir()) : pin.url;
-            const placeholders = Placeholders.allPlaceholders;
+            const placeholders = PinsPlaceholders;
             let containsPlaceholder = false;
             let passesTests = true;
             let ruleCount = 0;
-            for (const [placeholderText, placeholderValue] of Object.entries(placeholders)) {
-              if (
-                targetRaw.includes(placeholderText) ||
-                placeholderValue.aliases?.some((alias) => targetRaw.includes(alias))
-              ) {
+            for (const placeholder of placeholders) {
+              if (targetRaw.match(placeholder.regex)) {
                 containsPlaceholder = true;
-                for (const rule of placeholderValue.rules) {
+                for (const rule of (placeholder.rules || [])) {
                   ruleCount++;
-                  if (!(await rule(targetRaw, localData))) {
+                  if (!(await rule(targetRaw, localData as unknown as { [key: string]: unknown }))) {
                     passesTests = false;
                   }
                 }

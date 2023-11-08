@@ -29,10 +29,10 @@ import { getStorage, runCommand, runCommandInTerminal, setStorage } from "./util
 import { ExtensionPreferences } from "./preferences";
 import * as fs from "fs";
 import * as os from "os";
-import { Placeholders } from "./placeholders2";
 import path from "path";
-import { LocalDataObject } from "./LocalData";
 import { Group } from "./Groups";
+import { PLApplicator } from "placeholders-toolkit";
+import PinsPlaceholders from "./placeholders";
 
 /**
  * A pin object.
@@ -187,7 +187,7 @@ export const usePins = () => {
  * @param pin The pin to open.
  * @param preferences The extension preferences object.
  */
-export const openPin = async (pin: Pin, preferences: { preferredBrowser: Application }, context?: LocalDataObject) => {
+export const openPin = async (pin: Pin, preferences: { preferredBrowser: Application }, context?: { [key: string]: unknown }) => {
   const startDate = new Date();
 
   try {
@@ -203,7 +203,7 @@ export const openPin = async (pin: Pin, preferences: { preferredBrowser: Applica
       await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
     } else {
       const targetRaw = pin.url.startsWith("~") ? pin.url.replace("~", os.homedir()) : pin.url;
-      const target = await Placeholders.applyToString(targetRaw, context);
+      const target = await PLApplicator.applyToString(targetRaw, { context, allPlaceholders: PinsPlaceholders });
 
       if (target != "") {
         const isPath = pin.url.startsWith("/") || pin.url.startsWith("~");
@@ -704,12 +704,12 @@ export const getPinStatistics = (pin: Pin, pins: Pin[], format: "string" | "obje
   const percentOfAllExecutions = `${Math.round(((pin.timesOpened || 0) / getTotalPinExecutions(pins)) * 100)}%`;
   const averageExecutionTime = pin.averageExecutionTime ? `${pin.averageExecutionTime / 1000} seconds` : "N/A";
 
-  const placeholdersUsed = Object.entries(Placeholders.allPlaceholders).filter(([regex]) => {
-    return pin.url.match(new RegExp(regex, "g")) != null;
+  const placeholdersUsed = PinsPlaceholders.filter((placeholder) => {
+    return pin.url.match(new RegExp(placeholder.regex, "g")) != null;
   });
   const placeholdersSummary = `${
     placeholdersUsed.length > 0
-      ? `${placeholdersUsed.length} (${placeholdersUsed.map(([, placeholder]) => placeholder.name)})`
+      ? `${placeholdersUsed.length} (${placeholdersUsed.map((placeholder) => placeholder.name)})`
       : `None`
   }`;
 
