@@ -11,7 +11,7 @@
 import { environment, showHUD, showToast } from "@raycast/api";
 
 import { StorageKey } from "./constants";
-import { Placeholders } from "./placeholders";
+import { Placeholders } from "./placeholders2";
 import { getStorage, setStorage } from "./utils";
 
 /**

@@ -29,7 +29,7 @@ import { getStorage, runCommand, runCommandInTerminal, setStorage } from "./util
 import { ExtensionPreferences } from "./preferences";
 import * as fs from "fs";
 import * as os from "os";
-import { Placeholders } from "./placeholders";
+import { Placeholders } from "./placeholders2";
 import path from "path";
 import { LocalDataObject } from "./LocalData";
 import { Group } from "./Groups";

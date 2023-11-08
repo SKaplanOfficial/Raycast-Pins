@@ -26,7 +26,7 @@ import { createNewGroup, Group, useGroups } from "./lib/Groups";
 import { getGroupIcon } from "./lib/icons";
 import { useLocalData } from "./lib/LocalData";
 import { copyPinData, createNewPin, Pin, sortPins, usePins } from "./lib/Pins";
-import { Placeholders } from "./lib/placeholders";
+import { Placeholders } from "./lib/placeholders2";
 import { cutoff, getStorage, setStorage } from "./lib/utils";
 import { ExtensionPreferences } from "./lib/preferences";
 import { PinsMenubarPreferences } from "./lib/preferences";
