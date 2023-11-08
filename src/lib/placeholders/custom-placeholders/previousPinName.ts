@@ -7,7 +7,7 @@ import { StorageKey } from "../../constants";
  * Placeholder for the name of the most recently opened pin before the current one. The substitution will be URL-encoded.
  */
 const PreviousPinNamePlaceholder: Placeholder = {
-  name: "Last Opened Pin Name",
+  name: "previousPinName",
   regex: /{{(previousPinName|lastPinName)}}/,
   rules: [
     async () => {

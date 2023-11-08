@@ -5,7 +5,7 @@ import { LocationManager } from "../../scripts";
  * Placeholder for the name of the user's current street address.
  */
 const StreetAddressPlaceholder: Placeholder = {
-  name: "Street Address",
+  name: "address",
   regex: /{{(address|streetAddress)}}/,
   rules: [],
   apply: async () => {

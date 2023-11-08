@@ -5,7 +5,7 @@ import { LocationManager } from "../../scripts";
  * Placeholder for the name of the user's current latitude.
  */
 const LatitudePlaceholder: Placeholder = {
-  name: "Latitude",
+  name: "latitude",
   regex: /{{(latitude|lat)}}/,
   rules: [],
   apply: async () => {

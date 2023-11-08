@@ -8,7 +8,7 @@ import { Clipboard } from "@raycast/api";
  * Placeholder for the JSON representation of all pins.
  */
 const PinsPlaceholder: Placeholder = {
-  name: "Pins JSON",
+  name: "pins",
   regex: /{{pins( amount=[0-9]+)?}}/,
   rules: [],
   apply: async (str: string) => {

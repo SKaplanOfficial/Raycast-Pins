@@ -57,6 +57,56 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
 
   const preferences = getPreferenceValues<ExtensionPreferences>();
 
+  /**
+   * Get the list of applications that can be used to open the target.
+   * @param target The target to open.
+   * @returns A tuple containing the preferred application and the list of all relevant applications.
+   */
+  const getMatchingApplications = async (target: string): Promise<[string, Application[]]> => {
+    let [app, apps] = [values.application as string, [] as Application[]];
+    try {
+      apps = await getApplications(target);
+    } catch (error) {
+      const allApplications = await getApplications();
+      if (target.match(/^[a-zA-Z0-9]*?:.*/g)) {
+        // Target is URL-like, so use the preferred browser if one is set
+        const preferredBrowser = preferences.preferredBrowser ? preferences.preferredBrowser : { name: "Safari" };
+        const browser = allApplications.find((app) => app.name == preferredBrowser.name);
+        if (browser) {
+          apps = [browser, ...allApplications.filter((app) => app.name != preferredBrowser.name)];
+          if (app == undefined || app == "None") {
+            app = browser.path;
+          }
+        } else {
+          apps = allApplications;
+        }
+      } else {
+        app = "None";
+        apps = allApplications;
+      }
+    }
+    setApplications(apps);
+    return [app, apps];
+  };
+
+  /**
+   * Update the placeholder tooltip based on the current target.
+   * @param target The target to check for placeholders.
+   */
+  const updatePlaceholderTooltip = async (target: string) => {
+    const detectedPlaceholders = await checkForPlaceholders(target, { allPlaceholders: PinsPlaceholders });
+    setPlaceholderTooltip(
+      detectedPlaceholders.length > 0
+        ? `\n\nDetected Placeholders:\n${detectedPlaceholders
+            .map(
+              (placeholder) =>
+                `${placeholder.hintRepresentation}: ${placeholder.description}\nExample: ${placeholder.example}`,
+            )
+            .join("\n\n")}`
+        : "",
+    );
+  };
+
   return (
     <Form
       navigationTitle={pin ? `Edit Pin: ${pin.name}` : "New Pin"}
@@ -163,49 +213,12 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
             value = value.replace("~", os.homedir());
           }
 
-          let app = values.application;
-
-          try {
-            setApplications(await getApplications(value));
-          } catch (error) {
-            const allApplications = await getApplications();
-            if (value.match(/^[a-zA-Z0-9]*?:.*/g)) {
-              const preferredBrowser = preferences.preferredBrowser ? preferences.preferredBrowser : { name: "Safari" };
-              const browser = allApplications.find((app) => app.name == preferredBrowser.name);
-              if (browser) {
-                setApplications([browser, ...allApplications.filter((app) => app.name != preferredBrowser.name)]);
-                if (values.application == undefined || values.application == "None") {
-                  app = browser.path;
-                }
-              } else {
-                setApplications(allApplications);
-              }
-            } else {
-              setApplications(allApplications);
-              app = "None";
-            }
-          }
-
-          const detectedPlaceholders = await checkForPlaceholders(value, { allPlaceholders: PinsPlaceholders });
-          if (detectedPlaceholders.length > 0) {
-            setPlaceholderTooltip(
-              `\n\nDetected Placeholders:\n${detectedPlaceholders
-                .map(
-                  (placeholder) =>
-                    `${placeholder.hintRepresentation}: ${placeholder.description}\nExample: ${placeholder.example}`,
-                )
-                .join("\n\n")}`,
-            );
-          } else {
-            setPlaceholderTooltip("");
-          }
-
+          const [app] = await getMatchingApplications(value);
+          await updatePlaceholderTooltip(value);
           setValues({ ...values, url: value, application: app });
 
           if (urlError !== undefined) {
             setUrlError(undefined);
-          } else {
-            null;
           }
         }}
         onBlur={(event) => {

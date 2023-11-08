@@ -88,7 +88,7 @@ export interface PinsMenubarPreferences {
   /**
    * The action to perform when a pin menu item is right-clicked.
    */
-  rightClickAction: "open" | "delete";
+  rightClickAction: "open" | "delete" | "copy" | "edit";
 }
 
 /**

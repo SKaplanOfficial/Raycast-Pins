@@ -1,5 +1,7 @@
 # Pins Changelog
 
+## [1.6.0] - TBD
+
 ## [Bug fixes] - 2023-11-06
 
 - Fixed bug where pins with corrupted data from previous versions would cause themselves and others to disappear after editing. (Resolve SKaplanOfficial/Raycast-Pins4)

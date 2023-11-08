@@ -7,7 +7,7 @@ import { StorageKey } from "../../constants";
  * Placeholder for the comma-separated list of group names. The list's order matches the order of groups in the 'View Pins' command.
  */
 const GroupNamesPlaceholder: Placeholder = {
-  name: "Group Names",
+  name: "groupNames",
   regex: /{{groupNames( amount=[0-9]+)?}}/,
   rules: [],
   apply: async (str: string) => {

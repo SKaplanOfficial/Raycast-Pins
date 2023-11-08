@@ -102,7 +102,7 @@ const PlaceholdersGuideAction = () => {
 /**
  * Raycast command to view all pins in a list within the Raycast window.
  */
-export default function ViewPinsCommand() {
+export default function ViewPinsCommand(args: { launchContext?: { pinID?: number }}) {
   const { pins, setPins, loadingPins, revalidatePins } = usePins();
   const { groups, loadingGroups, revalidateGroups } = useGroups();
   const [examplesInstalled, setExamplesInstalled] = useState<LocalStorage.Value | undefined>(true);
@@ -115,6 +115,13 @@ export default function ViewPinsCommand() {
     });
     Promise.resolve(checkExpirations());
   }, []);
+
+  if (args.launchContext?.pinID) {
+    const pin = pins.find((pin) => pin.id == args.launchContext?.pinID);
+    if (pin) {
+      return <PinForm pin={pin} setPins={setPins} pins={pins} />;
+    }
+  }
 
   const maxTimesOpened = Math.max(...pins.map((pin) => pin.timesOpened || 0));
 

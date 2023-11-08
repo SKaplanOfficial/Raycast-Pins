@@ -6,7 +6,7 @@ import { StorageKey } from "../../constants";
  * Placeholder for the last application focused before the current application. If there is no previous application, this placeholder will not be replaced.
  */
 const PreviousApplicationPlaceholder: Placeholder = {
-  name: "Previous Application",
+  name: "previousApplication",
   regex:
     /{{(previousApp|previousAppName|lastApp|lastAppName|previousApplication|lastApplication|previousApplicationName|lastApplicationName)}}/,
   rules: [

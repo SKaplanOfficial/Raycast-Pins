@@ -18,7 +18,7 @@ import { JavaScriptPlaceholder } from "placeholders-toolkit/dist/lib/defaultPlac
 import vm from "vm";
 import PinStatisticsPlaceholder from "./custom-placeholders/pinStatistics";
 
-const filteredPlaceholders = Object.values(DefaultPlaceholders).filter((p) => !["location", "javascript"].includes(p.name));
+const filteredPlaceholders = Object.values(DefaultPlaceholders).filter((p) => !["location", "js"].includes(p.name));
 
 const PinsPlaceholders = [
   DelayDirective,

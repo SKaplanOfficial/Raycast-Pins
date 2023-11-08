@@ -9,7 +9,7 @@ import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-
  * The model and creativity are optional. The default model is `gpt-3.5-turbo` and the default creativity is `1.0`. The model can be either `gpt-3.5-turbo` or `text-davinci-003`. The creativity must be a decimal between 0 and 1.
  */
 const AskAIDirective: Placeholder = {
-  name: "Ask AI",
+  name: "askAI",
   regex:
     /{{(askAI|askai|AI|ai)( model="(([^{]|{(?!{)|{{[\s\S]*?}})*?)")?( creativity=(([^{]|{(?!{)|{{[\s\S]*?}})*?))?:(([^{]|{(?!{)|{{[\s\S]*?}})*?)}}/,
   rules: [],
@@ -44,7 +44,9 @@ const AskAIDirective: Placeholder = {
     return { result: "" };
   },
   constant: false,
-  fn: async (prompt?: string) => (await AskAIDirective.apply(`{{ai:${prompt}}}`)).result,
+  fn: async (prompt?: string) => {
+    return (await AskAIDirective.apply(`{{askAI:${prompt}}}`)).result
+  },
   example: '{{ai model="text-davinci-003":What is the meaning of life?}}',
   description:
     "Query Raycast AI and insert the response. If the query fails, the placeholder will be replaced with an empty string.",

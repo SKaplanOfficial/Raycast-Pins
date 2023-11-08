@@ -7,7 +7,7 @@ import { StorageKey } from "../../constants";
    * Placeholder for the comma-separated list of pin names. The list is sorted by most recently opened pin first.
    */
 const PinNamesPlaceholder: Placeholder = {
-  name: "Pin Names",
+  name: "pinNames",
   regex: /{{pinNames( amount=[0-9]+)?}}/,
   rules: [],
   apply: async (str: string) => {

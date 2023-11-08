@@ -8,7 +8,7 @@ import { Group } from "../../Groups";
  * Placeholder for the JSON representation of all pins.
  */
 const PinStatisticsPlaceholder: Placeholder = {
-  name: "Pin Statistics",
+  name: "pinStatistics",
   regex:
     /{{(statistics|stats|pinStats|pinStatistics)( sort="(alpha|alphabetical|freq|frequency|recency|dateCreated)")?( amount=[0-9]+)?}}/,
   rules: [],

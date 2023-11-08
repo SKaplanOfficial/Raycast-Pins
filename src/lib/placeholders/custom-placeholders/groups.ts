@@ -7,7 +7,7 @@ import { Group } from "../../Groups";
  * Placeholder for the JSON representation of all groups.
  */
 const GroupsPlaceholder: Placeholder = {
-  name: "Groups JSON",
+  name: "groups",
   regex: /{{groups( amount=[0-9]+)?}}/,
   rules: [],
   apply: async (str: string) => {

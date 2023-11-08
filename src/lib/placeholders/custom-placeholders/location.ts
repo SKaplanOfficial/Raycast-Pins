@@ -5,7 +5,7 @@ import { LocationManager } from "../../scripts";
  * Placeholder for a summary of the user's current location.
  */
 const LocationPlaceholder: Placeholder = {
-  name: "Location",
+  name: "location",
   regex: /{{location}}/,
   rules: [],
   apply: async () => {

@@ -7,7 +7,7 @@ import { getStorage } from "../../utils";
  * Placeholder for the newline-separated list of pin targets. The list is sorted by most recently opened pin first.
  */
 const PinTargetsPlaceholder: Placeholder = {
-  name: "Pin Targets",
+  name: "pinTargets",
   regex: /{{pinTargets( amount=[0-9]+)?}}/,
   rules: [],
   apply: async (str: string) => {

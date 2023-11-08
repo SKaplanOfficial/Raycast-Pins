@@ -1,7 +1,7 @@
-import { MenuBarExtra } from "@raycast/api";
+import { Clipboard, LaunchType, MenuBarExtra, launchCommand, showToast } from "@raycast/api";
 import { getPinIcon } from "../lib/icons";
 import { Pin, deletePin, openPin } from "../lib/Pins";
-import { ExtensionPreferences } from "../lib/preferences";
+import { ExtensionPreferences, PinsMenubarPreferences } from "../lib/preferences";
 import { LocalDataObject } from "../lib/LocalData";
 
 /**
@@ -15,7 +15,7 @@ import { LocalDataObject } from "../lib/LocalData";
  */
 export default function PinMenuItem(props: {
   pin: Pin;
-  preferences: ExtensionPreferences & { rightClickAction: "open" | "delete" };
+  preferences: ExtensionPreferences & PinsMenubarPreferences;
   relevant: boolean;
   localData: LocalDataObject;
   setPins: React.Dispatch<React.SetStateAction<Pin[]>>;
@@ -39,6 +39,13 @@ export default function PinMenuItem(props: {
               break;
             case "delete":
               await deletePin(pin, setPins);
+              break;
+            case "copy":
+              await Clipboard.copy(pin.url)
+              await showToast( { title: "Copied to Clipboard" })
+              break;
+            case "edit":
+              launchCommand({ name: "view-pins", type: LaunchType.UserInitiated, context: { pinID: pin.id }})
               break;
           }
         }

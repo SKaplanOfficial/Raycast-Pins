@@ -3,8 +3,8 @@
 ------------------------
 
 Author: Stephen Kaplan _(HelloImSteven)_ <br />
-Last Updated: 2023-11-01 <br />
-Pins Version: 1.5.0
+Last Updated: 2023-11-08 <br />
+Pins Version: 1.6.0
 
 ------------------------
 
@@ -30,6 +30,9 @@ Placeholders allow pins to be more dynamic and context-aware. You can use placeh
 | `{{alert:...}}` | Displays an alert with the specified text. Specify an optional message and timeout using `{{alert timeout=[number] title="...":...}}`. The default timeout is 10 seconds. |
 | `{{dialog:...}}` | Displays a dialog with the specified text. Specify an optional title and timeout using `{{dialog timeout=[number] title="...":Message}}`. The default timeout is 30 seconds. You can accept input by providing `input=true` before the timeout, e.g. `{{dialog input=true timeout=5:Enter a number}}`. |
 | `{{as:...}}` or <br /> `{{AS:..}}` | The return value of an AppleScript script. |
+| `{{chooseApplication}}` | A quoted POSIX path of an application selected by the user in a file dialog. Use `{{chooseApplication multiple=true}}` to allow the user to select multiple applications. |
+| `{{chooseFile}}` | A quoted POSIX path of a file selected by the user in a file dialog. Use `{{chooseFile multiple=true}}` to allow the user to select multiple files. |
+| `{{chooseFolder}}` | A quoted POSIX path of a folder selected by the user in a file dialog. Use `{{chooseFolder multiple=true}}` to allow the user to select multiple folders. |
 | `{{clipboardText}}` or <br /> `{{clipboard}}` | The current text content of the clipboard. |
 | `{{copy:...}}` | Copies the specified text to the clipboard. |
 | `{{currentAppBundleID}}` or <br /> `{{currentAppID}}` or <br /> `{{currentApplicationBundleID}}` or <br /> `{{currentApplicationID}}` | The bundle ID of the frontmost application. |
@@ -78,6 +81,7 @@ Placeholders allow pins to be more dynamic and context-aware. You can use placeh
 | `{{usedUUIDs}}` | The list of UUIDs previously used by the `{{uuid}}` placeholder since Pins' LocalStorage was last reset. |
 | `{{user}}` or <br /> `{{username}}` | The current user's system username. |
 | `{{uuid}}` or <br /> `{{UUID}}` | A unique UUID generated at runtime. |
+| `{{write to="[path]":...}}` | Writes the provided text to the file at the specified path. The path can be absolute or relative to the user's home directory using `~/`. Use `{{write to="[path]" append=true:...}}` to append the text to the file instead of overwriting it. Specify an optional end token using `{{write to="[path]" end="...":...}}`. The default end token is `\n\n`. |
 
 > **Note**
 > Placeholders are case-sensitive unless otherwise noted.

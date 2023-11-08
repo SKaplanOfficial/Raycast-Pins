@@ -7,7 +7,7 @@ import { StorageKey } from "../../constants";
  * Placeholder for the target of the most recently opened pin before the current one. The substitution will be URL-encoded.
  */
 const PreviousPinTargetPlaceholder: Placeholder = {
-  name: "Last Opened Pin Target",
+  name: "previousPinTarget",
   regex: /{{(previousPinTarget|lastPinTarget|previousTarget)}}/,
   rules: [
     async () => {

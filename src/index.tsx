@@ -20,7 +20,6 @@ import { useCachedState } from "@raycast/utils";
 import OpenAllMenuItem from "./components/OpenAllMenuItem";
 import PinMenuItem from "./components/PinMenuItem";
 import RecentApplicationsList from "./components/RecentApplicationsList";
-import { SupportedBrowsers } from "./lib/browser-utils";
 import { KEYBOARD_SHORTCUT, StorageKey } from "./lib/constants";
 import { createNewGroup, Group, useGroups } from "./lib/Groups";
 import { getGroupIcon } from "./lib/icons";
@@ -30,6 +29,7 @@ import { cutoff, getStorage, setStorage } from "./lib/utils";
 import { ExtensionPreferences } from "./lib/preferences";
 import { PinsMenubarPreferences } from "./lib/preferences";
 import PinsPlaceholders from "./lib/placeholders";
+import { utils } from "placeholders-toolkit";
 
 /**
  * Raycast menu bar command providing quick access to pins.
@@ -234,7 +234,7 @@ export default function ShowPinsCommand() {
                 }}
               />
             ) : null}
-            {SupportedBrowsers.includes(localData.currentApplication.name) ? (
+            {utils.SupportedBrowsers.find((b) => b.name == localData.currentApplication.name) ? (
               <MenuBarExtra.Item
                 title={`Pin This Tab (${cutoff(localData.currentTab.name, 20)})`}
                 icon={Icon.AppWindow}
@@ -256,7 +256,7 @@ export default function ShowPinsCommand() {
                 }}
               />
             ) : null}
-            {SupportedBrowsers.includes(localData.currentApplication.name) && localData.tabs.length > 1 ? (
+            {utils.SupportedBrowsers.find((b) => b.name == localData.currentApplication.name) && localData.tabs.length > 1 ? (
               <MenuBarExtra.Item
                 title={`Pin All Tabs (${localData.tabs.length})`}
                 icon={Icon.AppWindowGrid3x3}

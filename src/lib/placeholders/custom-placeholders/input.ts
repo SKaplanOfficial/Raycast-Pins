@@ -7,7 +7,7 @@ import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-
  * Directive/placeholder to ask the user for input via a dialog window. The placeholder will be replaced with the user's input. If the user cancels the dialog, the placeholder will be replaced with an empty string.
  */
 const InputDirective: Placeholder = {
-  name: "Input",
+  name: "input",
   regex: /{{input( prompt=("|').*?("|'))?}}/,
   rules: [],
   apply: async (str: string) => {

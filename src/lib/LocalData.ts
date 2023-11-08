@@ -10,11 +10,11 @@
 
 import { Application, getFrontmostApplication, getPreferenceValues, getSelectedText } from "@raycast/api";
 import { useEffect, useState } from "react";
-import { SupportedBrowsers, getCurrentTabs, getCurrentURL } from "./browser-utils";
 import { runAppleScript, useCachedState } from "@raycast/utils";
 import { getStorage, setStorage } from "./utils";
 import { ExtensionPreferences } from "./preferences";
 import { StorageKey } from "./constants";
+import { utils } from "placeholders-toolkit";
 
 /**
  * Local data object that stores various contextual information for use in placeholders, recent apps list, etc.
@@ -287,11 +287,11 @@ export const useLocalData = () => {
       newData.selectedNotes = request.selectedNotes;
       newData.currentDocument = request.activeDocument || { name: "", path: "" };
 
-      if (SupportedBrowsers.includes(app.name)) {
-        newData.tabs = await getCurrentTabs(app.name);
-        newData.currentTab = await getCurrentURL(app.name);
+      const browser = utils.SupportedBrowsers.find((b) => b.name == app.name);
+      if (browser) {
+        newData.tabs = await browser.tabs();
+        newData.currentTab = await browser.currentTab();
       }
-
       return newData;
     };
 
