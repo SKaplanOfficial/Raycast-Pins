@@ -25,7 +25,7 @@ import { createNewPin, getPins, getPinStatistics, modifyPin, Pin } from "../lib/
 import { ExtensionPreferences } from "../lib/preferences";
 import CopyPinActionsSubmenu from "./actions/CopyPinActionsSubmenu";
 import DeletePinAction from "./actions/DeletePinAction";
-import { checkForPlaceholders } from "placeholders-toolkit/dist/lib/apply";
+import { PLApplicator } from "placeholders-toolkit"
 import PinsPlaceholders from "../lib/placeholders";
 
 /**
@@ -94,7 +94,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
    * @param target The target to check for placeholders.
    */
   const updatePlaceholderTooltip = async (target: string) => {
-    const detectedPlaceholders = await checkForPlaceholders(target, { allPlaceholders: PinsPlaceholders });
+    const detectedPlaceholders = await PLApplicator.checkForPlaceholders(target, { allPlaceholders: PinsPlaceholders });
     setPlaceholderTooltip(
       detectedPlaceholders.length > 0
         ? `\n\nDetected Placeholders:\n${detectedPlaceholders
