@@ -154,7 +154,7 @@ export default function ViewPinsCommand(args: { launchContext?: { pinID?: number
           actions={
             <ActionPanel>
               <ActionPanel.Section title="Pin Actions">
-                <Action title="Open" icon={Icon.ChevronRight} onAction={async () => {
+                <Action title="Open" icon={Icon.ChevronRight} shortcut={pin.shortcut} onAction={async () => {
                   await getRecentApplications();
                   await openPin(pin, preferences, localData as unknown as { [key: string]: unknown })
                 }} />

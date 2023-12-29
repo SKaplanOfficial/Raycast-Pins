@@ -1,4 +1,4 @@
-import { DefaultPlaceholders, PlaceholderType, utils } from "placeholders-toolkit";
+import { DefaultPlaceholders, Placeholder, PlaceholderType, utils } from "placeholders-toolkit";
 import DelayDirective from "./custom-placeholders/delay";
 import InputDirective from "./custom-placeholders/input";
 import LocationPlaceholder from "./custom-placeholders/location";
@@ -20,9 +20,14 @@ import PinStatisticsPlaceholder from "./custom-placeholders/pinStatistics";
 
 const filteredPlaceholders = Object.values(DefaultPlaceholders).filter((p) => !["location", "js"].includes(p.name));
 
+// Remove rules from selectedText placeholder to avoid alert sounds
+const selectedTextPlaceholder = filteredPlaceholders.find((p) => p.name == "selectedText") as Placeholder;
+selectedTextPlaceholder.rules = [];
+
 const PinsPlaceholders = [
   DelayDirective,
-  ...filteredPlaceholders.filter((p) => p.type == PlaceholderType.Informational),
+  ...filteredPlaceholders.filter((p) => p.type == PlaceholderType.Informational && p.name != "selectedText"),
+  selectedTextPlaceholder,
   ...filteredPlaceholders.filter((p) => p.type == PlaceholderType.StaticDirective),
   LocationPlaceholder,
   LatitudePlaceholder,
