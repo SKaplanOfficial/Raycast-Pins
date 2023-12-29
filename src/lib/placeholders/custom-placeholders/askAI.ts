@@ -45,7 +45,7 @@ const AskAIDirective: Placeholder = {
   },
   constant: false,
   fn: async (prompt?: string) => {
-    return (await AskAIDirective.apply(`{{askAI:${prompt}}}`)).result
+    return (await AskAIDirective.apply(`{{askAI:${prompt}}}`)).result;
   },
   example: '{{ai model="text-davinci-003":What is the meaning of life?}}',
   description:

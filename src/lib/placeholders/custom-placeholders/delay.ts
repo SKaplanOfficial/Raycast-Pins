@@ -40,10 +40,10 @@ const DelayDirective: Placeholder = {
   constant: false,
   fn: async (duration: string, content: unknown) => {
     if (typeof content === "function") {
-      await DelayDirective.apply(`{{delay ${duration}:null}}`)
-      return await Promise.resolve(content())
+      await DelayDirective.apply(`{{delay ${duration}:null}}`);
+      return await Promise.resolve(content());
     }
-    return (await DelayDirective.apply(`{{delay ${duration}:${content}}}`)).result
+    return (await DelayDirective.apply(`{{delay ${duration}:${content}}}`)).result;
   },
   example: "{{delay 5s:{{alert:Hello!}}}}",
   description:

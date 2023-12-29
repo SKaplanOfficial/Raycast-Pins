@@ -10,7 +10,7 @@ import {
   Keyboard,
   showToast,
 } from "@raycast/api";
-import { setStorage, getStorage, cutoff } from "./lib/utils";
+import { setStorage, getStorage, cutoff, pluralize } from "./lib/utils";
 import { ExtensionPreferences } from "./lib/preferences";
 import { PinForm } from "./components/PinForm";
 import { Direction, StorageKey } from "./lib/constants";
@@ -267,7 +267,11 @@ export default function ViewPinsCommand(args: { launchContext?: { pinID?: number
           <List.Dropdown tooltip="Filter by Tag" isLoading={loadingPins} onChange={setFilteredTag}>
             <List.Dropdown.Item title="All Tags" value="all" icon={Icon.Tag} />
             {tagNames.map((tag) => (
-              <List.Dropdown.Item title={`${tag} (${tagCounts[tag]} pins)`} value={tag} icon={Icon.Tag} />
+              <List.Dropdown.Item
+                title={`${tag} (${tagCounts[tag]} ${pluralize("pin", tagCounts[tag])})`}
+                value={tag}
+                icon={Icon.Tag}
+              />
             ))}
           </List.Dropdown>
         ) : null

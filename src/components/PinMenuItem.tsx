@@ -41,11 +41,11 @@ export default function PinMenuItem(props: {
               await deletePin(pin, setPins);
               break;
             case RightClickAction.Copy:
-              await Clipboard.copy(pin.url)
-              await showToast( { title: "Copied to Clipboard" })
+              await Clipboard.copy(pin.url);
+              await showToast({ title: "Copied to Clipboard" });
               break;
             case RightClickAction.Edit:
-              launchCommand({ name: "view-pins", type: LaunchType.UserInitiated, context: { pinID: pin.id }})
+              launchCommand({ name: "view-pins", type: LaunchType.UserInitiated, context: { pinID: pin.id } });
               break;
           }
         }

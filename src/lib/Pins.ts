@@ -124,6 +124,9 @@ export type Pin = {
   notes?: string;
 };
 
+/**
+ * The keys of a {@link Pin} object.
+ */
 export const PinKeys = [
   "name",
   "url",
@@ -142,7 +145,7 @@ export const PinKeys = [
   "averageExecutionTime",
   "tags",
   "notes",
-]
+];
 
 /**
  * Removes expired pins.
@@ -217,7 +220,11 @@ export const usePins = () => {
  * @param pin The pin to open.
  * @param preferences The extension preferences object.
  */
-export const openPin = async (pin: Pin, preferences: { preferredBrowser: Application }, context?: { [key: string]: unknown }) => {
+export const openPin = async (
+  pin: Pin,
+  preferences: { preferredBrowser: Application },
+  context?: { [key: string]: unknown },
+) => {
   const startDate = new Date();
 
   try {
@@ -747,7 +754,10 @@ export const getPinStatistics = (pin: Pin, pins: Pin[], format: "string" | "obje
   const averageExecutionTime = pin.averageExecutionTime ? `${pin.averageExecutionTime / 1000} seconds` : "N/A";
 
   const placeholdersUsed = PinsPlaceholders.filter((placeholder) => {
-    return pin.url.match(new RegExp(placeholder.regex, "g")) != null || pin.url.match(new RegExp(`(?<![a-zA-z])${placeholder.name.replaceAll("+", "\\+")}(?! ?[a-zA-z])`)) != undefined
+    return (
+      pin.url.match(new RegExp(placeholder.regex, "g")) != null ||
+      pin.url.match(new RegExp(`(?<![a-zA-z])${placeholder.name.replaceAll("+", "\\+")}(?! ?[a-zA-z])`)) != undefined
+    );
   });
   const placeholdersSummary = `${
     placeholdersUsed.length > 0

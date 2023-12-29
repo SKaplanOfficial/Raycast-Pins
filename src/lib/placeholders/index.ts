@@ -51,20 +51,13 @@ const PinsPlaceholders = [
 
 JavaScriptPlaceholder.apply = async (str: string) => {
   try {
-    const script = str.match(
-      /(?<=(js|JS))( target="(.*?)")?:(([^{]|{(?!{)|{{[\s\S]*?}})*?)}}/
-    )?.[4];
-    const target = str.match(
-      /(?<=(js|JS))( target="(.*?)")?:(([^{]|{(?!{)|{{[\s\S]*?}})*?)}}/
-    )?.[3];
+    const script = str.match(/(?<=(js|JS))( target="(.*?)")?:(([^{]|{(?!{)|{{[\s\S]*?}})*?)}}/)?.[4];
+    const target = str.match(/(?<=(js|JS))( target="(.*?)")?:(([^{]|{(?!{)|{{[\s\S]*?}})*?)}}/)?.[3];
     if (!script) return { result: "", js: "" };
 
     if (target) {
       // Run in active browser tab
-      const res = await utils.runJSInActiveTab(
-        script.replaceAll(/(\n|\r|\t|\\|")/g, "\\$1"),
-        target
-      );
+      const res = await utils.runJSInActiveTab(script.replaceAll(/(\n|\r|\t|\\|")/g, "\\$1"), target);
       return { result: res, js: res };
     }
 
@@ -74,7 +67,7 @@ JavaScriptPlaceholder.apply = async (str: string) => {
         acc[placeholder.name] = placeholder.fn;
         return acc;
       },
-      {} as { [key: string]: (...args: never[]) => Promise<string> }
+      {} as { [key: string]: (...args: never[]) => Promise<string> },
     );
     sandbox["log"] = async (str: string) => {
       console.log(str); // Make logging available to JS scripts

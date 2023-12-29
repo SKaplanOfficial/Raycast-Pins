@@ -14,7 +14,7 @@ const LocationPlaceholder: Placeholder = {
     const res = `Address: ${address}, ${location.country}${
       address.includes(location.name.toString()) ? `` : `\nName: ${location.name}`
     }\nLatitude: ${location.latitude}\nLongitude: ${location.longitude}`;
-    console.log(res)
+    console.log(res);
     return { result: res, location: res };
   },
   constant: true,

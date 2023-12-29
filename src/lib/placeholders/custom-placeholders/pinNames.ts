@@ -4,8 +4,8 @@ import { Pin } from "../../Pins";
 import { StorageKey } from "../../constants";
 
 /**
-   * Placeholder for the comma-separated list of pin names. The list is sorted by most recently opened pin first.
-   */
+ * Placeholder for the comma-separated list of pin names. The list is sorted by most recently opened pin first.
+ */
 const PinNamesPlaceholder: Placeholder = {
   name: "pinNames",
   regex: /{{pinNames( amount=[0-9]+)?}}/,
@@ -38,6 +38,6 @@ const PinNamesPlaceholder: Placeholder = {
   fullRepresentation: "Pin Names",
   type: PlaceholderType.Informational,
   categories: [PlaceholderCategory.Meta],
-}
+};
 
 export default PinNamesPlaceholder;

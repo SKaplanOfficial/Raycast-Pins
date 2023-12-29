@@ -33,7 +33,8 @@ const PreviousPinTargetPlaceholder: Placeholder = {
   result_keys: ["previousPinTarget"],
   fn: async () => (await PreviousPinTargetPlaceholder.apply(`{{previousPinTarget}}`)).result,
   example: "{{previousPinTarget}}",
-  description: "The target of the most recently opened pin before the current one. The substitution will be URL-encoded.",
+  description:
+    "The target of the most recently opened pin before the current one. The substitution will be URL-encoded.",
   hintRepresentation: "{{previousPinTarget}}",
   fullRepresentation: "Last Opened Pin Target",
   type: PlaceholderType.Informational,

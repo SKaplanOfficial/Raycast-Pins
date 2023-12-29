@@ -34,9 +34,12 @@ export const mapAmountToColor = (amount: number, maxAmount: number) => {
  * @param accessories The list of accessories to add the tag accessories to.
  */
 export const addTagAccessories = (pin: Pin, accessories: List.Item.Accessory[]) => {
-  const tagAccessories = pin.tags?.map((tag) => ({ tag: { value: tag, color: Color.SecondaryText } }));
+  const tagAccessories = pin.tags?.map((tag) => ({
+    tag: { value: tag, color: Color.SecondaryText },
+    tooltip: `Tagged '${tag}'`,
+  }));
   accessories.push(...(tagAccessories || []));
-}
+};
 
 /**
  * Adds a frequency accessory to the given list of accessories.

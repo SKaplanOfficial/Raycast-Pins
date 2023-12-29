@@ -136,7 +136,9 @@ export const requestLocalData = async (): Promise<{
       // Try to get active document from any generic document-based app
       const app = Application(frontApp.toString());
       const doc = app.documents[0];
-      data.activeDocument = { name: doc.name(), path: doc.path().toString() };
+      if (doc) {
+        data.activeDocument = { name: doc.name(), path: doc.path().toString() };
+      }
     }
     
     return data;
