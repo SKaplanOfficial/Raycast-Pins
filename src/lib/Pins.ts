@@ -112,7 +112,37 @@ export type Pin = {
    * The average time, in milliseconds, for every execution of the pin.
    */
   averageExecutionTime?: number;
+
+  /**
+   * The tags associated with the pin.
+   */
+  tags?: string[];
+
+  /**
+   * User-defined notes for the pin.
+   */
+  notes?: string;
 };
+
+export const PinKeys = [
+  "name",
+  "url",
+  "icon",
+  "group",
+  "id",
+  "application",
+  "expireDate",
+  "fragment",
+  "execInBackground",
+  "shortcut",
+  "lastOpened",
+  "timesOpened",
+  "dateCreated",
+  "iconColor",
+  "averageExecutionTime",
+  "tags",
+  "notes",
+]
 
 /**
  * Removes expired pins.
@@ -265,6 +295,8 @@ export const openPin = async (pin: Pin, preferences: { preferredBrowser: Applica
     (pin.timesOpened || 0) + 1,
     pin.dateCreated ? new Date(pin.dateCreated) : new Date(),
     pin.iconColor,
+    pin.tags,
+    pin.notes,
     pin.averageExecutionTime
       ? Math.round((pin.averageExecutionTime * (pin.timesOpened || 0) + timeElapsed) / ((pin.timesOpened || 0) + 1))
       : timeElapsed,
@@ -317,6 +349,8 @@ export const createNewPin = async (
   fragment: boolean | undefined,
   shortcut: Keyboard.Shortcut | undefined,
   iconColor: string | undefined,
+  tags: string[] | undefined,
+  notes: string | undefined,
 ) => {
   // Get the stored pins
   const storedPins = await getStorage(StorageKey.LOCAL_PINS);
@@ -343,6 +377,8 @@ export const createNewPin = async (
     shortcut: shortcut,
     dateCreated: new Date().toUTCString(),
     iconColor: iconColor,
+    tags: tags,
+    notes: notes,
   });
 
   // Update the stored pins
@@ -379,6 +415,8 @@ export const modifyPin = async (
   timesOpened: number | undefined,
   dateCreated: Date | undefined,
   iconColor: string | undefined,
+  tags: string[] | undefined,
+  notes: string | undefined,
   averageExecutionTime: number | undefined,
   pop: () => void,
   setPins: React.Dispatch<React.SetStateAction<Pin[]>>,
@@ -412,6 +450,8 @@ export const modifyPin = async (
         timesOpened: timesOpened,
         dateCreated: dateCreated?.toUTCString(),
         iconColor: iconColor,
+        tags: tags,
+        notes: notes,
         averageExecutionTime: averageExecutionTime,
       } as Pin;
     } else {
@@ -442,6 +482,8 @@ export const modifyPin = async (
       timesOpened: timesOpened,
       dateCreated: dateCreated?.toUTCString(),
       iconColor: iconColor,
+      tags: tags,
+      notes: notes,
       averageExecutionTime: averageExecutionTime,
     });
   }

@@ -189,6 +189,11 @@ export interface ViewPinsPreferences {
    * Whether to display an indicator for the most recently opened pin.
    */
   showLastOpened: boolean;
+
+  /**
+   * Whether to display the tags of each pin as accessories.
+   */
+  showTags: boolean;
 }
 
 /**

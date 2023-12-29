@@ -55,6 +55,8 @@ export type Group = {
   dateCreated?: string;
 };
 
+export const GroupKeys = ["name", "icon", "id", "parent", "sortStrategy", "iconColor", "dateCreated"];
+
 export const isGroup = (item: object): boolean => {
   return (item as Pin).url == undefined;
 };

@@ -177,10 +177,13 @@ export default function ShowPinsCommand() {
     );
   };
 
-  const groupSubmenus = preferences.groupDisplaySetting === GroupDisplaySetting.None ? [] : groups
-    .filter((g) => g.parent == undefined)
-    .map((group) => getSubsections(group, groups))
-    .filter((g) => g != null);
+  const groupSubmenus =
+    preferences.groupDisplaySetting === GroupDisplaySetting.None
+      ? []
+      : groups
+          .filter((g) => g.parent == undefined)
+          .map((group) => getSubsections(group, groups))
+          .filter((g) => g != null);
 
   // Display the menu
   return (
@@ -190,7 +193,7 @@ export default function ShowPinsCommand() {
           <MenuBarExtra.Section title={preferences.showCategories ? "Pins" : undefined} key="pins">
             {allPins.length == 0 ? <MenuBarExtra.Item title="No pins yet!" /> : null}
             {allPins
-              .filter((p) => preferences.groupDisplaySetting !== GroupDisplaySetting.None ? p.group == "None" : true)
+              .filter((p) => (preferences.groupDisplaySetting !== GroupDisplaySetting.None ? p.group == "None" : true))
               .map((pin: Pin) => (
                 <PinMenuItem
                   pin={pin}
@@ -231,6 +234,8 @@ export default function ShowPinsCommand() {
                     false,
                     undefined,
                     undefined,
+                    [],
+                    "",
                   );
                 }}
               />
@@ -254,6 +259,8 @@ export default function ShowPinsCommand() {
                   true,
                   undefined,
                   undefined,
+                  [],
+                  "",
                 );
               }}
             />
@@ -276,6 +283,8 @@ export default function ShowPinsCommand() {
                     false,
                     undefined,
                     undefined,
+                    [],
+                    "",
                   );
                 }}
               />
@@ -310,6 +319,8 @@ export default function ShowPinsCommand() {
                       false,
                       undefined,
                       undefined,
+                      [],
+                      "",
                     );
                   }
                 }}
@@ -338,6 +349,8 @@ export default function ShowPinsCommand() {
                       false,
                       undefined,
                       undefined,
+                      [],
+                      "",
                     );
                   } else {
                     let newGroupName = "New File Group";
@@ -362,6 +375,8 @@ export default function ShowPinsCommand() {
                         false,
                         undefined,
                         undefined,
+                        [],
+                        "",
                       );
                     }
                   }
@@ -386,6 +401,8 @@ export default function ShowPinsCommand() {
                     false,
                     undefined,
                     undefined,
+                    [],
+                    "",
                   );
                 }}
               />
@@ -417,6 +434,8 @@ export default function ShowPinsCommand() {
                     false,
                     undefined,
                     undefined,
+                    [],
+                    "",
                   );
                 }}
               />
@@ -445,6 +464,8 @@ export default function ShowPinsCommand() {
                       false,
                       undefined,
                       undefined,
+                      [],
+                      "",
                     );
                   } else {
                     let newGroupName = "New Note Group";
@@ -467,6 +488,8 @@ export default function ShowPinsCommand() {
                         false,
                         undefined,
                         undefined,
+                        [],
+                        "",
                       );
                     }
                   }

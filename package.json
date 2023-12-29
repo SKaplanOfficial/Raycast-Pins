@@ -249,6 +249,14 @@
           "description": "Whether to an indicator on the most recently opened pin",
           "default": true,
           "required": false
+        },
+        {
+          "name": "showTags",
+          "type": "checkbox",
+          "label": "Show Tags",
+          "description": "Whether to show tags for each pin",
+          "default": true,
+          "required": false
         }
       ]
     },
@@ -418,8 +426,8 @@
   ],
   "dependencies": {
     "@iarna/toml": "^2.2.5",
-    "@raycast/api": "^1.60.1",
-    "@raycast/utils": "^1.10.0",
+    "@raycast/api": "^1.64.4",
+    "@raycast/utils": "^1.10.1",
     "@types/papaparse": "^5.3.8",
     "@types/xml-js": "^1.0.0",
     "papaparse": "^5.4.1",

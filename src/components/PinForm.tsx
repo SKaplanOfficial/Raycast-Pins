@@ -25,7 +25,7 @@ import { createNewPin, getPins, getPinStatistics, modifyPin, Pin } from "../lib/
 import { ExtensionPreferences } from "../lib/preferences";
 import CopyPinActionsSubmenu from "./actions/CopyPinActionsSubmenu";
 import DeletePinAction from "./actions/DeletePinAction";
-import { PLApplicator } from "placeholders-toolkit"
+import { PLApplicator } from "placeholders-toolkit";
 import PinsPlaceholders from "../lib/placeholders";
 
 /**
@@ -94,7 +94,12 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
    * @param target The target to check for placeholders.
    */
   const updatePlaceholderTooltip = async (target: string) => {
-    const detectedPlaceholders = await PLApplicator.checkForPlaceholders(target, { allPlaceholders: PinsPlaceholders });
+    let detectedPlaceholders = await PLApplicator.checkForPlaceholders(target, { allPlaceholders: PinsPlaceholders });
+    detectedPlaceholders = detectedPlaceholders.filter(
+      (placeholder) =>
+        target.match(placeholder.regex) != undefined ||
+        target.match(new RegExp(`(?<![a-zA-z])${placeholder.name.replaceAll("+", "\\+")}(?! ?[a-zA-z])`)) != undefined,
+    );
     setPlaceholderTooltip(
       detectedPlaceholders.length > 0
         ? `\n\nDetected Placeholders:\n${detectedPlaceholders
@@ -110,6 +115,12 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
   return (
     <Form
       navigationTitle={pin ? `Edit Pin: ${pin.name}` : "New Pin"}
+      searchBarAccessory={
+        <Form.LinkAccessory
+          text="Placeholders Guide"
+          target={`file://${path.resolve(environment.assetsPath, "placeholders_guide.md")}`}
+        />
+      }
       actions={
         <ActionPanel>
           <Action.SubmitForm
@@ -158,6 +169,11 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
                   pin.timesOpened,
                   pin.dateCreated ? new Date(pin.dateCreated) : new Date(),
                   values.iconColorField,
+                  (values.tagsField as string)
+                    .split(",")
+                    .map((tag) => tag.trim())
+                    .filter((tag) => tag.length > 0),
+                  values.notesField,
                   pin.averageExecutionTime,
                   pop,
                   setPins,
@@ -174,6 +190,11 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
                   values.fragmentField,
                   { modifiers: values.modifiersField, key: values.keyField },
                   values.iconColorField,
+                  (values.tagsField as string)
+                    .split(",")
+                    .map((tag) => tag.trim())
+                    .filter((tag) => tag.length > 0),
+                  values.notesField,
                 );
                 if (setPins) {
                   setPins(await getPins());
@@ -347,6 +368,23 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
           })}
         </Form.Dropdown>
       ) : null}
+
+      <Form.TextField
+        id="tagsField"
+        title="Tags"
+        info="The comma-separated list of tags associated with the pin. Tags can be used to filter pins in the 'View Pins' command."
+        defaultValue={pin ? pin.tags?.join(", ") : ""}
+      />
+
+      <Form.Separator />
+
+      <Form.TextArea
+        id="notesField"
+        title="Notes"
+        info="Any additional notes about the pin. Notes are displayed in the 'View Pins' command. Markdown is supported."
+        defaultValue={pin ? pin.notes : undefined}
+        enableMarkdown={true}
+      />
 
       <Form.Separator />
 
