@@ -705,11 +705,11 @@ export const getPinStatistics = (pin: Pin, pins: Pin[], format: "string" | "obje
   const averageExecutionTime = pin.averageExecutionTime ? `${pin.averageExecutionTime / 1000} seconds` : "N/A";
 
   const placeholdersUsed = PinsPlaceholders.filter((placeholder) => {
-    return pin.url.match(new RegExp(placeholder.regex, "g")) != null;
+    return pin.url.match(new RegExp(placeholder.regex, "g")) != null || pin.url.match(new RegExp(`(?<![a-zA-z])${placeholder.name.replaceAll("+", "\\+")}(?! ?[a-zA-z])`)) != undefined
   });
   const placeholdersSummary = `${
     placeholdersUsed.length > 0
-      ? `${placeholdersUsed.length} (${placeholdersUsed.map((placeholder) => placeholder.name)})`
+      ? `${placeholdersUsed.length} (${placeholdersUsed.map((placeholder) => placeholder.name).join(", ")})`
       : `None`
   }`;
 

@@ -2,6 +2,15 @@
 
 ## 1.6.0 Release, TBD
 
+### 2023-12-28
+
+- Added optional `offsets` parameter to the `{{clipboardText}}` placeholder
+- Selected text will no longer be automatically detected when the menu is opened, but will still be detected when the pin is opened.
+
+### 2023-11-10
+
+- Improved placeholder detection logic to better handle nested placeholders
+
 ### 2023-11-08
 
 - Added `{{write to="[Path]":...}}` placeholder for writing text to a file at the specified path. The path can be absolute or relative to the user's home directory using the ~ character.

@@ -110,6 +110,28 @@
           "required": false
         },
         {
+          "name": "groupDisplaySetting",
+          "type": "dropdown",
+          "title": "Group Display",
+          "description": "Specifies how to display groups in the menu dropdown. \"Submenu\" will show groups as submenus of the main menu. \"Section\" will show groups as sections in the main menu. \"None\" will not show groups in the main menu (all pins will be listed in one section).",
+          "default": "submenu",
+          "required": false,
+          "data": [
+            {
+              "title": "Submenus",
+              "value": "submenus"
+            },
+            {
+              "title": "Subsections",
+              "value": "subsections"
+            },
+            {
+              "title": "None",
+              "value": "none"
+            }
+          ]
+        },
+        {
           "name": "rightClickAction",
           "type": "dropdown",
           "title": "Right Click Action",

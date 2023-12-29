@@ -1,7 +1,7 @@
 import { Clipboard, LaunchType, MenuBarExtra, launchCommand, showToast } from "@raycast/api";
 import { getPinIcon } from "../lib/icons";
 import { Pin, deletePin, openPin } from "../lib/Pins";
-import { ExtensionPreferences, PinsMenubarPreferences } from "../lib/preferences";
+import { ExtensionPreferences, PinsMenubarPreferences, RightClickAction } from "../lib/preferences";
 import { LocalDataObject } from "../lib/LocalData";
 
 /**
@@ -34,17 +34,17 @@ export default function PinMenuItem(props: {
         } else {
           // Handle right-click based on user's preferences
           switch (preferences.rightClickAction) {
-            case "open":
+            case RightClickAction.Open:
               await openPin(pin, preferences, localData as unknown as { [key: string]: string });
               break;
-            case "delete":
+            case RightClickAction.Delete:
               await deletePin(pin, setPins);
               break;
-            case "copy":
+            case RightClickAction.Copy:
               await Clipboard.copy(pin.url)
               await showToast( { title: "Copied to Clipboard" })
               break;
-            case "edit":
+            case RightClickAction.Edit:
               launchCommand({ name: "view-pins", type: LaunchType.UserInitiated, context: { pinID: pin.id }})
               break;
           }

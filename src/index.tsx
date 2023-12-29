@@ -7,6 +7,7 @@ import {
   Clipboard,
   environment,
   getPreferenceValues,
+  getSelectedText,
   Icon,
   launchCommand,
   LaunchType,
@@ -26,7 +27,7 @@ import { getGroupIcon } from "./lib/icons";
 import { useLocalData } from "./lib/LocalData";
 import { copyPinData, createNewPin, Pin, sortPins, usePins } from "./lib/Pins";
 import { cutoff, getStorage, setStorage } from "./lib/utils";
-import { ExtensionPreferences } from "./lib/preferences";
+import { ExtensionPreferences, GroupDisplaySetting } from "./lib/preferences";
 import { PinsMenubarPreferences } from "./lib/preferences";
 import PinsPlaceholders from "./lib/placeholders";
 import { utils } from "placeholders-toolkit";
@@ -77,7 +78,7 @@ export default function ShowPinsCommand() {
             for (const placeholder of placeholders) {
               if (targetRaw.match(placeholder.regex)) {
                 containsPlaceholder = true;
-                for (const rule of (placeholder.rules || [])) {
+                for (const rule of placeholder.rules || []) {
                   ruleCount++;
                   if (!(await rule(targetRaw, localData as unknown as { [key: string]: unknown }))) {
                     passesTests = false;
@@ -120,6 +121,28 @@ export default function ShowPinsCommand() {
     if (memberPins.length == 0 && subgroupPins.length == 0) {
       return null;
     }
+
+    if (preferences.groupDisplaySetting === GroupDisplaySetting.Subsections) {
+      return (
+        <MenuBarExtra.Section title={group.name} key={group.id}>
+          {memberPins.map((pin) => (
+            <PinMenuItem
+              pin={pin}
+              relevant={relevantPins.find((p) => p.id == pin.id) != undefined && !preferences.showInapplicablePins}
+              preferences={preferences}
+              localData={localData}
+              setPins={setPins}
+              key={pin.id}
+            />
+          ))}
+          {children.map((g) => getSubsections(g, groups))}
+          {subgroupPins.length > 0 ? (
+            <OpenAllMenuItem pins={allPins.filter((p) => p.group == group.name)} submenuName={group.name} />
+          ) : null}
+        </MenuBarExtra.Section>
+      );
+    }
+
     return (
       <MenuBarExtra.Submenu
         title={
@@ -154,7 +177,7 @@ export default function ShowPinsCommand() {
     );
   };
 
-  const groupSubmenus = groups
+  const groupSubmenus = preferences.groupDisplaySetting === GroupDisplaySetting.None ? [] : groups
     .filter((g) => g.parent == undefined)
     .map((group) => getSubsections(group, groups))
     .filter((g) => g != null);
@@ -167,7 +190,7 @@ export default function ShowPinsCommand() {
           <MenuBarExtra.Section title={preferences.showCategories ? "Pins" : undefined} key="pins">
             {allPins.length == 0 ? <MenuBarExtra.Item title="No pins yet!" /> : null}
             {allPins
-              .filter((p) => p.group == "None")
+              .filter((p) => preferences.groupDisplaySetting !== GroupDisplaySetting.None ? p.group == "None" : true)
               .map((pin: Pin) => (
                 <PinMenuItem
                   pin={pin}
@@ -212,28 +235,29 @@ export default function ShowPinsCommand() {
                 }}
               />
             ) : null}
-            {localData.selectedText.trim().length > 0 ? (
-              <MenuBarExtra.Item
-                title={`Pin Selected Text (${cutoff(localData.selectedText, 20)})`}
-                icon={Icon.Text}
-                tooltip="Pin the currently selected text as a text fragment"
-                shortcut={KEYBOARD_SHORTCUT.PIN_SELECTED_TEXT}
-                onAction={async () => {
-                  await createNewPin(
-                    localData.selectedText.substring(0, 50).trim(),
-                    localData.selectedText,
-                    "text-16",
-                    "None",
-                    "None",
-                    undefined,
-                    undefined,
-                    true,
-                    undefined,
-                    undefined,
-                  );
-                }}
-              />
-            ) : null}
+
+            <MenuBarExtra.Item
+              title={`Pin Selected Text`}
+              icon={Icon.Text}
+              tooltip="Pin the currently selected text as a text fragment"
+              shortcut={KEYBOARD_SHORTCUT.PIN_SELECTED_TEXT}
+              onAction={async () => {
+                const text = await getSelectedText();
+                await createNewPin(
+                  text.substring(0, 50).trim(),
+                  text,
+                  "text-16",
+                  "None",
+                  "None",
+                  undefined,
+                  undefined,
+                  true,
+                  undefined,
+                  undefined,
+                );
+              }}
+            />
+
             {utils.SupportedBrowsers.find((b) => b.name == localData.currentApplication.name) ? (
               <MenuBarExtra.Item
                 title={`Pin This Tab (${cutoff(localData.currentTab.name, 20)})`}
@@ -256,7 +280,8 @@ export default function ShowPinsCommand() {
                 }}
               />
             ) : null}
-            {utils.SupportedBrowsers.find((b) => b.name == localData.currentApplication.name) && localData.tabs.length > 1 ? (
+            {utils.SupportedBrowsers.find((b) => b.name == localData.currentApplication.name) &&
+            localData.tabs.length > 1 ? (
               <MenuBarExtra.Item
                 title={`Pin All Tabs (${localData.tabs.length})`}
                 icon={Icon.AppWindowGrid3x3}
