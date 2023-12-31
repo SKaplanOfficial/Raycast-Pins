@@ -1,6 +1,6 @@
 # Pins Changelog
 
-## [Tooltips, Tag Filtering, and New Placeholders] - TBD
+## [Tooltips, Tag Filtering, and New Placeholders] - 2023-12-29
 
 - Now using the placeholders-toolkit package.
 - Added pin tags and tag filtering.

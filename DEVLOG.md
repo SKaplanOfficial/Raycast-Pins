@@ -1,6 +1,6 @@
 # Pins DevLog - A more detailed changelog
 
-## 1.6.0 Release, TBD
+## 1.6.0 Release, 2023-12-29
 
 ### 2023-12-28
 
