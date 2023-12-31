@@ -1,6 +1,31 @@
 # Pins DevLog - A more detailed changelog
 
-## 1.5.0 Release, TBD
+## 1.6.0 Release, 2023-12-29
+
+### 2023-12-28
+
+- Added optional `offsets` parameter to the `{{clipboardText}}` placeholder
+- Selected text will no longer be automatically detected when the menu is opened, but will still be detected when the pin is opened.
+
+### 2023-11-10
+
+- Improved placeholder detection logic to better handle nested placeholders
+
+### 2023-11-08
+
+- Added `{{write to="[Path]":...}}` placeholder for writing text to a file at the specified path. The path can be absolute or relative to the user's home directory using the ~ character.
+  - Supports `append=(true|false)` parameter for appending to the file instead of overwriting it.
+  - Supports `end="..."` parameter for specifying an end token. The default is two newlines.
+- Added `{{chooseFile}}`, `{{chooseFolder}}`, and `{{chooseApplication}}` placeholders.
+  - Supports `multiple=(true|false)` parameter for selecting multiple files/folders/applications.
+
+### 2023-11-07
+
+- Extract placeholders into their own node package.
+- Added placeholder tooltips, similar to PromptLab.
+- Added ability to edit or copy placeholders by right-clicking on them in the menu bar dropdown.
+
+## 1.5.0 Release, 2023-11-01
 
 ### 2023-11-01
 
