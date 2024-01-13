@@ -1,5 +1,21 @@
 # Pins DevLog - A more detailed changelog
 
+## 1.7.0 Release, TBA
+
+### 2024-01-12
+
+- Added target group selection in menu bar dropdown.
+  - The selected group will be used when creating new pins.
+- Added support for pin tooltips in the menu bar dropdown.
+- Added alternate menu item each pin to open the pin edit form.
+
+### 2024-01-11
+
+- Use gpt-3.5-turbo-instruct instead of text-davinci-003 for AI placeholder.
+- Added quick pin for the currently playing track in Music, TV, or Spotify.
+- Fixed bug where non-document-based applications that expose an Applescript API could yield an error upon LocalData updates.
+- Improved error handling for LocalData operations.
+
 ## 1.6.0 Release, 2023-12-29
 
 ### 2023-12-28

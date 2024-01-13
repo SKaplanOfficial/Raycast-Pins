@@ -128,3 +128,53 @@ export const LocationManager = {
     }
   },
 };
+
+/**
+ * Returns an AppleScript that plays a track in the Music app.
+ * @param track The name of the track to play.
+ * @param artist The artist of the track.
+ * @param album The album of the track.
+ * @returns {string} The AppleScript.
+ */
+export const getMusicTrackScript = (track: string, artist: string, album: string): string => {
+  return `tell application "Music"
+  set theTracks to every track whose name is "${track.replaceAll('"', '\\"')}"${
+    artist.length ? `and artist is "${artist.replaceAll('"', '\\"')}"` : ""
+  }${album.length ? `and album is "${album.replaceAll('"', '\\"')}"` : ""}
+  if (count of theTracks) is 1 then
+    set theTrack to item 1 of theTracks
+    play theTrack
+  end if
+end tell`;
+};
+
+/**
+ * Returns an AppleScript that plays a track in the Spotify app.
+ * @param uri The URI of the track to play.
+ * @returns {string} The AppleScript.
+ */
+export const getSpotifyTrackScript = (uri: string): string => {
+  return `tell application "Spotify"
+  play track "${uri}"
+end tell`;
+};
+
+/**
+ * Returns an AppleScript that plays a track in the TV app.
+ * @param track The name of the track to play.
+ * @param director The director of the track.
+ * @param album The album of the track.
+ * @returns {string} The AppleScript.
+ */
+export const getTVTrackScript = (track: string, director: string, album: string): string => {
+  return `tell application "TV"
+  
+  set theTracks to every track whose name is "${track.replaceAll('"', '\\"')}"${
+    director.length ? `and director is "${director.replaceAll('"', '\\"')}"` : ""
+  }${album.length ? `and album is "${album.replaceAll('"', '\\"')}"` : ""}
+  if (count of theTracks) is 1 then
+    set theTrack to item 1 of theTracks
+    play theTrack
+  end if
+end tell`;
+};
