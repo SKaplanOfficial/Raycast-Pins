@@ -5,7 +5,7 @@
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
  * Created at     : 2023-09-04 17:36:31
- * Last modified  : 2023-11-01 00:43:57
+ * Last modified  : 2024-01-13 01:07:53
  */
 
 import { Application, getFrontmostApplication, getPreferenceValues } from "@raycast/api";

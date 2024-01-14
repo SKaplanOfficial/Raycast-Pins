@@ -5,7 +5,7 @@
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
  * Created at     : 2023-09-04 17:37:42
- * Last modified  : 2023-11-01 00:43:50
+ * Last modified  : 2024-01-13 01:07:48
  */
 
 import { useCachedState } from "@raycast/utils";
@@ -671,7 +671,7 @@ export const calculatePinFrequencyPercentile = (pin: Pin, pins: Pin[]) => {
   const pinIndex = pinsSortedByFrequency.findIndex(
     (p) => p.id == pin.id || (p.timesOpened || 0) >= (pin.timesOpened || 0),
   );
-  return Math.round((pinIndex / pinsSortedByFrequency.length) * 100);
+  return Math.round((pinIndex / (pinsSortedByFrequency.length - 1)) * 100);
 };
 
 /**
@@ -681,11 +681,13 @@ export const calculatePinFrequencyPercentile = (pin: Pin, pins: Pin[]) => {
  * @returns The percentile of the pin's execution time compared to all other pins.
  */
 export const calculatePinExecutionTimePercentile = (pin: Pin, pins: Pin[]) => {
-  const pinsSortedByExecutionTime = pins.sort((a, b) => (a.averageExecutionTime || 0) - (b.averageExecutionTime || 0));
+  const pinsSortedByExecutionTime = pins
+    .filter((p) => p.averageExecutionTime != undefined)
+    .sort((a, b) => (a.averageExecutionTime || 0) - (b.averageExecutionTime || 0));
   const pinIndex = pinsSortedByExecutionTime.findIndex(
     (p) => p.id == pin.id || (p.averageExecutionTime || 0) >= (pin.averageExecutionTime || 0),
   );
-  return Math.round((pinIndex / pinsSortedByExecutionTime.length) * 100);
+  return Math.round((1 - pinIndex / (pinsSortedByExecutionTime.length - 1)) * 100);
 };
 
 /**
@@ -802,7 +804,13 @@ export const getPinStatistics = (pin: Pin, pins: Pin[], format: "string" | "obje
   const frequencyPercentile = calculatePinFrequencyPercentile(pin, pins);
   const timesUsedText = `Times Used: ${
     pin?.timesOpened
-      ? `${pin.timesOpened} ${frequencyPercentile > 0 ? `(More than ${frequencyPercentile}% of Other Pins)` : ``}`
+      ? `${pin.timesOpened} ${
+          frequencyPercentile > 0
+            ? frequencyPercentile === 100
+              ? `(Most Used Pin)`
+              : `(More than ${frequencyPercentile}% of Other Pins)`
+            : `(Least Used Pin)`
+        }`
       : 0
   }`;
 
@@ -812,7 +820,11 @@ export const getPinStatistics = (pin: Pin, pins: Pin[], format: "string" | "obje
 
   const executionTimePercentile = calculatePinExecutionTimePercentile(pin, pins);
   const averageExecutionTimeText = `Average Execution Time: ${averageExecutionTime}${
-    executionTimePercentile > 0 ? ` (Faster than ${executionTimePercentile}% of Other Pins)` : ``
+    executionTimePercentile > 0
+      ? executionTimePercentile === 100
+        ? ` (Fastest Pin)`
+        : ` (Faster than ${executionTimePercentile}% of Other Pins)`
+      : ` (Slowest Pin)`
   }`;
 
   const placeholdersUsedText = `Placeholders Used: ${placeholdersSummary}`;

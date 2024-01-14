@@ -7,11 +7,26 @@ import { Group, createNewGroup } from "../../../lib/Groups";
 import { useCachedState } from "@raycast/utils";
 
 type NotesQuickPinProps = {
+  /**
+   * The application that is currently open.
+   */
   app: Application;
+
+  /**
+   * The notes that are currently selected in Notes.
+   */
   notes: NoteRef[];
+
+  /**
+   * The list of all pin groups.
+   */
   groups: Group[];
 };
 
+/**
+ * A menu bar extra item that creates a new pin for each selected note in Notes.
+ * @returns A menu bar extra item, or null if the current app is not Notes or no notes are selected.
+ */
 export default function NotesQuickPin(props: NotesQuickPinProps) {
   const { app, notes, groups } = props;
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
@@ -20,16 +35,16 @@ export default function NotesQuickPin(props: NotesQuickPinProps) {
     return null;
   }
 
-  let title = `Pin ${notes.length > 1 ? `These Notes (${notes.length})` : `This Note (${cutoff(notes[0].name, 20)})`}`
+  let title = `Pin ${notes.length > 1 ? `These Notes (${notes.length})` : `This Note (${cutoff(notes[0].name, 20)})`}`;
   if (targetGroup) {
-    title = `${title} to Target Group`
+    title = `${title} to Target Group`;
   }
 
   return (
     <MenuBarExtra.Item
       title={title}
       icon={{ fileIcon: app.path }}
-      tooltip="Create a pin for each selected note, pinned to a new group"
+      tooltip="Create a pin for each selected note, pinned to a new group if necessary"
       shortcut={KEYBOARD_SHORTCUT.PIN_SELECTED_NOTES}
       onAction={async () => {
         if (notes.length == 1) {

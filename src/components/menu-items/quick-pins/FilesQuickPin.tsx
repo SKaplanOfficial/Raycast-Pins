@@ -7,11 +7,26 @@ import { cutoff } from "../../../lib/utils";
 import { useCachedState } from "@raycast/utils";
 
 type FilesQuickPinProps = {
+  /**
+   * The application that is currently open.
+   */
   app: Application;
+
+  /**
+   * The files that are currently selected in Finder.
+   */
   selectedFiles: FileRef[];
+
+  /**
+   * The list of all pin groups.
+   */
   groups: Group[];
 };
 
+/**
+ * A menu bar extra item that creates a new pin for each selected file in Finder.
+ * @returns A menu bar extra item, or null if the current app is not Finder or no files are selected.
+ */
 export default function FilesQuickPin(props: FilesQuickPinProps) {
   const { app, selectedFiles, groups } = props;
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);

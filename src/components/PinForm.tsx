@@ -71,7 +71,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
           name: "Terminal",
           path: "/System/Applications/Utilities/Terminal.app",
           bundleId: "com.apple.Terminal",
-        })
+        });
       }
     } catch (error) {
       const allApplications = await getApplications();

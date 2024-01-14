@@ -5,9 +5,16 @@ import { useCachedState } from "@raycast/utils";
 import { Group } from "../../../lib/Groups";
 
 type AppQuickPinProps = {
+  /**
+   * The application to pin.
+   */
   app: Application;
 };
 
+/**
+ * A menu bar extra item that creates a new pin whose target is the path of the current app.
+ * @returns A menu bar extra item, or null if the app is not pinnable (e.g. Finder or Desktop).
+ */
 export default function AppQuickPin(props: AppQuickPinProps) {
   const { app } = props;
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);

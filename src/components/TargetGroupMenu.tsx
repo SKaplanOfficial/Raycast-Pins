@@ -1,11 +1,11 @@
-import { Icon, MenuBarExtra, showHUD } from "@raycast/api"
-import { Group } from "../lib/Groups"
+import { Icon, MenuBarExtra, showHUD } from "@raycast/api";
+import { Group } from "../lib/Groups";
 import { useCachedState } from "@raycast/utils";
 import { StorageKey } from "../lib/constants";
 
 type TargetGroupMenuProps = {
   groups: Group[];
-}
+};
 
 export default function TargetGroupMenu(props: TargetGroupMenuProps) {
   const { groups } = props;
@@ -40,8 +40,8 @@ export default function TargetGroupMenu(props: TargetGroupMenuProps) {
               await showHUD(`Set Target Group to ${group.name}`);
             }}
           />
-        )
+        );
       })}
     </MenuBarExtra.Submenu>
-  )
+  );
 }

@@ -7,10 +7,21 @@ import { useCachedState } from "@raycast/utils";
 import { Group } from "../../../lib/Groups";
 
 type DirectoryQuickPinProps = {
+  /**
+   * The application that is currently open.
+   */
   app: Application;
+
+  /**
+   * The directory that is currently open in Finder.
+   */
   directory: FileRef;
 };
 
+/**
+ * A menu bar extra item that creates a new pin whose target path is the current directory of Finder.
+ * @returns A menu bar extra item, or null if the current app is not Finder or the current directory is Desktop.
+ */
 export default function DirectoryQuickPin(props: DirectoryQuickPinProps) {
   const { app, directory } = props;
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
@@ -19,9 +30,9 @@ export default function DirectoryQuickPin(props: DirectoryQuickPinProps) {
     return null;
   }
 
-  let title = `Pin This Directory (${cutoff(directory.name, 20)})`
+  let title = `Pin This Directory (${cutoff(directory.name, 20)})`;
   if (targetGroup) {
-    title = `${title} to Target Group`
+    title = `${title} to Target Group`;
   }
 
   return (

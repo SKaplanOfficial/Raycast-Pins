@@ -7,11 +7,26 @@ import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
 import { useCachedState } from "@raycast/utils";
 
 type TabsQuickPinProps = {
+  /**
+   * The application that is currently open.
+   */
   app: Application;
+
+  /**
+   * The tabs that are currently open in the frontmost browser.
+   */
   tabs: TabRef[];
+
+  /**
+   * The list of all pin groups.
+   */
   groups: Group[];
 };
 
+/**
+ * A menu bar extra item that creates a new pin for each tab in the frontmost browser.
+ * @returns A menu bar extra item, or null if the current application is not a supported browser or no tabs are open.
+ */
 export default function TabsQuickPin(props: TabsQuickPinProps) {
   const { app, tabs, groups } = props;
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
@@ -20,9 +35,9 @@ export default function TabsQuickPin(props: TabsQuickPinProps) {
     return null;
   }
 
-  let title = `Pin All Tabs (${tabs.length})`
+  let title = `Pin All Tabs (${tabs.length})`;
   if (targetGroup) {
-    title = `${title} to Target Group`
+    title = `${title} to Target Group`;
   }
 
   return (

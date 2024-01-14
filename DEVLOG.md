@@ -8,6 +8,7 @@
   - The selected group will be used when creating new pins.
 - Added support for pin tooltips in the menu bar dropdown.
 - Added alternate menu item each pin to open the pin edit form.
+- Adjust statistic calculations.
 
 ### 2024-01-11
 

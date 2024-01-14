@@ -4,12 +4,16 @@ import { createNewPin } from "../../../lib/Pins";
 import { useCachedState } from "@raycast/utils";
 import { Group } from "../../../lib/Groups";
 
+/**
+ * A menu bar extra item that creates a new pin whose target is the currently selected text.
+ * @returns A menu bar extra.
+ */
 export default function TextQuickPin() {
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
 
   let title = "Pin Selected Text";
   if (targetGroup) {
-    title = `${title} to Target Group`
+    title = `${title} to Target Group`;
   }
 
   return (
