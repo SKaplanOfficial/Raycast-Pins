@@ -1,6 +1,6 @@
 # Pins Changelog
 
-## Blah - 2024-01-12
+## [Target Groups, Media Track Quick Pins, and Bug Fixes] - 2024-01-12
 
 - Added ability to quick-add pins to a target group from the menu bar dropdown.
 - Added ability to quick-pin tracks in Music, TV, and Spotify.
