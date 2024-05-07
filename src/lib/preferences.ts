@@ -194,6 +194,11 @@ export interface ViewPinsPreferences {
    * Whether to display the tags of each pin as accessories.
    */
   showTags: boolean;
+
+  /**
+   * Whether to display the number of linked pins as an accessory.
+   */
+  showLinkCount: boolean;
 }
 
 /**

@@ -5,7 +5,7 @@
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
  * Created at     : 2023-09-04 17:37:42
- * Last modified  : 2024-01-13 01:07:48
+ * Last modified  : 2024-04-23 00:47:05
  */
 
 import { useCachedState } from "@raycast/utils";
@@ -25,7 +25,7 @@ import {
 } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { SORT_FN, StorageKey, SORT_STRATEGY } from "./constants";
-import { runCommand, runCommandInTerminal } from "./utils";
+import { objectFromNonNullableEntriesOfObject, runCommand, runCommandInTerminal } from "./utils";
 import { ExtensionPreferences } from "./preferences";
 import * as fs from "fs";
 import * as os from "os";
@@ -246,8 +246,12 @@ export const openPin = async (
       }
       await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
     } else {
+      const filteredContext = objectFromNonNullableEntriesOfObject(context || {});
       const targetRaw = pin.url.startsWith("~") ? pin.url.replace("~", os.homedir()) : pin.url;
-      const target = await PLApplicator.bulkApply(targetRaw, { context, allPlaceholders: PinsPlaceholders });
+      const target = await PLApplicator.bulkApply(targetRaw, {
+        context: filteredContext,
+        allPlaceholders: PinsPlaceholders,
+      });
 
       if (target != "") {
         const isPath = pin.url.startsWith("/") || pin.url.startsWith("~");
@@ -352,6 +356,10 @@ export const getNextPinID = async () => {
  * @param execInBackground Whether to run the specified command, if any, in the background.
  * @param fragment Whether to treat the pin's target as a text fragment, regardless of its contents.
  * @param shortcut The keyboard shortcut to open/execute the pin.
+ * @param iconColor The color of the icon.
+ * @param tags The tags associated with the pin.
+ * @param notes User-defined notes for the pin.
+ * @returns The ID of the new pin.
  */
 export const createNewPin = async (
   name: string,
@@ -398,6 +406,7 @@ export const createNewPin = async (
 
   // Update the stored pins
   await setStorage(StorageKey.LOCAL_PINS, newData);
+  return newID;
 };
 
 /**
@@ -735,6 +744,38 @@ export const copyPinData = async () => {
   const jsonData = JSON.stringify(data);
   await Clipboard.copy(jsonData);
   return jsonData;
+};
+
+/**
+ * Gets the pins that this pin links to.
+ * @param pin The pin to get linked pins for.
+ * @param pins The list of all pins.
+ * @param groups The list of all groups.
+ * @returns The list of pins that the given pin links to.
+ */
+export const getLinkedPins = (pin: Pin, pins: Pin[], groups: Group[]) => {
+  const links: Pin[] = [];
+  const pattern = /{{(launchPin|openPin|runPin):(([^{]|{(?!{)|{{[\s\S]*?}})*?)}}/g;
+  let match;
+  while ((match = pattern.exec(pin.url))) {
+    const targetRep = match[2];
+    const target = pins.find((p) => p.name == targetRep || p.id.toString() == targetRep);
+    if (target) {
+      links.push(target);
+    }
+  }
+
+  const groupPattern = /{{(launchGroup|openGroup):(([^{]|{(?!{)|{{[\s\S]*?}})*?)}}/g;
+  let groupMatch;
+  while ((groupMatch = groupPattern.exec(pin.url))) {
+    const targetRep = groupMatch[2];
+    const targetGroup = groups.find((g) => g.name == targetRep || g.id.toString() == targetRep);
+    if (targetGroup) {
+      const groupPins = pins.filter((p) => p.group == targetGroup.name);
+      links.push(...groupPins);
+    }
+  }
+  return links;
 };
 
 /**
