@@ -113,8 +113,8 @@ export default function ViewGroupsCommand() {
                     onAction={async () => {
                       await Promise.all(
                         groupPins.map(async (pin) => {
-                          await openPin(pin, preferences)
-                        })
+                          await openPin(pin, preferences);
+                        }),
                       );
                     }}
                   />

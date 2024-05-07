@@ -69,9 +69,9 @@ export const pluralize = (str: string, count: number) => {
 
 /**
  * Checks if a value is nullish.
- * 
+ *
  * A nullish value is a value that is either null, undefined, an empty string, an empty array, or an empty object.
- * 
+ *
  * @param value The value to check.
  * @returns True if the value is nullish, false otherwise.
  */

@@ -53,7 +53,7 @@ export const addFrequencyAccessory = (pin: Pin, accessories: List.Item.Accessory
     accessories.push({
       tag: { value: pin.timesOpened.toString(), color: mapAmountToColor(pin.timesOpened, maxFrequency) },
       tooltip: `Opened ${pin.timesOpened} Time${pin.timesOpened == 1 ? "" : "s"}`,
-      icon: Icon.PlayFilled
+      icon: Icon.PlayFilled,
     });
   }
 };

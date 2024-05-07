@@ -190,55 +190,57 @@ export default function ViewPinsCommand(args: { launchContext?: { pinID?: number
                 />
 
                 <ActionPanel.Submenu title="Move Pin..." icon={Icon.ChevronUpDown}>
-                    {index > 0 &&
-                    (group?.sortStrategy == "manual" ||
-                      (!group?.sortStrategy && preferences.defaultSortStrategy == "manual") ||
-                      (group?.name == undefined && preferences.defaultSortStrategy == "manual")) ? (
-                      <Action
-                        title="Move Up"
-                        icon={Icon.ArrowUp}
-                        shortcut={Keyboard.Shortcut.Common.MoveUp}
-                        onAction={async () => {
-                          await movePin(pin, Direction.UP, setPins);
-                        }}
-                      />
-                    ) : null}      
-                    {index < pins.length - 1 &&
-                    (group?.sortStrategy == "manual" ||
-                      (!group?.sortStrategy && preferences.defaultSortStrategy == "manual") ||
-                      (group?.name == undefined && preferences.defaultSortStrategy == "manual")) ? (
-                      <Action
-                        title="Move Down"
-                        icon={Icon.ArrowDown}
-                        shortcut={Keyboard.Shortcut.Common.MoveDown}
-                        onAction={async () => {
-                          await movePin(pin, Direction.DOWN, setPins);
-                        }}
-                      />
-                    ) : null}
+                  {index > 0 &&
+                  (group?.sortStrategy == "manual" ||
+                    (!group?.sortStrategy && preferences.defaultSortStrategy == "manual") ||
+                    (group?.name == undefined && preferences.defaultSortStrategy == "manual")) ? (
+                    <Action
+                      title="Move Up"
+                      icon={Icon.ArrowUp}
+                      shortcut={Keyboard.Shortcut.Common.MoveUp}
+                      onAction={async () => {
+                        await movePin(pin, Direction.UP, setPins);
+                      }}
+                    />
+                  ) : null}
+                  {index < pins.length - 1 &&
+                  (group?.sortStrategy == "manual" ||
+                    (!group?.sortStrategy && preferences.defaultSortStrategy == "manual") ||
+                    (group?.name == undefined && preferences.defaultSortStrategy == "manual")) ? (
+                    <Action
+                      title="Move Down"
+                      icon={Icon.ArrowDown}
+                      shortcut={Keyboard.Shortcut.Common.MoveDown}
+                      onAction={async () => {
+                        await movePin(pin, Direction.DOWN, setPins);
+                      }}
+                    />
+                  ) : null}
                   <ActionPanel.Section title="Between Groups">
-                    {groups.filter((g) => g.name !== pin.group).map((group) => (
-                      <Action
-                        title={`Move to ${group.name}`}
-                        key={group.id}
-                        icon={Icon.ChevronRight}
-                        onAction={async () => {
-                          const pins = [...allPins];
-                          const groupPins = pins.filter((p) => p.group == group.name);
-                          const pinIndex = pins.findIndex((p) => p.id == pin.id);
-                          if (groupPins.length == 0 || pinIndex == -1) return;
+                    {groups
+                      .filter((g) => g.name !== pin.group)
+                      .map((group) => (
+                        <Action
+                          title={`Move to ${group.name}`}
+                          key={group.id}
+                          icon={Icon.ChevronRight}
+                          onAction={async () => {
+                            const pins = [...allPins];
+                            const groupPins = pins.filter((p) => p.group == group.name);
+                            const pinIndex = pins.findIndex((p) => p.id == pin.id);
+                            if (groupPins.length == 0 || pinIndex == -1) return;
 
-                          pins.splice(pinIndex, 1);
-                          pin.group = group.name;
-                          const groupStart = pins.findIndex((p) => p.id == groupPins[0].id);
-                          const targetIndex = groupStart + groupPins.length;
-                          const newPins = [...pins.slice(0, targetIndex), pin, ...pins.slice(targetIndex)];
+                            pins.splice(pinIndex, 1);
+                            pin.group = group.name;
+                            const groupStart = pins.findIndex((p) => p.id == groupPins[0].id);
+                            const targetIndex = groupStart + groupPins.length;
+                            const newPins = [...pins.slice(0, targetIndex), pin, ...pins.slice(targetIndex)];
 
-                          await setStorage(StorageKey.LOCAL_PINS, newPins);
-                          await revalidatePins();
-                        }}
-                      />
-                    ))}
+                            await setStorage(StorageKey.LOCAL_PINS, newPins);
+                            await revalidatePins();
+                          }}
+                        />
+                      ))}
                     <Action
                       title="Move to Other"
                       key="Other"
