@@ -1,6 +1,14 @@
 # Pins DevLog - A more detailed changelog
 
-## 1.7.0 Release, TBA
+## 1.8.0 Release, TBA
+
+### 2024-04-23
+
+- Added `{{launchPin:pinName}}` and `{{launchGroup:groupName}}` placeholder directives.
+- Added action to open all pins in a group in the "View Groups" command.
+- Fixed bug where placeholders using values from LocalData would not update on time.
+
+## 1.7.0 Release, 2024-01-14
 
 ### 2024-01-12
 
