@@ -2,6 +2,21 @@
 
 ## 1.8.0 Release, TBA
 
+### 2024-05-25
+
+- Added setting for configuring the default AI model.
+
+### 2024-05-07
+
+- Added support for additional models supported by Raycast AI.
+- Added `{{deletePin:pinName}}` directive for deleting pins.
+- Added `{{createPin:pinName:pinTarget:pinGroup}}` directive for creating new pins.
+
+### 2024-04-24
+
+- Added list item accessory for showing the number of pins "linked" to a pin.
+  - "Linked" pins are ones that will be launched when the pin is opened.
+
 ### 2024-04-23
 
 - Added `{{launchPin:pinName}}` and `{{launchGroup:groupName}}` placeholder directives.

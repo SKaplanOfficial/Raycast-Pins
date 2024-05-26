@@ -34,6 +34,11 @@ export interface ExtensionPreferences {
    * The default sort strategy for lists of pins outside of groups.
    */
   defaultSortStrategy: string;
+
+  /**
+   * The default Raycast AI model to use for AI queries.
+   */
+  defaultAIModel: string;
 }
 
 /**
