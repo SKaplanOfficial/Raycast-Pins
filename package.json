@@ -355,7 +355,7 @@
     },
     {
       "name": "check-expirations",
-      "title": "Check For Expirations",
+      "title": "Check for Expirations",
       "description": "Check for expired pins and remove them",
       "mode": "no-view",
       "interval": "1m"
