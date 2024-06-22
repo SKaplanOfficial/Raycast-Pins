@@ -1,13 +1,16 @@
 # Pins Changelog
 
-## [1.8.0 - ] - TBA
+## [1.8.0 - ] - 2024-06-22
 
 - Added support for new Raycast AI models.
 - Added setting for configuring the default AI model.
+- Added action to open all pins in a group in the "View Groups" command.
 - Added `{{createPin:pinName:pinTarget:pinGroup}}` directive for creating new pins.
 - Added `{{deletePin:pinName}}` directive for deleting pins.
 - Added `{{launchPin:pinName}}` directive for launching other pins.
 - Added `{{launchGroup:groupName}}` directive for launching all pins in a group.
+- Fixed bug where placeholders using values from LocalData would not update on time.
+- Fixed bug where non-document-based applications that expose an Applescript API could yield an error upon LocalData updates.
 
 ## [1.7.0 - Target Groups, Media Track Quick Pins, and Bug Fixes] - 2024-01-12
 

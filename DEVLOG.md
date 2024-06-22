@@ -1,6 +1,6 @@
 # Pins DevLog - A more detailed changelog
 
-## 1.8.0 Release, TBA
+## 1.8.0 Release, 2024-06-22
 
 ### 2024-05-25
 
