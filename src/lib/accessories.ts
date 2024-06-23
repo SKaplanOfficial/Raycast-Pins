@@ -176,12 +176,14 @@ export const addTextFragmentAccessory = (pin: Pin, accessories: List.Item.Access
  * @param accessories The list of accessories to add the sorting strategy accessory to.
  */
 export const addSortingStrategyAccessory = (group: Group, accessories: List.Item.Accessory[]) => {
-  accessories.push({
-    tag: {
-      value: SORT_STRATEGY[group.sortStrategy || ("Not Set" as keyof typeof SORT_STRATEGY)],
-      color: Color.SecondaryText,
-    },
-  });
+  if (group.sortStrategy !== undefined) {
+    accessories.push({
+      tag: {
+        value: SORT_STRATEGY[group.sortStrategy],
+        color: Color.SecondaryText,
+      },
+    });
+  }
 };
 
 /**
