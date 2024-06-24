@@ -66,6 +66,13 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
     let [app, apps] = [values.application as string, [] as Application[]];
     try {
       apps = await getApplications(target);
+      if (!apps.find((app) => app.name === "Terminal")) {
+        apps.push({
+          name: "Terminal",
+          path: "/System/Applications/Utilities/Terminal.app",
+          bundleId: "com.apple.Terminal",
+        });
+      }
     } catch (error) {
       const allApplications = await getApplications();
       if (target.match(/^[a-zA-Z0-9]*?:.*/g)) {
@@ -174,6 +181,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
                     .map((tag) => tag.trim())
                     .filter((tag) => tag.length > 0),
                   values.notesField,
+                  values.tooltipField,
                   pin.averageExecutionTime,
                   pop,
                   setPins,
@@ -285,8 +293,8 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
             ? (values.url as string).startsWith("/") || (values.url as string).startsWith("~")
               ? { fileIcon: values.url as string }
               : (values.url as string).match(/^[a-zA-Z0-9]*?:.*/g)
-              ? getFavicon(values.url as string)
-              : Icon.Terminal
+                ? getFavicon(values.url as string)
+                : Icon.Terminal
             : iconMap["Minus"];
 
           return (
@@ -298,8 +306,8 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
                 icon in iconMap
                   ? { source: iconMap[icon], tintColor: values.iconColor as string }
                   : icon == "Favicon / File Icon"
-                  ? urlIcon
-                  : iconMap["Minus"]
+                    ? urlIcon
+                    : iconMap["Minus"]
               }
             />
           );
@@ -332,16 +340,20 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
           title="Open With"
           id="openWithField"
           info="The application to open the pin with"
-          defaultValue={pin ? pin.application : undefined}
-          value={values.application ? (values.application as string) : undefined}
+          value={values.application ? (values.application as string) : "None"}
           onChange={(value) => {
             setValues({ ...values, application: value });
           }}
         >
           <Form.Dropdown.Item key="None" title="None" value="None" icon={Icon.Minus} />
-          {applications.map((app) => {
+          {applications.map((app, idx) => {
             return (
-              <Form.Dropdown.Item key={app.name} title={app.name} value={app.path} icon={{ fileIcon: app.path }} />
+              <Form.Dropdown.Item
+                key={`app.name${idx}`}
+                title={app.name}
+                value={app.path}
+                icon={{ fileIcon: app.path }}
+              />
             );
           })}
         </Form.Dropdown>
@@ -377,6 +389,13 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
       />
 
       <Form.Separator />
+
+      <Form.TextField
+        id="tooltipField"
+        title="Tooltip"
+        info="The tooltip that is displayed when hovering over the pin in the menu bar dropdown."
+        defaultValue={pin ? pin.tooltip : undefined}
+      />
 
       <Form.TextArea
         id="notesField"

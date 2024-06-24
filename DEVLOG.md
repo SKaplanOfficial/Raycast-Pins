@@ -1,5 +1,45 @@
 # Pins DevLog - A more detailed changelog
 
+## 1.8.0 Release, 2024-06-22
+
+### 2024-05-25
+
+- Added setting for configuring the default AI model.
+
+### 2024-05-07
+
+- Added support for additional models supported by Raycast AI.
+- Added `{{deletePin:pinName}}` directive for deleting pins.
+- Added `{{createPin:pinName:pinTarget:pinGroup}}` directive for creating new pins.
+
+### 2024-04-24
+
+- Added list item accessory for showing the number of pins "linked" to a pin.
+  - "Linked" pins are ones that will be launched when the pin is opened.
+
+### 2024-04-23
+
+- Added `{{launchPin:pinName}}` and `{{launchGroup:groupName}}` placeholder directives.
+- Added action to open all pins in a group in the "View Groups" command.
+- Fixed bug where placeholders using values from LocalData would not update on time.
+
+## 1.7.0 Release, 2024-01-14
+
+### 2024-01-12
+
+- Added target group selection in menu bar dropdown.
+  - The selected group will be used when creating new pins.
+- Added support for pin tooltips in the menu bar dropdown.
+- Added alternate menu item each pin to open the pin edit form.
+- Adjust statistic calculations.
+
+### 2024-01-11
+
+- Use gpt-3.5-turbo-instruct instead of text-davinci-003 for AI placeholder.
+- Added quick pin for the currently playing track in Music, TV, or Spotify.
+- Fixed bug where non-document-based applications that expose an Applescript API could yield an error upon LocalData updates.
+- Improved error handling for LocalData operations.
+
 ## 1.6.0 Release, 2023-12-29
 
 ### 2023-12-28
