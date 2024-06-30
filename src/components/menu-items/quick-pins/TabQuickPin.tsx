@@ -1,6 +1,6 @@
 import { Application, Icon, MenuBarExtra } from "@raycast/api";
 import { cutoff } from "../../../lib/utils";
-import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
+import { KEYBOARD_SHORTCUT, PinAction, StorageKey, Visibility } from "../../../lib/constants";
 import { utils } from "placeholders-toolkit";
 import { TabRef } from "../../../lib/LocalData";
 import { createNewPin } from "../../../lib/Pins";
@@ -56,6 +56,8 @@ export default function TabQuickPin(props: TabQuickPinProps) {
           undefined,
           [],
           "",
+          Visibility.VISIBLE,
+          PinAction.DELETE,
         );
       }}
     />

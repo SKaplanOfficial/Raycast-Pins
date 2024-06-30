@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Icon } from "@raycast/api";
+import { Action, ActionPanel, Icon, Keyboard } from "@raycast/api";
 import { Pin, getPinStatistics } from "../../lib/Pins";
 import { PinAction } from "../../lib/constants";
 
@@ -12,7 +12,11 @@ export default function CopyPinActionsSubmenu(props: { pin: Pin; pins: Pin[] }) 
   const { pin, pins } = props;
 
   return (
-    <ActionPanel.Submenu title="Clipboard Actions" icon={Icon.Clipboard}>
+    <ActionPanel.Submenu
+      title="Clipboard Actions"
+      icon={Icon.Clipboard}
+      shortcut={Keyboard.Shortcut.Common.Copy}
+    >
       <Action.CopyToClipboard
         title="Copy Pin Name"
         content={pin.name}
@@ -30,10 +34,12 @@ export default function CopyPinActionsSubmenu(props: { pin: Pin; pins: Pin[] }) 
       />
       <Action.CopyToClipboard
         title="Copy Deeplink"
-        content={`raycast://extensions/HelloImSteven/pins/view-pins?context=${encodeURIComponent(JSON.stringify({
-          pinID: pin.id,
-          action: PinAction.OPEN,
-        }))}`}
+        content={`raycast://extensions/HelloImSteven/pins/view-pins?context=${encodeURIComponent(
+          JSON.stringify({
+            pinID: pin.id,
+            action: PinAction.OPEN,
+          }),
+        )}`}
         shortcut={{ modifiers: ["cmd", "shift"], key: "l" }}
       />
       <Action.CopyToClipboard

@@ -2,7 +2,7 @@ import { Application, Icon, MenuBarExtra } from "@raycast/api";
 import { FileRef } from "../../../lib/LocalData";
 import { createNewPin } from "../../../lib/Pins";
 import { Group, createNewGroup } from "../../../lib/Groups";
-import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
+import { KEYBOARD_SHORTCUT, PinAction, StorageKey, Visibility } from "../../../lib/constants";
 import { cutoff } from "../../../lib/utils";
 import { useCachedState } from "@raycast/utils";
 
@@ -65,6 +65,8 @@ export default function FilesQuickPin(props: FilesQuickPinProps) {
             undefined,
             [],
             "",
+            Visibility.VISIBLE,
+            PinAction.DELETE,
           );
         } else {
           let newGroupName = "New File Group";
@@ -95,6 +97,8 @@ export default function FilesQuickPin(props: FilesQuickPinProps) {
               undefined,
               [],
               "",
+              Visibility.VISIBLE,
+              PinAction.DELETE,
             );
           }
         }

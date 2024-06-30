@@ -3,7 +3,7 @@ import { TabRef } from "../../../lib/LocalData";
 import { utils } from "placeholders-toolkit";
 import { Group, createNewGroup } from "../../../lib/Groups";
 import { createNewPin } from "../../../lib/Pins";
-import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
+import { KEYBOARD_SHORTCUT, PinAction, StorageKey, Visibility } from "../../../lib/constants";
 import { useCachedState } from "@raycast/utils";
 
 type TabsQuickPinProps = {
@@ -75,6 +75,8 @@ export default function TabsQuickPin(props: TabsQuickPinProps) {
             undefined,
             [],
             "",
+            Visibility.VISIBLE,
+          PinAction.DELETE,
           );
         }
       }}

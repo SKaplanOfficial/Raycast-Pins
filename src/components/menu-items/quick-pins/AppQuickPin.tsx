@@ -1,6 +1,6 @@
 import { Application, MenuBarExtra } from "@raycast/api";
 import { createNewPin } from "../../../lib/Pins";
-import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
+import { KEYBOARD_SHORTCUT, PinAction, StorageKey, Visibility } from "../../../lib/constants";
 import { useCachedState } from "@raycast/utils";
 import { Group } from "../../../lib/Groups";
 
@@ -48,6 +48,8 @@ export default function AppQuickPin(props: AppQuickPinProps) {
           undefined,
           [],
           "",
+          Visibility.VISIBLE,
+          PinAction.DELETE,
         );
       }}
     />

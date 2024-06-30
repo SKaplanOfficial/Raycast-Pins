@@ -1,7 +1,7 @@
 import { Application, MenuBarExtra } from "@raycast/api";
 import { TrackRef } from "../../../lib/LocalData";
 import { cutoff } from "../../../lib/utils";
-import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
+import { KEYBOARD_SHORTCUT, PinAction, StorageKey, Visibility } from "../../../lib/constants";
 import { getMusicTrackScript, getSpotifyTrackScript, getTVTrackScript } from "../../../lib/scripts";
 import { createNewPin } from "../../../lib/Pins";
 import { useCachedState } from "@raycast/utils";
@@ -66,6 +66,8 @@ export default function TrackQuickPin(props: TrackQuickPinProps) {
           undefined,
           [],
           "",
+          Visibility.VISIBLE,
+          PinAction.DELETE,
         );
       }}
     />

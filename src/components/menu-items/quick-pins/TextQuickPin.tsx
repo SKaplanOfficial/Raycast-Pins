@@ -1,5 +1,5 @@
 import { Icon, MenuBarExtra, getSelectedText } from "@raycast/api";
-import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
+import { KEYBOARD_SHORTCUT, PinAction, StorageKey, Visibility } from "../../../lib/constants";
 import { createNewPin } from "../../../lib/Pins";
 import { useCachedState } from "@raycast/utils";
 import { Group } from "../../../lib/Groups";
@@ -37,6 +37,8 @@ export default function TextQuickPin() {
           undefined,
           [],
           "",
+          Visibility.VISIBLE,
+          PinAction.DELETE,
         );
       }}
     />

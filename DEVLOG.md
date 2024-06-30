@@ -2,9 +2,18 @@
 
 ## 1.9.0 Release, TBA
 
-### 2024-07-30
-
 ### 2024-06-29
+
+- Added visibility setting for groups.
+- Added ability to customize the expiration action of pins.
+  - Base actions include deleting the pin, moving it to a different group, or hiding/disabling it.
+  - Custom actions can be defined using placeholders.
+- Added `{{movePin:pinName:groupName}}` directive for moving pins to a different group.
+- Added `{{pinJSON}}`, `{{pinName}}`, `{{pinNotes}}`, and `{{pinTarget}}` placeholders for getting information about the current pin.
+- Exposed the `crypto`, `console`, `fs`, `os`, `path`, and `URL` modules in the JavaScript context for use in placeholders.
+- Deprecated the use of `log()` in `{js:...}` placeholders. Use `console.log()` instead.
+
+### 2024-06-28
 
 - Added visibility setting for controlling where pins are displayed.
   - Pins can be set to show in the menu bar dropdown, the "View Pins" command, both, or neither.

@@ -1,7 +1,7 @@
 import { Application, MenuBarExtra } from "@raycast/api";
 import { NoteRef } from "../../../lib/LocalData";
 import { cutoff } from "../../../lib/utils";
-import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
+import { KEYBOARD_SHORTCUT, PinAction, StorageKey, Visibility } from "../../../lib/constants";
 import { createNewPin } from "../../../lib/Pins";
 import { Group, createNewGroup } from "../../../lib/Groups";
 import { useCachedState } from "@raycast/utils";
@@ -62,6 +62,8 @@ export default function NotesQuickPin(props: NotesQuickPinProps) {
             undefined,
             [],
             "",
+            Visibility.VISIBLE,
+            PinAction.DELETE,
           );
         } else {
           let newGroupName = "New Note Group";
@@ -90,6 +92,8 @@ export default function NotesQuickPin(props: NotesQuickPinProps) {
               undefined,
               [],
               "",
+              Visibility.VISIBLE,
+              PinAction.DELETE,
             );
           }
         }

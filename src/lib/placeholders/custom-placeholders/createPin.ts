@@ -1,7 +1,7 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
 import { createNewPin } from "../../Pins";
 import { Group, createNewGroup } from "../../Groups";
-import { StorageKey } from "../../constants";
+import { PinAction, StorageKey, Visibility } from "../../constants";
 import { getStorage } from "../../storage";
 
 /**
@@ -39,6 +39,8 @@ const CreatePinDirective: Placeholder = {
       undefined,
       undefined,
       undefined,
+      Visibility.VISIBLE,
+      PinAction.DELETE,
     );
     return { result: "" };
   },
