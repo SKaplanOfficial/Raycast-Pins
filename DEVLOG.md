@@ -1,5 +1,18 @@
 # Pins DevLog - A more detailed changelog
 
+## 1.9.0 Release, TBA
+
+### 2024-07-30
+
+### 2024-06-29
+
+- Added visibility setting for controlling where pins are displayed.
+  - Pins can be set to show in the menu bar dropdown, the "View Pins" command, both, or neither.
+  - Hidden pins can still be opened via deeplinks, while Disabled pins cannot be opened at all.
+- Added action to show/hide hidden pins in the "View Pins" command.
+- Added ability to open pins via deeplinks.
+- Added action to create a QuickLink for a pin.
+
 ## 1.8.0 Release, 2024-06-22
 
 ### 2024-05-25

@@ -1,6 +1,8 @@
 # Pins Changelog
 
-## [1.8.0 - ] - 2024-06-22
+## [1.9.0 - TBA] - TBA
+
+## [1.8.0 - Bug Fixes, More AI Models, & Pin Management Placeholders] - 2024-06-22
 
 - Added support for new Raycast AI models.
 - Added setting for configuring the default AI model.

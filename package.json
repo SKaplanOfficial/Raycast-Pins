@@ -154,6 +154,14 @@
             {
               "title": "Copy",
               "value": "copy"
+            },
+            {
+              "title": "Hide",
+              "value": "hide"
+            },
+            {
+              "title": "Disable",
+              "value": "disable"
             }
           ]
         }
@@ -190,7 +198,15 @@
           "name": "showSubtitles",
           "type": "checkbox",
           "label": "Show Subtitles",
-          "description": "Whether to pin targets (e.g. URLs) as subtitles in the list view.",
+          "description": "Whether to show pin targets (e.g. URLs) as subtitles in the list view.",
+          "default": true,
+          "required": false
+        },
+        {
+          "name": "showVisibility",
+          "type": "checkbox",
+          "label": "Show Visibility",
+          "description": "Whether to show the visibility for each pin.",
           "default": true,
           "required": false
         },
