@@ -2,6 +2,12 @@
 
 ## 1.9.0 Release, TBA
 
+### 2024-06-30
+
+- Added aliases setting for pins.
+- Aliases and tags are now searchable in the 'View Pins' command.
+- Fixed timeout error when running AppleScript scripts.
+
 ### 2024-06-29
 
 - Added visibility setting for groups.

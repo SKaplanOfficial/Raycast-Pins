@@ -63,28 +63,31 @@ export default function GroupForm(props: { group?: Group; setGroups?: (groups: G
               }
               if (environment.commandName == "new-group") {
                 await createNewGroup(
-                  values.nameField,
-                  values.iconField,
-                  values.parentField ? values.parentField : undefined,
-                  values.sortStrategyField && values.sortStrategyField != "none" ? values.sortStrategyField : undefined,
-                  values.iconColorField,
-                  values.visibilityField,
+                  {
+                    name: values.nameField,
+                    icon: values.iconField,
+                    parent: values.parentField ? parseInt(values.parentField) : undefined,
+                    sortStrategy: values.sortStrategyField && values.sortStrategyField != "none" ? values.sortStrategyField : undefined,
+                    iconColor: values.iconColorField,
+                    visibility: values.visibilityField,
+                  },
                 );
                 await launchCommand({
                   name: "view-groups",
                   type: LaunchType.UserInitiated,
                 });
               } else {
-                await modifyGroup(
-                  targetGroup,
-                  values.nameField,
-                  values.iconField,
-                  pop,
+                await modifyGroup(targetGroup,
+                  {
+                    name: values.nameField,
+                    icon: values.iconField,
+                    parent: values.parentField ? parseInt(values.parentField) : undefined,
+                    sortStrategy: values.sortStrategyField && values.sortStrategyField != "none" ? values.sortStrategyField : undefined,
+                    iconColor: values.iconColorField,
+                    visibility: values.visibilityField,
+                  },
                   setGroups as (groups: Group[]) => void,
-                  values.parentField ? values.parentField : undefined,
-                  values.sortStrategyField && values.sortStrategyField != "none" ? values.sortStrategyField : undefined,
-                  values.iconColorField,
-                  values.visibilityField,
+                  pop,
                 );
               }
             }}

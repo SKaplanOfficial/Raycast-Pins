@@ -1,6 +1,6 @@
 # Pins Changelog
 
-## [1.9.0 - TBA] - TBA
+## [1.9.0 - TBA] - Pin Visibility, Expiration Actions, - TBA
 
 ## [1.8.0 - Bug Fixes, More AI Models, & Pin Management Placeholders] - 2024-06-22
 

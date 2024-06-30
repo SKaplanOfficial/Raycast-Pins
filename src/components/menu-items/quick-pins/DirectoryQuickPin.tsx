@@ -1,7 +1,7 @@
 import { Application, MenuBarExtra } from "@raycast/api";
 import { FileRef } from "../../../lib/LocalData";
 import { cutoff } from "../../../lib/utils";
-import { KEYBOARD_SHORTCUT, PinAction, StorageKey, Visibility } from "../../../lib/constants";
+import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
 import { createNewPin } from "../../../lib/Pins";
 import { useCachedState } from "@raycast/utils";
 import { Group } from "../../../lib/Groups";
@@ -42,22 +42,11 @@ export default function DirectoryQuickPin(props: DirectoryQuickPinProps) {
       tooltip="Create a pin whose target path is the current directory of Finder"
       shortcut={KEYBOARD_SHORTCUT.PIN_CURRENT_DIRECTORY}
       onAction={async () => {
-        await createNewPin(
-          directory.name,
-          directory.path,
-          "Favicon / File Icon",
-          targetGroup?.name || "None",
-          "None",
-          undefined,
-          undefined,
-          false,
-          undefined,
-          undefined,
-          [],
-          "",
-          Visibility.VISIBLE,
-          PinAction.DELETE,
-        );
+        await createNewPin({
+          name: directory.name,
+          url: directory.path,
+          group: targetGroup?.name || "None",
+        });
       }}
     />
   );

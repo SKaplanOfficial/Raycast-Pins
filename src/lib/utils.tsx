@@ -43,7 +43,7 @@ export const runCommandInTerminal = async (command: string): Promise<string> => 
       activate
       do script "${command.replaceAll('"', '\\"')}"
     end try
-  end tell`);
+  end tell`, { timeout: 0 });
   return output;
 };
 

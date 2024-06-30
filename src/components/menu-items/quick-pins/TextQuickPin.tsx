@@ -1,5 +1,5 @@
 import { Icon, MenuBarExtra, getSelectedText } from "@raycast/api";
-import { KEYBOARD_SHORTCUT, PinAction, StorageKey, Visibility } from "../../../lib/constants";
+import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
 import { createNewPin } from "../../../lib/Pins";
 import { useCachedState } from "@raycast/utils";
 import { Group } from "../../../lib/Groups";
@@ -24,22 +24,12 @@ export default function TextQuickPin() {
       shortcut={KEYBOARD_SHORTCUT.PIN_SELECTED_TEXT}
       onAction={async () => {
         const text = await getSelectedText();
-        await createNewPin(
-          text.substring(0, 50).trim(),
-          text,
-          "text-16",
-          targetGroup?.name || "None",
-          "None",
-          undefined,
-          undefined,
-          true,
-          undefined,
-          undefined,
-          [],
-          "",
-          Visibility.VISIBLE,
-          PinAction.DELETE,
-        );
+        await createNewPin({
+          name: text.substring(0, 50).trim(),
+          url: text,
+          icon: "text-16",
+          group: targetGroup?.name || "None",
+        });
       }}
     />
   );

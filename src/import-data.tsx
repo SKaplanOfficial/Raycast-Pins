@@ -139,6 +139,7 @@ const importCSVData = async (data: string[][], importMethod: string) => {
       const averageExecutionTimeIndex = fieldNames.indexOf("averageExecutionTime");
       const visibilityIndex = fieldNames.indexOf("visibility");
       const expirationActionIndex = fieldNames.indexOf("expirationAction");
+      const aliasesIndex = fieldNames.indexOf("aliases");
 
       return {
         name: row[nameIndex],
@@ -165,6 +166,13 @@ const importCSVData = async (data: string[][], importMethod: string) => {
         averageExecutionTime: averageExecutionTimeIndex == -1 ? undefined : parseInt(row[averageExecutionTimeIndex]),
         visibility: visibilityIndex == -1 ? undefined : (row[visibilityIndex] as Visibility),
         expirationAction: expirationActionIndex == -1 ? undefined : row[expirationActionIndex],
+        aliases:
+          aliasesIndex == -1
+            ? undefined
+            : row[aliasesIndex]
+                .split(",")
+                .map((alias) => alias.trim())
+                .filter((alias) => alias.length > 0),
       };
     });
     await importJSONData({ pins: newPins }, importMethod);

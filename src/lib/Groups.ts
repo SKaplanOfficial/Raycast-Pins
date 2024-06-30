@@ -13,7 +13,7 @@ import { getStorage, setStorage } from "./storage";
 import { useCachedState } from "@raycast/utils";
 import { SORT_FN, SORT_STRATEGY, StorageKey, Visibility } from "./constants";
 import { showToast } from "@raycast/api";
-import { Pin, sortPins } from "./Pins";
+import { Pin, getPins, sortPins } from "./Pins";
 
 /**
  * A group of pins.
@@ -76,6 +76,14 @@ export const isGroup = (obj: object): obj is Group => {
 
 /**
  * Gets the stored groups.
+ * @returns The list of groups.
+ */
+export const getGroups = async () => {
+  return (await getStorage(StorageKey.LOCAL_GROUPS)) as Group[];
+};
+
+/**
+ * Gets the stored groups.
  * @returns The list of groups alongside an update function.
  */
 export const useGroups = () => {
@@ -84,7 +92,7 @@ export const useGroups = () => {
 
   const revalidateGroups = async () => {
     setLoading(true);
-    const storedGroups: Group[] = await getStorage(StorageKey.LOCAL_GROUPS);
+    const storedGroups = await getGroups();
     const checkedGroups: Group[] = [];
     for (const group of storedGroups) {
       checkedGroups.push({
@@ -113,7 +121,7 @@ export const useGroups = () => {
  */
 export const getNextGroupID = async () => {
   // Get the stored groups
-  const storedGroups = await getStorage(StorageKey.LOCAL_GROUPS);
+  const storedGroups = await getGroups();
 
   // Get the next available group ID
   let newID = (await getStorage(StorageKey.NEXT_GROUP_ID))[0] || 1;
@@ -126,100 +134,64 @@ export const getNextGroupID = async () => {
 
 /**
  * Creates a new group; updates local storage.
- * @param name The name of the group.
- * @param icon The icon for the group.
+ * @param attributes The attributes of the new group.
+ * @returns The new group object.
  */
-export const createNewGroup = async (
-  name: string,
-  icon: string,
-  parent?: number,
-  sortStrategy?: keyof typeof SORT_STRATEGY,
-  iconColor?: string,
-  visibility?: Visibility,
-) => {
-  const storedGroups = await getStorage(StorageKey.LOCAL_GROUPS);
+export const createNewGroup = async (attributes: Partial<Group>) => {
+  const storedGroups = await getGroups();
   const newID = await getNextGroupID();
 
   // Add the new group to the stored groups
   const newData = [...storedGroups];
-  newData.push({
-    name: name,
-    icon: icon,
+  const newGroup = {
+    ...attributes,
     id: newID,
-    parent: parent,
-    sortStrategy: sortStrategy,
-    iconColor: iconColor,
     dateCreated: new Date().toUTCString(),
-    visibility: visibility || Visibility.VISIBLE,
-  });
+    visibility: attributes.visibility || Visibility.VISIBLE,
+  } as Group;
+  newData.push(newGroup);
 
   // Update the stored groups
   await setStorage(StorageKey.LOCAL_GROUPS, newData);
+  return newGroup;
 };
 
 /**
  * Modifies the properties of a group.
  * @param group The group to modify (used to source the group's ID)
- * @param name The (new) name of the group.
- * @param icon The (new) icon for the group.
- * @param pop Function to pop the current view off the navigation stack.
+ * @param attributes The new attributes for the group.
  * @param setGroups Function to update the list of groups.
- * @param parent The (new) parent group ID for the group.
- * @param sortStrategy The (new) sort strategy for the group.
- * @param iconColor The (new) icon color for the group.
- * @param visibility The (new) visibility for the group.
+ * @param pop Function to pop the current view off the navigation stack.
  */
 export const modifyGroup = async (
   group: Group,
-  name: string,
-  icon: string,
-  pop: () => void,
+  attributes: Partial<Group>,
   setGroups: (groups: Group[]) => void,
-  parent?: number,
-  sortStrategy?: keyof typeof SORT_STRATEGY,
-  iconColor?: string,
-  visibility?: Visibility,
+  pop: () => void,
 ) => {
-  const storedGroups = await getStorage(StorageKey.LOCAL_GROUPS);
+  const storedGroups = await getGroups();
   const newGroups: Group[] = storedGroups.map((oldGroup: Group) => {
     // Update group if it exists
     if (group.id != -1 && oldGroup.id == group.id) {
       return {
-        name: name,
-        icon: icon,
-        id: group.id,
-        parent: parent,
-        sortStrategy: sortStrategy,
-        iconColor: iconColor,
+        ...oldGroup,
+        ...attributes,
         dateCreated: group.dateCreated || new Date().toUTCString(),
-        visibility: visibility || Visibility.VISIBLE,
+        visibility: attributes.visibility || Visibility.VISIBLE,
       };
     } else {
       return oldGroup;
     }
   });
 
+  // Create a new group if it doesn't exist
   if (group.id == -1) {
-    group.id = (await getStorage(StorageKey.NEXT_GROUP_ID))[0] || 1;
-    while (storedGroups.some((storedGroup: Group) => storedGroup.id == group.id)) {
-      group.id = group.id + 1;
-    }
-    setStorage(StorageKey.NEXT_GROUP_ID, [group.id + 1]);
-
-    // Add new group if it doesn't exist
-    newGroups.push({
-      name: name,
-      icon: icon,
-      id: group.id,
-      parent: parent,
-      sortStrategy: sortStrategy,
-      iconColor: iconColor,
-      dateCreated: new Date().toUTCString(),
-      visibility: visibility || Visibility.VISIBLE,
-    });
+    const newGroup = await createNewGroup(attributes);
+    newGroups.push(newGroup);
   }
 
-  const storedPins = await getStorage(StorageKey.LOCAL_PINS);
+  // Propagate name changes to pins
+  const storedPins = await getPins();
   const newPins = storedPins.map((pin: Pin) => {
     if (pin.group == group.name) {
       return {
@@ -247,7 +219,7 @@ export const modifyGroup = async (
  * @param setGroups The function to update the active list of groups.
  */
 export const deleteGroup = async (group: Group, setGroups: (groups: Group[]) => void, displayToast = true) => {
-  const storedGroups: Group[] = await getStorage(StorageKey.LOCAL_GROUPS);
+  const storedGroups = await getGroups();
 
   const filteredGroups = storedGroups
     .filter((oldGroup: Group) => {
@@ -269,7 +241,7 @@ export const deleteGroup = async (group: Group, setGroups: (groups: Group[]) => 
       return oldGroup.name == group.name;
     }).length != 0;
 
-  const storedPins = await getStorage(StorageKey.LOCAL_PINS);
+  const storedPins = await getPins();
   const updatedPins = storedPins.map((pin: Pin) => {
     if (pin.group == group.name && !isDuplicate) {
       if (group.parent != undefined && storedGroups.some((g) => g.id == group.parent)) {

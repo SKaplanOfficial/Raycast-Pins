@@ -1,7 +1,7 @@
 import { Application, MenuBarExtra } from "@raycast/api";
 import { TrackRef } from "../../../lib/LocalData";
 import { cutoff } from "../../../lib/utils";
-import { KEYBOARD_SHORTCUT, PinAction, StorageKey, Visibility } from "../../../lib/constants";
+import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
 import { getMusicTrackScript, getSpotifyTrackScript, getTVTrackScript } from "../../../lib/scripts";
 import { createNewPin } from "../../../lib/Pins";
 import { useCachedState } from "@raycast/utils";
@@ -53,22 +53,12 @@ export default function TrackQuickPin(props: TrackQuickPinProps) {
           trackScript = getTVTrackScript(track.name, track.artist, track.album);
         }
 
-        await createNewPin(
-          `Play Track '${track.name}'`,
-          `{{as:${trackScript}}}`,
-          app.path,
-          targetGroup?.name || "None",
-          "None",
-          undefined,
-          undefined,
-          false,
-          undefined,
-          undefined,
-          [],
-          "",
-          Visibility.VISIBLE,
-          PinAction.DELETE,
-        );
+        await createNewPin({
+          name: `Play Track '${track.name}'`,
+          url: `{{as:${trackScript}}}`,
+          icon: app.path,
+          group: targetGroup?.name || "None",
+        });
       }}
     />
   );
