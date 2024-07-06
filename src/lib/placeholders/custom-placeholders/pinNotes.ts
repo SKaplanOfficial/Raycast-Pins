@@ -15,7 +15,7 @@ const PinNotesPlaceholder: Placeholder = {
     return { result: (context["pin"] as Pin).notes || "" };
   },
   constant: false,
-  fn: async (context?: { [key: string]: unknown }) => (await PinNotesPlaceholder.apply(`{{pinNotes}}`, context)).result,
+  fn: async (context?) => (await PinNotesPlaceholder.apply(`{{pinNotes}}`, context as unknown as { [key: string]: unknown })).result,
   example: "{{pinNotes}}",
   description: "Gets the notes for the current pin.",
   hintRepresentation: "{{pinNotes}}",

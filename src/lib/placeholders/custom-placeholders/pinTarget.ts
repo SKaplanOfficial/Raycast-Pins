@@ -15,7 +15,7 @@ const PinTargetPlaceholder: Placeholder = {
     return { result: (context["pin"] as Pin).url };
   },
   constant: false,
-  fn: async (context?: { [key: string]: unknown }) => (await PinTargetPlaceholder.apply(`{{pinTarget}}`, context)).result,
+  fn: async (context?) => (await PinTargetPlaceholder.apply(`{{pinTarget}}`, context as unknown as { [key: string]: unknown })).result,
   example: "{{pinTarget}}",
   description: "Gets the target of the current pin.",
   hintRepresentation: "{{pinTarget}}",

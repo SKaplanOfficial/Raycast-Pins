@@ -5,7 +5,7 @@
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
  * Created at     : 2023-09-04 17:31:40
- * Last modified  : 2023-11-01 00:44:17
+ * Last modified  : 2024-07-05 01:57:20
  */
 
 import { Keyboard } from "@raycast/api";
@@ -231,6 +231,7 @@ export enum Direction {
  * Visibility options for pins and groups.
  */
 export enum Visibility {
+  USE_PARENT = "use_parent",
   VISIBLE = "visible",
   MENUBAR_ONLY = "menubar_only",
   VIEW_PINS_ONLY = "view_pins_only",

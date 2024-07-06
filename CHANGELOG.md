@@ -1,6 +1,15 @@
 # Pins Changelog
 
-## [1.9.0 - TBA] - Pin Visibility, Expiration Actions, - TBA
+## [1.9.0 - Aliases, Visibility, & Expiration Actions] - TBA
+
+- Added aliases setting for pins.
+- Added visibility setting for pins and groups.
+- Added ability to customize the expiration action of pins.
+- Added `{{movePin:pinName:groupName}}` directive for moving pins to a different group.
+- Added `{{pinJSON}}`, `{{pinName}}`, `{{pinNotes}}`, and `{{pinTarget}}` placeholders for getting information about the current pin.
+- Added `{{monthCalendar}}` placeholder for inserting a table representation of the current month's calendar.
+- Added support for opening pins via deeplinks.
+- Fixed timeout error when running AppleScript scripts.
 
 ## [1.8.0 - Bug Fixes, More AI Models, & Pin Management Placeholders] - 2024-06-22
 

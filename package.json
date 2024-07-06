@@ -291,6 +291,14 @@
       "mode": "view",
       "preferences": [
         {
+          "name": "showVisibility",
+          "type": "checkbox",
+          "label": "Show Visibility",
+          "description": "Whether to show the visibility for each pin.",
+          "default": true,
+          "required": false
+        },
+        {
           "name": "showIDs",
           "type": "checkbox",
           "title": "General Settings",

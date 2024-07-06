@@ -5,7 +5,7 @@
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
  * Created at     : 2023-09-04 17:37:42
- * Last modified  : 2024-04-23 00:47:05
+ * Last modified  : 2024-07-05 01:57:20
  */
 
 import { useCachedState } from "@raycast/utils";
@@ -290,7 +290,12 @@ export const checkExpirations = async () => {
  */
 export const validatePins = async (pins: Pin[]) => {
   const checkedPins: Pin[] = [];
-  for (const pin of pins) {
+  for (const [index, pin] of pins.entries()) {
+    for (const [index2, pin2] of pins.entries()) {
+      if (index != index2 && pin.id == pin2.id) {
+        pin.id = await getNextPinID();
+      }
+    }
     checkedPins.push({
       ...pin,
       group: pin.group == undefined ? "None" : pin.group,
@@ -336,7 +341,7 @@ export const usePins = () => {
  */
 export const openPin = async (
   pin: Pin,
-  preferences: { preferredBrowser: Application },
+  preferences: { preferredBrowser?: Application },
   context?: { [key: string]: unknown },
 ) => {
   const startDate = new Date();

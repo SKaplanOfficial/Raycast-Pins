@@ -30,6 +30,7 @@ import PinNamePlaceholder from "./custom-placeholders/pinName";
 import PinNotesPlaceholder from "./custom-placeholders/pinNotes";
 import PinTargetPlaceholder from "./custom-placeholders/pinTarget";
 import PinJSONPlaceholder from "./custom-placeholders/pinJSON";
+import MonthCalendarPlaceholder from "./custom-placeholders/monthCalendar";
 
 const filteredPlaceholders = Object.values(DefaultPlaceholders).filter((p) => !["location", "js"].includes(p.name));
 
@@ -41,6 +42,7 @@ const PinsPlaceholders = [
   DelayDirective,
   ...filteredPlaceholders.filter((p) => p.type == PlaceholderType.Informational && p.name != "selectedText"),
   selectedTextPlaceholder,
+  MonthCalendarPlaceholder,
   ...filteredPlaceholders.filter((p) => p.type == PlaceholderType.StaticDirective),
   LocationPlaceholder,
   LatitudePlaceholder,
@@ -88,7 +90,7 @@ JavaScriptPlaceholder.apply = async (str: string, context?: { [key: string]: unk
       (acc, placeholder) => {
         // acc[placeholder.name] = placeholder.fn;
         acc[placeholder.name] = async (...args: never[]) => {
-          return placeholder.fn(...args, context);
+          return placeholder.fn(...args, context as unknown as string);
         };
         return acc;
       },
@@ -112,9 +114,9 @@ JavaScriptPlaceholder.apply = async (str: string, context?: { [key: string]: unk
         console.warn("`log` is deprecated. Use `console.log` instead.");
         console.log(str); // Make logging available to JS scripts
         return "";
-      }
-    }
-    
+      },
+    };
+
     const res = await vm.runInNewContext(script, sandbox, {
       timeout: 1000,
       displayErrors: true,
@@ -127,4 +129,7 @@ JavaScriptPlaceholder.apply = async (str: string, context?: { [key: string]: unk
 
 PinsPlaceholders.push(JavaScriptPlaceholder);
 
+const PinsInfoPlaceholders = PinsPlaceholders.filter((p) => p.type == PlaceholderType.Informational);
+
 export default PinsPlaceholders;
+export { PinsInfoPlaceholders };

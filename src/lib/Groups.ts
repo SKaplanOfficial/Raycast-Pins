@@ -5,15 +5,16 @@
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
  * Created at     : 2023-09-04 17:35:11
- * Last modified  : 2023-11-01 00:44:06
+ * Last modified  : 2024-07-05 01:57:13
  */
 
 import { useEffect, useState } from "react";
 import { getStorage, setStorage } from "./storage";
 import { useCachedState } from "@raycast/utils";
 import { SORT_FN, SORT_STRATEGY, StorageKey, Visibility } from "./constants";
-import { showToast } from "@raycast/api";
+import { environment, showToast } from "@raycast/api";
 import { Pin, getPins, sortPins } from "./Pins";
+import { GroupDisplaySetting } from "./preferences";
 
 /**
  * A group of pins.
@@ -58,6 +59,11 @@ export type Group = {
    * Where the group is visible, if at all.
    */
   visibility?: Visibility;
+
+  /**
+   * How the group should be displayed in the menubar.
+   */
+  menubarDisplay?: GroupDisplaySetting;
 };
 
 /**
@@ -83,40 +89,6 @@ export const getGroups = async () => {
 };
 
 /**
- * Gets the stored groups.
- * @returns The list of groups alongside an update function.
- */
-export const useGroups = () => {
-  const [groups, setGroups] = useCachedState<Group[]>("pin-groups", []);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  const revalidateGroups = async () => {
-    setLoading(true);
-    const storedGroups = await getGroups();
-    const checkedGroups: Group[] = [];
-    for (const group of storedGroups) {
-      checkedGroups.push({
-        ...group,
-        id: group.id == undefined ? await getNextGroupID() : group.id,
-      });
-    }
-    setGroups(checkedGroups);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    revalidateGroups();
-  }, []);
-
-  return {
-    groups: groups,
-    setGroups: setGroups,
-    loadingGroups: loading,
-    revalidateGroups: revalidateGroups,
-  };
-};
-
-/**
  * Gets the next available group ID.
  */
 export const getNextGroupID = async () => {
@@ -130,6 +102,113 @@ export const getNextGroupID = async () => {
   }
   setStorage(StorageKey.NEXT_GROUP_ID, [newID + 1]);
   return newID;
+};
+
+/**
+ * Gets the ancestors of a group.
+ * @param group The group to get the ancestors of.
+ * @param allGroups The list of all groups.
+ * @returns An array of ancestor groups of the group.
+ */
+export const getAncestorsOfGroup = (group: Group, allGroups: Group[], options?: { excluding: Group[] }): Group[] => {
+  const ancestors: Group[] = [];
+  let currentGroup = group;
+  while (currentGroup.parent != undefined) {
+    const parent = allGroups.find(
+      (g) => g.id == currentGroup.parent && !options?.excluding.some((eg) => eg.id == g.id),
+    );
+    if (parent) {
+      ancestors.push(parent);
+      currentGroup = parent;
+    } else {
+      break;
+    }
+  }
+  return ancestors;
+};
+
+/**
+ * Checks if a group should be displayed in the current context.
+ * @param group The group to check.
+ * @param allGroups The list of all groups.
+ * @returns True if the group should be displayed, false otherwise.
+ */
+export const shouldDisplayGroup = (group: Group, allGroups: Group[]): boolean => {
+  if (group.visibility == Visibility.USE_PARENT) {
+    const parent = allGroups.find((g) => g.id == group.parent);
+    return parent ? shouldDisplayGroup(parent, allGroups) : true;
+  }
+  if (group.visibility == Visibility.VISIBLE) return true;
+  if (group.visibility == Visibility.HIDDEN) return false;
+  if (group.visibility == Visibility.DISABLED) return false;
+  if (group.visibility == Visibility.VIEW_PINS_ONLY) return environment.commandName == "view-pins";
+  if (group.visibility == Visibility.MENUBAR_ONLY) return environment.commandName == "index";
+  return true;
+};
+
+/**
+ * Validates a list of groups, ensuring that they all have valid IDs.
+ * @param groups The list of groups to validate.
+ * @returns The list of validated groups.
+ */
+export const validateGroups = async (groups: Group[]) => {
+  const checkedGroups: Group[] = [];
+  for (const [index, group] of groups.entries()) {
+    for (const [index2, group2] of groups.entries()) {
+      if (index != index2 && group.id == group2.id) {
+        group.id = await getNextGroupID();
+      }
+    }
+    checkedGroups.push({
+      ...group,
+      id: group.id == undefined ? await getNextGroupID() : group.id,
+    });
+  }
+  return checkedGroups;
+};
+
+/**
+ * Gets the stored groups.
+ * @returns The list of groups alongside an update function.
+ */
+export const useGroups = () => {
+  const [groups, setGroups] = useCachedState<Group[]>("pin-groups", []);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const revalidateGroups = async () => {
+    setLoading(true);
+    const storedGroups = await getGroups();
+    const validatedGroups = await validateGroups(storedGroups);
+    setGroups(validatedGroups);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    revalidateGroups();
+  }, []);
+
+  return {
+    groups: groups,
+    setGroups: setGroups,
+    loadingGroups: loading,
+    revalidateGroups: revalidateGroups,
+
+    /**
+     * Gets the ancestors of a group.
+     * @param group The group to get the ancestors of.
+     * @param options Options for which ancestors to include/exclude.
+     * @returns An array of ancestor groups of the group.
+     */
+    getAncestorsOfGroup: (group: Group, options?: { excluding: Group[] }) =>
+      getAncestorsOfGroup(group, groups, options),
+
+    /**
+     * Checks if a group should be displayed in the current context.
+     * @param group The group to check.
+     * @returns True if the group should be displayed, false otherwise.
+     */
+    shouldDisplayGroup: (group: Group) => shouldDisplayGroup(group, groups),
+  };
 };
 
 /**
@@ -147,7 +226,8 @@ export const createNewGroup = async (attributes: Partial<Group>) => {
     ...attributes,
     id: newID,
     dateCreated: new Date().toUTCString(),
-    visibility: attributes.visibility || Visibility.VISIBLE,
+    visibility: attributes.visibility || Visibility.USE_PARENT,
+    menubarDisplay: attributes.menubarDisplay || GroupDisplaySetting.SUBMENUS,
   } as Group;
   newData.push(newGroup);
 
@@ -177,7 +257,8 @@ export const modifyGroup = async (
         ...oldGroup,
         ...attributes,
         dateCreated: group.dateCreated || new Date().toUTCString(),
-        visibility: attributes.visibility || Visibility.VISIBLE,
+        visibility: attributes.visibility || Visibility.USE_PARENT,
+        menubarDisplay: attributes.menubarDisplay || GroupDisplaySetting.SUBMENUS,
       };
     } else {
       return oldGroup;
@@ -190,15 +271,16 @@ export const modifyGroup = async (
     newGroups.push(newGroup);
   }
 
-  // Propagate name changes to pins
+  // Propagate changes to pins
   const storedPins = await getPins();
   const newPins = storedPins.map((pin: Pin) => {
     if (pin.group == group.name) {
       return {
+        ...pin,
         name: pin.name,
         url: pin.url,
         icon: pin.icon,
-        group: name,
+        group: attributes.name || group.name,
         id: pin.id,
       };
     } else {
@@ -289,16 +371,20 @@ export const checkGroupParentField = async (
   suggestedID: string,
   setParentError: React.Dispatch<React.SetStateAction<string | undefined>>,
   groups: Group[],
-) => {
+): Promise<boolean> => {
   const nextID = await getStorage(StorageKey.NEXT_GROUP_ID);
   if (suggestedID.trim().length == 0) {
     setParentError(undefined);
+    return true;
   } else if (!groups.map((g) => g.id).includes(parseInt(suggestedID))) {
     setParentError("No group with this ID exists!");
+    return false;
   } else if (parseInt(suggestedID) == nextID) {
     setParentError("Group cannot be its own parent!");
+    return false;
   } else {
     setParentError(undefined);
+    return true;
   }
 };
 

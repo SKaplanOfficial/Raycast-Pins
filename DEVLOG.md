@@ -2,10 +2,17 @@
 
 ## 1.9.0 Release, TBA
 
+### 2024-07-03
+
+- Added support for using information placeholders in pin names.
+- Added ability to control how groups display in the menubar extra on a per-group basis.
+- Added `{{monthCalendar}}` placeholder for inserting a table representation of the current month's calendar.
+
 ### 2024-06-30
 
 - Added aliases setting for pins.
 - Aliases and tags are now searchable in the 'View Pins' command.
+- Added ability to import multiple data files at once.
 - Fixed timeout error when running AppleScript scripts.
 
 ### 2024-06-29

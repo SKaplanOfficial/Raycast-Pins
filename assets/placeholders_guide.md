@@ -3,7 +3,7 @@
 ------------------------
 
 Author: Stephen Kaplan _(HelloImSteven)_ <br />
-Last Updated: 2024-06-30 <br />
+Last Updated: 2024-07-05 <br />
 Pins Version: 1.9.0
 
 ------------------------
@@ -58,6 +58,7 @@ Placeholders allow pins to be more dynamic and context-aware. You can use placeh
 | `{{jxa:...}}` or <br /> `{{JXA:...}}` | The return value of a JXA script. |
 | `{{launchGroup:[groupName]}}` | Launches all pins in the specified group. |
 | `{{launchPin:[pinName]}}` | Launches the specified pin. |
+| `{{monthCalendar}}` | A tabular representation of the current calendar month. |
 | `{{paste:...}}` | Pastes the specified text into the frontmost application. |
 | `{{pinNames}}` | The comma-separated list of names of all pins, sorted by date last used. Specify an amount of pins to randomly select using `{{pinNames amount=[number]}}`. |
 | `{{pins}}` | The JSON representation of all pins. Specify an amount of pins to randomly select using `{{pins amount=[number]}}`. |

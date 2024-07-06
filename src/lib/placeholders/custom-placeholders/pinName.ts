@@ -15,7 +15,7 @@ const PinNamePlaceholder: Placeholder = {
     return { result: (context["pin"] as Pin).name };
   },
   constant: false,
-  fn: async (context?: { [key: string]: unknown }) => (await PinNamePlaceholder.apply(`{{pinName}}`, context)).result,
+  fn: async (context?) => (await PinNamePlaceholder.apply(`{{pinName}}`, context as unknown as { [key: string]: unknown })).result,
   example: "{{pinName}}",
   description: "Gets the name of the current pin.",
   hintRepresentation: "{{pinName}}",

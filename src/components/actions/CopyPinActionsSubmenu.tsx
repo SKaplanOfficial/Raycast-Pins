@@ -44,7 +44,7 @@ export default function CopyPinActionsSubmenu(props: { pin: Pin; pins: Pin[] }) 
       />
       <Action.CopyToClipboard
         title="Copy Pin JSON"
-        content={JSON.stringify(pin)}
+        content={JSON.stringify({ groups: [], pins: [pin] })}
         shortcut={{ modifiers: ["cmd", "shift"], key: "j" }}
       />
       <Action.CopyToClipboard

@@ -396,8 +396,9 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         id="visibilityField"
         title="Visibility"
         info="Controls the visibility of the pin in the 'View Pins' command and the menu bar dropdown. If set to 'Hidden', you can find the pin by using the 'Show Hidden Pins' action of the 'View Pins' command. Hidden pins can still be opened using deeplinks, while disabled pins cannot be opened at all."
-        defaultValue={pin ? pin.visibility : Visibility.VISIBLE}
+        defaultValue={pin ? pin.visibility : Visibility.USE_PARENT}
       >
+        <Form.Dropdown.Item key="use_parent" title="Use Parent Setting" value={Visibility.USE_PARENT} icon={Icon.Gear} />
         <Form.Dropdown.Item key="visible" title="Visible" value={Visibility.VISIBLE} icon={Icon.Eye} />
         <Form.Dropdown.Item
           key="menubarOnly"
@@ -436,7 +437,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         id="tagsField"
         title="Tags"
         info="The comma-separated list of tags associated with the pin. Tags can be used to filter pins in the 'View Pins' command."
-        value={values.tags}
+        value={values.tags || ""}
         onChange={(value) => setValues({ ...values, tags: value })}
       />
 
