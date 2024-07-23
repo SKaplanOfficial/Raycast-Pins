@@ -12,6 +12,7 @@ import { StorageKey, SORT_STRATEGY, Visibility } from "./lib/constants";
 import { getGroups, Group, isGroup, validateGroups } from "./lib/Groups";
 import { getPins, Pin, validatePins } from "./lib/Pins";
 import { setStorage } from "./lib/storage";
+import { GroupDisplaySetting } from "./lib/preferences";
 
 /**
  * Merges the existing pins/groups with the imported pins/groups, removing any duplicate entries. Duplicate entries are determined by the name of the pin. The ID of each pin is updated to ensure that there are no duplicates.
@@ -174,6 +175,10 @@ const importCSVData = async (data: string[][], importMethod: string) => {
         id: parseInt(row[indices.id]),
         visibility:
           indices.visibility == -1 ? undefined : (row[indices.visibility] as Visibility) || Visibility.VISIBLE,
+        menubarDisplay:
+          indices.menubarDisplay == -1
+            ? undefined
+            : (row[indices.menubarDisplay] as GroupDisplaySetting) || GroupDisplaySetting.USE_PARENT,
       };
     });
     await importJSONData({ groups: newGroups }, importMethod);
