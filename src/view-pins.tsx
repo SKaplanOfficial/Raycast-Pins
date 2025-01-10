@@ -1,25 +1,23 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Icon,
   List,
   ActionPanel,
   getPreferenceValues,
-  LocalStorage,
-  closeMainWindow,
-  PopToRootType,
 } from "@raycast/api";
 import { pluralize } from "./lib/utils";
 import { ExtensionPreferences } from "./lib/preferences";
 import { PinForm } from "./components/PinForm";
-import { PinAction, StorageKey, Visibility } from "./lib/constants";
-import { Pin, checkExpirations, getLastOpenedPin, openPin, sortPins, usePins } from "./lib/Pins";
-import { Group, useGroups } from "./lib/Groups";
+import { ItemType, PinAction, Visibility } from "./lib/constants";
+import { Pin, getLastOpenedPin, sortPins, usePins } from "./lib/Pins";
+import { dummyGroup, useGroups } from "./lib/Groups";
 import RecentApplicationsList from "./components/RecentApplicationsList";
 import { InstallExamplesAction } from "./components/actions/InstallExamplesAction";
 import { ViewPinsPreferences } from "./lib/preferences";
 import { useLocalData } from "./lib/LocalData";
 import PinListItem from "./components/PinListItem";
 import CreateNewPinAction from "./components/actions/CreateNewPinAction";
+import useExamples from "./hooks/useExamples";
 
 /**
  * Raycast command to view all pins in a list within the Raycast window.
@@ -27,29 +25,12 @@ import CreateNewPinAction from "./components/actions/CreateNewPinAction";
 export default function ViewPinsCommand(args: { launchContext?: { pinID?: number; action?: PinAction } }) {
   const { pins, setPins, loadingPins, revalidatePins } = usePins();
   const { groups, loadingGroups, revalidateGroups } = useGroups();
-  const [examplesInstalled, setExamplesInstalled] = useState<boolean>(true);
   const preferences = getPreferenceValues<ExtensionPreferences & ViewPinsPreferences>();
   const { localData, loadingLocalData } = useLocalData();
   const [selectedPinID, setSelectedPinID] = useState<string | null>(null);
   const [filteredTag, setFilteredTag] = useState<string>("all");
   const [showingHidden, setShowingHidden] = useState<boolean>(false);
-
-  useEffect(() => {
-    Promise.resolve(LocalStorage.getItem(StorageKey.EXAMPLE_PINS_INSTALLED)).then((examplesInstalled) => {
-      setExamplesInstalled(examplesInstalled === 1);
-    });
-    Promise.resolve(checkExpirations());
-
-    if (args.launchContext?.pinID) {
-      const pin = pins.find((pin) => pin.id == args.launchContext?.pinID);
-      if (pin) {
-        if (args.launchContext.action === PinAction.OPEN) {
-          Promise.resolve(openPin(pin, preferences, localData as unknown as { [key: string]: unknown }));
-          closeMainWindow({ popToRootType: PopToRootType.Immediate });
-        }
-      }
-    }
-  }, []);
+  const { examplesInstalled, setExamplesInstalled } = useExamples([ItemType.PIN]);
 
   if (args.launchContext?.pinID) {
     const pin = pins.find((pin) => pin.id == args.launchContext?.pinID);
@@ -75,16 +56,7 @@ export default function ViewPinsCommand(args: { launchContext?: { pinID?: number
           pin.visibility === Visibility.VIEW_PINS_ONLY ||
           pin.visibility === undefined,
     );
-    return sortPins(pins, groups)
-      .filter((pin) => {
-        if (showingHidden) return true;
-        return (
-          pin.visibility === undefined ||
-          pin.visibility === Visibility.USE_PARENT ||
-          pin.visibility === Visibility.VISIBLE ||
-          pin.visibility === Visibility.VIEW_PINS_ONLY
-        );
-      })
+    return sortPins(visiblePins, groups)
       .map((pin, index) => {
         return (
           <PinListItem
@@ -164,9 +136,9 @@ export default function ViewPinsCommand(args: { launchContext?: { pinID?: number
         description="Add a custom pin (⌘N)  or install some examples (⌘E)"
         icon="no-view.png"
       />
-      {[{ name: "None", icon: "Minus", id: -1 } as Group].concat(groups).map((group) =>
+      {[dummyGroup()].concat(groups).map((group) =>
         preferences.showGroups ? (
-          group.visibility === Visibility.HIDDEN || group.visibility === Visibility.MENUBAR_ONLY ? (
+          !showingHidden && (group.visibility === Visibility.HIDDEN || group.visibility === Visibility.MENUBAR_ONLY) ? (
             getPinListItems(
               pins.filter(
                 (pin) =>

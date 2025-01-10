@@ -1,8 +1,10 @@
-import { PinForm } from "./components/PinForm";
+import { LaunchProps } from "@raycast/api";
+import { PinForm, PinFormValues } from "./components/PinForm";
 
 /**
  * Raycast command for creating a new pin.
  */
-export default function NewPinCommand() {
-  return <PinForm />;
+export default function NewPinCommand(props: LaunchProps<{ draftValues: PinFormValues }>) {
+  const draftValues = props.draftValues;
+  return <PinForm draftValues={draftValues} />;
 }

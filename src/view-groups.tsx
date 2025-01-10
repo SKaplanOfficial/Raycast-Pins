@@ -7,11 +7,10 @@ import {
   Alert,
   getPreferenceValues,
   Keyboard,
-  LocalStorage,
   showToast,
 } from "@raycast/api";
 import { setStorage, getStorage } from "./lib/storage";
-import { Direction, StorageKey } from "./lib/constants";
+import { Direction, ItemType, StorageKey } from "./lib/constants";
 import { Group, deleteGroup, useGroups } from "./lib/Groups";
 import { Pin, openPin, usePins } from "./lib/Pins";
 import {
@@ -23,10 +22,10 @@ import {
 import { getGroupIcon } from "./lib/icons";
 import GroupForm from "./components/GroupForm";
 import { InstallExamplesAction } from "./components/actions/InstallExamplesAction";
-import { useEffect, useState } from "react";
 import CopyGroupActionsSubmenu from "./components/actions/CopyGroupActionsSubmenu";
 import { ExtensionPreferences, ViewGroupsPreferences } from "./lib/preferences";
 import { pluralize } from "./lib/utils";
+import useExamples from "./hooks/useExamples";
 
 /**
  * Action to create a new group. Opens a form view with blank/default fields.
@@ -67,14 +66,8 @@ const moveGroup = async (index: number, dir: Direction, setGroups: React.Dispatc
 export default function ViewGroupsCommand() {
   const { groups, setGroups, revalidateGroups } = useGroups();
   const { pins } = usePins();
-  const [examplesInstalled, setExamplesInstalled] = useState<boolean>(true);
+  const { examplesInstalled, setExamplesInstalled } = useExamples([ItemType.GROUP]);
   const preferences = getPreferenceValues<ExtensionPreferences & ViewGroupsPreferences>();
-
-  useEffect(() => {
-    Promise.resolve(LocalStorage.getItem(StorageKey.EXAMPLE_GROUPS_INSTALLED)).then((examplesInstalled) => {
-      setExamplesInstalled(examplesInstalled === 1);
-    });
-  }, []);
 
   return (
     <List

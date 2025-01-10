@@ -24,19 +24,38 @@ import { SORT_STRATEGY, Visibility } from "../lib/constants";
 import { usePins } from "../lib/Pins";
 import { GroupDisplaySetting } from "../lib/preferences";
 
+export interface GroupFormValues {
+  nameField: string;
+  iconField: string;
+  iconColorField: string;
+  visibilityField: Visibility;
+  menubarDisplayField: GroupDisplaySetting;
+  sortStrategyField: string;
+  parentField: string;
+}
+
 /**
  * Form for editing a group.
  * @param props.group The group to edit.
  * @param props.setGroups The function to call to update the list of groups.
  * @returns A form view.
  */
-export default function GroupForm(props: { group?: Group; groups?: Group[]; setGroups?: (groups: Group[]) => void }) {
-  const { group, setGroups } = props;
+export default function GroupForm(props: {
+  group?: Group;
+  groups?: Group[];
+  setGroups?: (groups: Group[]) => void;
+  draftValues?: GroupFormValues;
+}) {
+  const { group, setGroups, draftValues } = props;
   const { pins } = usePins();
-  const [visibility, setVisibility] = useState<Visibility>(group?.visibility ?? Visibility.USE_PARENT);
-  const [iconColor, setIconColor] = useState<string | undefined>(group?.iconColor);
+  const [visibility, setVisibility] = useState<Visibility>(
+    draftValues?.visibilityField || (group?.visibility ?? Visibility.USE_PARENT),
+  );
+  const [iconColor, setIconColor] = useState<string | undefined>(draftValues?.iconColorField || group?.iconColor);
   const [nameError, setNameError] = useState<string | undefined>();
-  const [parentID, setParentID] = useState<number | undefined>(group?.parent);
+  const [parentID, setParentID] = useState<number | undefined>(
+    draftValues?.parentField ? parseInt(draftValues.parentField) : group?.parent,
+  );
   const [parentError, setParentError] = useState<string | undefined>();
   const { groups } = useGroups();
   const { pop } = useNavigation();
@@ -45,10 +64,11 @@ export default function GroupForm(props: { group?: Group; groups?: Group[]; setG
   const targetGroup =
     group == undefined
       ? {
-          name: "",
-          icon: "BulletPoints",
+          name: draftValues?.nameField || "",
+          icon: draftValues?.iconField || "BulletPoints",
           id: -1,
-          parent: undefined,
+          parent: draftValues?.parentField ? parseInt(draftValues.parentField) : undefined,
+          sortStrategy: (draftValues?.sortStrategyField || SORT_STRATEGY.manual) as keyof typeof SORT_STRATEGY,
         }
       : group;
 
@@ -56,6 +76,7 @@ export default function GroupForm(props: { group?: Group; groups?: Group[]; setG
 
   return (
     <Form
+      enableDrafts
       navigationTitle={group ? `Edit Group: ${group.name}` : "New Group"}
       actions={
         <ActionPanel>
@@ -139,7 +160,7 @@ export default function GroupForm(props: { group?: Group; groups?: Group[]; setG
         id="iconColorField"
         title="Icon Color"
         onChange={(value) => setIconColor(value)}
-        defaultValue={group?.iconColor ?? Color.PrimaryText}
+        defaultValue={draftValues?.iconColorField || (group?.iconColor ?? Color.PrimaryText)}
       >
         {Object.entries(Color).map(([key, color]) => {
           return (
@@ -195,7 +216,7 @@ export default function GroupForm(props: { group?: Group; groups?: Group[]; setG
           id="menubarDisplayField"
           title="Menubar Display"
           info="Controls how the group is displayed in the menu bar dropdown."
-          defaultValue={group?.menubarDisplay ?? GroupDisplaySetting.SUBMENUS}
+          defaultValue={draftValues?.menubarDisplayField || (group?.menubarDisplay ?? GroupDisplaySetting.SUBMENUS)}
         >
           <Form.Dropdown.Item
             key="useParent"

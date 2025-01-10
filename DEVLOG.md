@@ -1,6 +1,15 @@
 # Pins DevLog - A more detailed changelog
 
-## 1.9.0 Release, TBA
+## 1.9.1 Release, TBA
+
+### 2025-01-10
+
+- Added drafts support when creating new pins or groups.
+- Improved negotiation of pin, group, and parent group settings.
+- Improved ID assignment for new/imported pins and groups.
+- Simplified logic for installing example pins.
+
+## 1.9.0 Release, 2024-07-23
 
 ### 2024-07-03
 

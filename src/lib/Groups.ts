@@ -134,16 +134,18 @@ export const getAncestorsOfGroup = (group: Group, allGroups: Group[], options?: 
  * @returns True if the group should be displayed, false otherwise.
  */
 export const shouldDisplayGroup = (group: Group, allGroups: Group[]): boolean => {
-  if (group.visibility == Visibility.USE_PARENT) {
-    const parent = allGroups.find((g) => g.id == group.parent);
-    return parent ? shouldDisplayGroup(parent, allGroups) : true;
-  }
-  if (group.visibility == Visibility.VISIBLE) return true;
-  if (group.visibility == Visibility.HIDDEN) return false;
-  if (group.visibility == Visibility.DISABLED) return false;
-  if (group.visibility == Visibility.VIEW_PINS_ONLY) return environment.commandName == "view-pins";
-  if (group.visibility == Visibility.MENUBAR_ONLY) return environment.commandName == "index";
-  return true;
+  const visibilityChecks = {
+    [Visibility.USE_PARENT]: () => {
+      const parent = allGroups.find((g) => g.id == group.parent);
+      return parent ? shouldDisplayGroup(parent, allGroups) : true;
+    },
+    [Visibility.VISIBLE]: () => true,
+    [Visibility.HIDDEN]: () => false,
+    [Visibility.DISABLED]: () => false,
+    [Visibility.VIEW_PINS_ONLY]: () => environment.commandName == "view-pins",
+    [Visibility.MENUBAR_ONLY]: () => environment.commandName == "index",
+  };
+  return visibilityChecks[group.visibility || Visibility.USE_PARENT]();
 };
 
 /**
@@ -153,17 +155,16 @@ export const shouldDisplayGroup = (group: Group, allGroups: Group[]): boolean =>
  */
 export const validateGroups = async (groups: Group[]) => {
   const checkedGroups: Group[] = [];
-  for (const [index, group] of groups.entries()) {
-    for (const [index2, group2] of groups.entries()) {
-      if (index != index2 && group.id == group2.id) {
-        group.id = await getNextGroupID();
-      }
+  const seenIDs = new Set<number>();
+
+  for (const group of groups) {
+    if (seenIDs.has(group.id) || group.id == undefined) {
+      group.id = await getNextGroupID();
     }
-    checkedGroups.push({
-      ...group,
-      id: group.id == undefined ? await getNextGroupID() : group.id,
-    });
+    seenIDs.add(group.id);
+    checkedGroups.push(group);
   }
+
   return checkedGroups;
 };
 
@@ -234,6 +235,18 @@ export const createNewGroup = async (attributes: Partial<Group>) => {
   // Update the stored groups
   await setStorage(StorageKey.LOCAL_GROUPS, newData);
   return newGroup;
+};
+
+/**
+ * Creates a dummy group object.
+ * @returns The group object with placeholder values and an ID of -1.
+ */
+export const dummyGroup = (): Group => {
+  return {
+    name: "None",
+    icon: "Minus",
+    id: -1,
+  };
 };
 
 /**

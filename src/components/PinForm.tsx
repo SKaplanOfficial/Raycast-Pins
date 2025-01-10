@@ -25,8 +25,30 @@ import { createNewPin, getPins, getPinStatistics, modifyPin, Pin } from "../lib/
 import { ExtensionPreferences } from "../lib/preferences";
 import CopyPinActionsSubmenu from "./actions/CopyPinActionsSubmenu";
 import DeletePinAction from "./actions/DeletePinAction";
-import { PLApplicator } from "placeholders-toolkit";
+import { PLChecker } from "placeholders-toolkit";
 import PinsPlaceholders from "../lib/placeholders";
+
+export interface PinFormValues {
+  nameField: string;
+  urlField: string;
+  iconField: string;
+  groupField: string;
+  openWithField: string;
+  dateField: Date;
+  execInBackgroundField: boolean;
+  fragmentField: boolean;
+  iconColorField: string;
+  tagsField: string;
+  notesField: string;
+  tooltipField: string;
+  visibilityField: Visibility;
+  expirationActionField: string;
+  modifiersField: string[];
+  keyField: string;
+  aliasesField: string;
+  expirationActionDestinationField: string;
+  expirationActionCustomField: string;
+}
 
 /**
  * Form for creating/editing a new pin.
@@ -35,8 +57,13 @@ import PinsPlaceholders from "../lib/placeholders";
  * @param props.pins The list of all pins.
  * @returns A form view component.
  */
-export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetStateAction<Pin[]>>; pins?: Pin[] }) => {
-  const { pin, setPins, pins } = props;
+export const PinForm = (props: {
+  pin?: Pin;
+  setPins?: React.Dispatch<React.SetStateAction<Pin[]>>;
+  pins?: Pin[];
+  draftValues?: PinFormValues;
+}) => {
+  const { pin, setPins, pins, draftValues } = props;
   const { groups } = useGroups();
   const { pop } = useNavigation();
   const [applications, setApplications] = useState<Application[]>([]);
@@ -44,15 +71,15 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
   const [urlError, setUrlError] = useState<string | undefined>();
   const [shortcutError, setShortcutError] = useState<string | undefined>();
   const [values, setValues] = useState({
-    url: pin ? pin.url : undefined,
-    icon: pin ? pin.icon : undefined,
-    iconColor: pin ? pin.iconColor : undefined,
-    isFragment: pin && pin.fragment ? true : false,
-    application: pin ? pin.application : undefined,
-    expireDate: pin ? pin.expireDate : undefined,
-    expirationAction: pin ? pin.expirationAction : undefined,
-    tags: pin ? pin.tags?.join(", ") : undefined,
-    aliases: pin ? pin.aliases?.join(", ") : undefined,
+    url: draftValues?.urlField || (pin ? pin.url : undefined),
+    icon: draftValues?.iconField || (pin ? pin.icon : undefined),
+    iconColor: draftValues?.iconColorField || (pin ? pin.iconColor : undefined),
+    isFragment: draftValues?.fragmentField || (pin && pin.fragment ? true : false),
+    application: draftValues?.openWithField || (pin ? pin.application : undefined),
+    expireDate: draftValues?.dateField || (pin ? pin.expireDate : undefined),
+    expirationAction: draftValues?.expirationActionField || (pin ? pin.expirationAction : undefined),
+    tags: draftValues?.tagsField || (pin ? pin.tags?.join(", ") : undefined),
+    aliases: draftValues?.aliasesField || (pin ? pin.aliases?.join(", ") : undefined),
   });
 
   const iconList = Object.keys(Icon);
@@ -105,7 +132,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
    * @param target The target to check for placeholders.
    */
   const updatePlaceholderTooltip = async (target: string) => {
-    let detectedPlaceholders = await PLApplicator.checkForPlaceholders(target, { allPlaceholders: PinsPlaceholders });
+    let detectedPlaceholders = await PLChecker.checkForPlaceholders(target, { allPlaceholders: PinsPlaceholders });
     detectedPlaceholders = detectedPlaceholders.filter(
       (placeholder) =>
         target.match(placeholder.regex) != undefined ||
@@ -125,6 +152,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
 
   return (
     <Form
+      enableDrafts
       navigationTitle={pin ? `Edit Pin: ${pin.name}` : "New Pin"}
       searchBarAccessory={
         <Form.LinkAccessory
@@ -261,7 +289,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         title="Pin Name"
         placeholder="Enter pin name, e.g. Google, or leave blank to use target"
         info="The name of the pin as it will appear in the list/menu. If left blank, the first 50 characters of the target (prior to placeholder substitution) will be used as the name."
-        defaultValue={pin ? pin.name : undefined}
+        defaultValue={draftValues?.nameField || (pin ? pin.name : undefined)}
       />
 
       <Form.TextArea
@@ -277,7 +305,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
 
           const [app] = await getMatchingApplications(value);
           await updatePlaceholderTooltip(value);
-          setValues({ ...values, url: value, application: app });
+          setValues({ ...values, url: value, application: draftValues?.openWithField || app });
 
           if (urlError !== undefined) {
             setUrlError(undefined);
@@ -290,7 +318,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
             setUrlError(undefined);
           }
         }}
-        defaultValue={pin ? pin.url : undefined}
+        defaultValue={draftValues?.urlField || (pin ? pin.url : undefined)}
       />
 
       <Form.Checkbox
@@ -298,7 +326,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         id="fragmentField"
         info="If checked, the target will be treated as a text fragment, regardless of its format. Text fragments are copied to the clipboard when the pin is opened."
         onChange={(value) => setValues({ ...values, isFragment: value })}
-        defaultValue={pin ? pin.fragment : false}
+        defaultValue={draftValues?.fragmentField || (pin ? pin.fragment : false)}
       />
 
       {!values.isFragment &&
@@ -309,7 +337,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         <Form.Checkbox
           label="Execute in Background"
           id="execInBackgroundField"
-          defaultValue={pin ? pin.execInBackground : false}
+          defaultValue={draftValues?.execInBackgroundField || (pin ? pin.execInBackground : false)}
           info="If checked, the pinned Terminal command will be executed in the background instead of in a new Terminal tab."
         />
       ) : null}
@@ -318,7 +346,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         id="iconField"
         title="Icon"
         info="The icon displayed next to the pin's name in the list/menu. Favicons and file icons are automatically fetched. When an icon other than Favicon / File Icon is selected, the icon color can be changed (a color field will appear below)."
-        defaultValue={pin ? pin.icon : "Favicon / File Icon"}
+        defaultValue={draftValues?.iconField || (pin ? pin.icon : "Favicon / File Icon")}
         onChange={(value) => setValues({ ...values, icon: value })}
       >
         {iconList.map((icon) => {
@@ -353,7 +381,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
           title="Icon Color"
           info="The color of the Pin's icon when displayed in the list/menu."
           onChange={(value) => setValues({ ...values, iconColor: value })}
-          defaultValue={pin?.iconColor ?? Color.PrimaryText}
+          defaultValue={draftValues?.iconColorField || (pin?.iconColor ?? Color.PrimaryText)}
         >
           {Object.entries(Color).map(([key, color]) => {
             return (
@@ -379,16 +407,28 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
           }}
         >
           <Form.Dropdown.Item key="None" title="None" value="None" icon={Icon.Minus} />
-          {applications.map((app, idx) => {
-            return (
-              <Form.Dropdown.Item
-                key={`app.name${idx}`}
-                title={app.name}
-                value={app.path}
-                icon={{ fileIcon: app.path }}
-              />
-            );
-          })}
+          {draftValues?.openWithField ? (
+            <Form.Dropdown.Item
+              key={`app.name${draftValues?.openWithField ? path.basename(draftValues.openWithField, ".app") : ""}`}
+              title={draftValues?.openWithField ? path.basename(draftValues.openWithField, ".app") : ""}
+              value={draftValues?.openWithField || ""}
+              icon={{ fileIcon: draftValues?.openWithField || "/" }}
+            />
+          ) : null}
+          {applications
+            .filter(
+              (app) => !(draftValues?.openWithField && app.name == path.basename(draftValues.openWithField, ".app")),
+            )
+            .map((app, idx) => {
+              return (
+                <Form.Dropdown.Item
+                  key={`app.name${idx}`}
+                  title={app.name}
+                  value={app.path}
+                  icon={{ fileIcon: app.path }}
+                />
+              );
+            })}
         </Form.Dropdown>
       ) : null}
 
@@ -396,7 +436,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         id="visibilityField"
         title="Visibility"
         info="Controls the visibility of the pin in the 'View Pins' command and the menu bar dropdown. If set to 'Hidden', you can find the pin by using the 'Show Hidden Pins' action of the 'View Pins' command. Hidden pins can still be opened using deeplinks, while disabled pins cannot be opened at all."
-        defaultValue={pin ? pin.visibility : Visibility.USE_PARENT}
+        defaultValue={draftValues?.visibilityField || (pin ? pin.visibility : Visibility.USE_PARENT)}
       >
         <Form.Dropdown.Item
           key="use_parent"
@@ -425,7 +465,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         <Form.Dropdown
           id="groupField"
           title="Group"
-          defaultValue={pin ? pin.group : "None"}
+          defaultValue={draftValues?.groupField || (pin ? pin.group : "None")}
           info="The group that this Pin is associated with in the 'View Pins' command and in the menu bar dropdown."
         >
           {[{ name: "None", icon: "Minus", id: -1 }].concat(groups).map((group) => {
@@ -458,14 +498,14 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         id="tooltipField"
         title="Tooltip"
         info="The tooltip that is displayed when hovering over the pin in the menu bar dropdown."
-        defaultValue={pin ? pin.tooltip : undefined}
+        defaultValue={draftValues?.tooltipField || (pin ? pin.tooltip : undefined)}
       />
 
       <Form.TextArea
         id="notesField"
         title="Notes"
         info="Any additional notes about the pin. Notes are displayed in the 'View Pins' command. Markdown is supported."
-        defaultValue={pin ? pin.notes : undefined}
+        defaultValue={draftValues?.notesField || (pin ? pin.notes : undefined)}
         enableMarkdown={true}
       />
 
@@ -475,7 +515,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         id="dateField"
         title="Expiration Date"
         info="The date and time at which the pin will be automatically removed"
-        defaultValue={pin && pin.expireDate ? new Date(pin.expireDate) : undefined}
+        defaultValue={draftValues?.dateField || (pin && pin.expireDate ? new Date(pin.expireDate) : undefined)}
         onChange={(value) => setValues({ ...values, expireDate: value?.toDateString() })}
       />
 
@@ -485,13 +525,14 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
           title="Expiration Action"
           info="The action to take when the pin expires"
           defaultValue={
-            pin
+            draftValues?.expirationActionField ||
+            (pin
               ? pin.expirationAction?.startsWith("custom")
                 ? pin.expirationAction?.startsWith("custom-move")
                   ? "move"
                   : "custom"
                 : pin.expirationAction
-              : "delete"
+              : "delete")
           }
           onChange={(value) => setValues({ ...values, expirationAction: value })}
         >
@@ -510,11 +551,12 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
           title="Expiration Destination"
           info="The group to move the pin to when it expires"
           defaultValue={
-            pin
+            draftValues?.expirationActionDestinationField ||
+            (pin
               ? pin.expirationAction?.startsWith("custom-move")
                 ? pin.expirationAction.match(/:(.*?):(.*?):(.*?)/)?.[3] || "Expired Pins"
                 : "Expired Pins"
-              : "Expired Pins"
+              : "Expired Pins")
           }
         >
           {[{ name: "Expired Pins", icon: "BellDisabled", id: -1 } as Group].concat(groups).map((group) => {
@@ -535,7 +577,10 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
           id="expirationActionCustomField"
           title="Custom Action"
           info="The custom action to take when the pin expires"
-          defaultValue={pin ? pin.expirationAction?.replace("custom-move:", "").replace("custom:", "") : undefined}
+          defaultValue={
+            draftValues?.expirationActionCustomField ||
+            (pin ? pin.expirationAction?.replace("custom-move:", "").replace("custom:", "") : undefined)
+          }
         />
       ) : null}
 
@@ -545,7 +590,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         id="modifiersField"
         title="Keyboard Shortcut Modifiers"
         info="The keyboard modifiers to use for the keyboard shortcut that opens the pin. The combination of modifiers and key must be unique."
-        defaultValue={pin ? pin.shortcut?.modifiers : undefined}
+        defaultValue={draftValues?.modifiersField || (pin ? pin.shortcut?.modifiers : undefined)}
         error={shortcutError}
         onChange={() => setShortcutError(undefined)}
       >
@@ -559,7 +604,7 @@ export const PinForm = (props: { pin?: Pin; setPins?: React.Dispatch<React.SetSt
         id="keyField"
         title="Keyboard Shortcut Key"
         info="The keyboard key to use for the keyboard shortcut that opens the pin. The combination of modifiers and key must be unique."
-        defaultValue={pin ? pin.shortcut?.key : undefined}
+        defaultValue={draftValues?.keyField || (pin ? pin.shortcut?.key : undefined)}
         error={shortcutError}
         onChange={() => setShortcutError(undefined)}
       />

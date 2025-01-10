@@ -1,6 +1,10 @@
 # Pins Changelog
 
-## [1.9.0 - Aliases, Visibility, & Expiration Actions] - TBA
+## [1.9.1 - Drafts] - 2024-08-05
+
+- Added drafts support for 'New Pin' and 'New Pin Group' commands.
+
+## [1.9.0 - Aliases, Visibility, & Expiration Actions] - 2024-07-21
 
 - Added aliases setting for pins.
 - Added visibility setting for pins and groups.
