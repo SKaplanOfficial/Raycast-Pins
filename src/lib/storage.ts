@@ -1,4 +1,5 @@
 import { LocalStorage } from "@raycast/api";
+import { useCachedState } from "@raycast/utils";
 
 /**
  * Sets the value of a local storage key.
@@ -18,4 +19,11 @@ export const getStorage = async (key: string) => {
   const localStorage = await LocalStorage.getItem<string>(key);
   const storageString = typeof localStorage === "undefined" ? "" : localStorage;
   return storageString == "" ? [] : JSON.parse(storageString);
+};
+
+export const storageMethods = {
+  setItem: LocalStorage.setItem,
+  getItem: LocalStorage.getItem,
+  removeItem: LocalStorage.removeItem,
+  useState: useCachedState,
 };

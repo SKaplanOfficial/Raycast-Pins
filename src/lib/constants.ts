@@ -24,10 +24,16 @@ export enum StorageKey {
    */
   LOCAL_PINS = "localPins",
 
+  PIN_STORE = "local-pins",
+
   /**
    * The list of stored groups.
    */
   LOCAL_GROUPS = "localGroups",
+
+  GROUP_STORE = "local-groups",
+  
+  TAG_STORE = "local-tags",
 
   /**
    * The ID of the next pin to be created. This is generally the highest ID in the list of pins, but it is not guaranteed. It is used to ensure that each pin has a unique ID.

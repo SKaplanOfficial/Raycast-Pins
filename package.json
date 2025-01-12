@@ -326,6 +326,12 @@
       ]
     },
     {
+      "name": "view-tags",
+      "title": "View Tags",
+      "description": "View and modify tags globally",
+      "mode": "view"
+    },
+    {
       "name": "copy-pins",
       "title": "Export Pin Data",
       "description": "Export pins and groups in JSON, CSV, TOML, YAML, or XML format",

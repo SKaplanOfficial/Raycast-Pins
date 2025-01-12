@@ -17,6 +17,8 @@ import { Group, isGroup } from "./Groups";
 import { getLinkedPins, Pin } from "./Pins";
 import { pluralize } from "./utils";
 import PinsPlaceholders from "./placeholders";
+import { Tag } from "./tag";
+import { LocalObjectMap } from "../hooks/useLocalObjectStore";
 
 /**
  * Maps an amount to a color, based on the maximum amount, hinting at relative intensity.
@@ -35,11 +37,11 @@ export const mapAmountToColor = (amount: number, maxAmount: number) => {
  * @param pin The pin to add the accessory for.
  * @param accessories The list of accessories to add the tag accessories to.
  */
-export const addTagAccessories = (pin: Pin, accessories: List.Item.Accessory[]) => {
-  const tagAccessories = pin.tags?.map((tag) => ({
-    tag: { value: tag, color: Color.SecondaryText },
-    tooltip: `Tagged '${tag}'`,
-  }));
+export const addTagAccessories = (pin: Pin, tagMap: LocalObjectMap<Tag>, accessories: List.Item.Accessory[]) => {
+  const tagAccessories = pin.tags?.map((tagName) => {
+    const tag = tagMap.get(tagName);
+    return { tag: { value: tag?.name, color: Color.SecondaryText }, tooltip: `Tagged '${tag?.name}'` };
+  });
   accessories.push(...(tagAccessories || []));
 };
 
