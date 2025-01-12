@@ -3,8 +3,8 @@
 ------------------------
 
 Author: Stephen Kaplan _(HelloImSteven)_ <br />
-Last Updated: 2024-07-05 <br />
-Pins Version: 1.9.0
+Last Updated: 2024-07-07 <br />
+Pins Version: 1.8.2
 
 ------------------------
 
@@ -58,10 +58,11 @@ Placeholders allow pins to be more dynamic and context-aware. You can use placeh
 | `{{jxa:...}}` or <br /> `{{JXA:...}}` | The return value of a JXA script. |
 | `{{launchGroup:[groupName]}}` | Launches all pins in the specified group. |
 | `{{launchPin:[pinName]}}` | Launches the specified pin. |
-| `{{monthCalendar}}` | A tabular representation of the current calendar month. |
 | `{{paste:...}}` | Pastes the specified text into the frontmost application. |
+| `{{pinName}}` | The name of the current pin. |
 | `{{pinNames}}` | The comma-separated list of names of all pins, sorted by date last used. Specify an amount of pins to randomly select using `{{pinNames amount=[number]}}`. |
 | `{{pins}}` | The JSON representation of all pins. Specify an amount of pins to randomly select using `{{pins amount=[number]}}`. |
+| `{{pinTarget}}` | The target of the current pin. |
 | `{{pinTargets}}` | The newline-separated list of targets of all pins, sorted by date last used. Specify an amount of pins to randomly select using `{{pinTargets amount=[number]}}`. |
 | `{{previousApp}}` or <br /> `{{previousAppName}}` or <br /> `{{lastApp}}` or <br /> `{{lastAppName}}` or <br /> `{{previousApplication}}` or <br /> `{{previousApplicationName}}` or <br /> `{{lastApplication}}` or <br /> `{{lastApplicationName}}` | The name of the last application that was active before the current one. |
 | `{{previousPinName}}` or <br /> `{{lastPinName}}` | The URL-encoded name of the last pin that was opened. |

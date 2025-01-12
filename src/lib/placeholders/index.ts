@@ -27,10 +27,7 @@ import CreatePinDirective from "./custom-placeholders/createPin";
 import DeletePinDirective from "./custom-placeholders/deletePin";
 import MovePinDirective from "./custom-placeholders/movePin";
 import PinNamePlaceholder from "./custom-placeholders/pinName";
-import PinNotesPlaceholder from "./custom-placeholders/pinNotes";
 import PinTargetPlaceholder from "./custom-placeholders/pinTarget";
-import PinJSONPlaceholder from "./custom-placeholders/pinJSON";
-import MonthCalendarPlaceholder from "./custom-placeholders/monthCalendar";
 
 const filteredPlaceholders = Object.values(DefaultPlaceholders).filter((p) => !["location", "js"].includes(p.name));
 
@@ -42,7 +39,6 @@ const PinsPlaceholders = [
   DelayDirective,
   ...filteredPlaceholders.filter((p) => p.type == PlaceholderType.Informational && p.name != "selectedText"),
   selectedTextPlaceholder,
-  MonthCalendarPlaceholder,
   ...filteredPlaceholders.filter((p) => p.type == PlaceholderType.StaticDirective),
   LocationPlaceholder,
   LatitudePlaceholder,
@@ -51,9 +47,7 @@ const PinsPlaceholders = [
   PreviousApplicationPlaceholder,
   PreviousPinNamePlaceholder,
   PreviousPinTargetPlaceholder,
-  PinJSONPlaceholder,
   PinNamePlaceholder,
-  PinNotesPlaceholder,
   PinTargetPlaceholder,
   PinNamesPlaceholder,
   PinTargetsPlaceholder,
