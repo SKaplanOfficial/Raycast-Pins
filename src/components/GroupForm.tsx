@@ -20,7 +20,7 @@ import {
 } from "../lib/Groups";
 import { useState } from "react";
 import { getIcon } from "../lib/icons";
-import { SORT_STRATEGY, Visibility } from "../lib/constants";
+import { ItemType, SORT_STRATEGY, Visibility } from "../lib/constants";
 import { usePins } from "../lib/Pins";
 import { GroupDisplaySetting } from "../lib/preferences";
 
@@ -63,13 +63,14 @@ export default function GroupForm(props: {
   // No group data provided -> we're creating a new group.
   const targetGroup =
     group == undefined
-      ? {
+      ? ({
           name: draftValues?.nameField || "",
           icon: draftValues?.iconField || "BulletPoints",
           id: -1,
           parent: draftValues?.parentField ? parseInt(draftValues.parentField) : undefined,
           sortStrategy: (draftValues?.sortStrategyField || SORT_STRATEGY.manual) as keyof typeof SORT_STRATEGY,
-        }
+          itemType: ItemType.GROUP,
+        } as Group)
       : group;
 
   const parent = group?.parent ? groups.find((g) => g.id == group.parent) : undefined;

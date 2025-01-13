@@ -1,10 +1,11 @@
 import { Action, ActionPanel, Color, Form, Icon, showToast, useNavigation } from "@raycast/api";
+import { useForm } from "@raycast/utils";
+
 import { LocalObjectStore, LocalObjectType } from "../hooks/useLocalObjectStore";
-import { Tag } from "../lib/tag";
+import { ItemType, StorageKey } from "../lib/constants";
 import { getPins } from "../lib/Pins";
 import { setStorage } from "../lib/storage";
-import { ItemType, StorageKey } from "../lib/constants";
-import { useForm } from "@raycast/utils";
+import { Tag } from "../lib/tag";
 
 type TagFormValues = {
   name: string;
@@ -23,8 +24,6 @@ export default function TagForm(props: TagFormProps) {
   const { tag, tagStore, onSubmit } = props;
   const { pop } = useNavigation();
 
-  console.log("!!!!!", tag)
-
   const targetTag = tag ?? {
     name: "",
     color: Color.PrimaryText,
@@ -32,8 +31,6 @@ export default function TagForm(props: TagFormProps) {
     notes: "",
     itemType: ItemType.TAG,
   };
-
-  // console.log("wowza", targetTag);
 
   const validateName = (name: string | undefined) => {
     if (tagStore.objects.some((tag) => tag.name === name && ("id" in targetTag ? targetTag.id !== tag.id : true))) {

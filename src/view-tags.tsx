@@ -15,9 +15,7 @@ export function TagsList() {
   const [associations, setAssociations] = useState<{ [key: string]: { tag: Tag; pins: Pin[] } }>({});
   const preferences = getPreferenceValues<ExtensionPreferences>();
 
-  // const sortedTags = useMemo(() => tagStore.objects.sort(SORT_FN.ALPHA_ASC), [tagStore.objects]);
-  // const [sortedTags, setSortedTags] = useState<LocalObjectType<Tag>[]>([]);
-  const sortedTags = [...tagStore.objects].sort(SORT_FN.ALPHA_ASC);
+  const sortedTags = useMemo(() => tagStore.objects.sort(SORT_FN.ALPHA_ASC), [tagStore.objects]);
 
   async function findAssociations() {
     const pins = await getPins();
@@ -37,10 +35,7 @@ export function TagsList() {
       findAssociations();
     }
   }, [tagStore.loading, tagStore.objects]);
-
-  // Why does this keep switching between "aliases: [ 'artificial', 'intel' ]" and "aliases: [ 'artificial', 'intel', [length]: 2 ]"?
-  console.log("SORTEDTAGS", sortedTags);
-
+  
   return (
     <List
       isLoading={tagStore.loading}

@@ -498,7 +498,6 @@ export default function useLocalObjectStore<T>(...args: LocalObjectStoreArgs<T>)
     log(`Filling key ${String(key)} with value ${value}...`);
     stage.current = StoreOperationStage.UPDATING;
     const processedObjects = objects.map((object) => ({ ...object, [key]: value }));
-    console.log(processedObjects);
     setObjects(processedObjects);
     if (commit) {
       await save(processedObjects);
