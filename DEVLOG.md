@@ -1,5 +1,11 @@
 # Pins DevLog - A more detailed changelog
 
+## 1.9.2 Release, TBA
+
+### 2025-01-13
+
+- TBD
+
 ## 1.9.1 Release, TBA
 
 ### 2025-01-12
