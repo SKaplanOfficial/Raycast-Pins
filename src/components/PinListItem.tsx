@@ -3,7 +3,7 @@ import { LocalDataObject, getRecentApplications } from "../lib/LocalData";
 import { Pin, deletePin, disablePin, getPinKeywords, getPins, hidePin, openPin, unhidePin } from "../lib/Pins";
 import { PinForm } from "./PinForm";
 import { getPinIcon } from "../lib/icons";
-import { Direction, PinAction, SORT_STRATEGY, StorageKey, Visibility } from "../lib/constants";
+import { Direction, ItemType, PinAction, SORT_STRATEGY, StorageKey, Visibility } from "../lib/constants";
 import { setStorage } from "../lib/storage";
 import { cutoff } from "../lib/utils";
 import { ExtensionPreferences, ViewPinsPreferences } from "../lib/preferences";
@@ -24,10 +24,12 @@ import { Group } from "../lib/Groups";
 import { PinsInfoPlaceholders } from "../lib/placeholders";
 import { bulkApply } from "placeholders-toolkit/dist/lib/apply";
 import CopyPinActionsSubmenu from "./actions/CopyPinActionsSubmenu";
-import DeletePinAction from "./actions/DeletePinAction";
 import { useEffect, useState } from "react";
-import CreateNewPinAction from "./actions/CreateNewPinAction";
 import { InstallExamplesAction } from "./actions/InstallExamplesAction";
+import { LocalObjectStore } from "../hooks/useLocalObjectStore";
+import { Tag } from "../lib/tag";
+import CreateNewItemAction from "./actions/CreateNewItemAction";
+import DeleteItemAction from "./actions/DeleteItemAction";
 
 /**
  * Moves a pin up or down in the list of pins. Pins stay within their groups unless grouping is disabled in preferences.
@@ -77,6 +79,7 @@ export default function PinListItem(props: {
   revalidatePins: () => Promise<void>;
   groups: Group[];
   revalidateGroups: () => Promise<void>;
+  tagStore: LocalObjectStore<Tag>;
   maxTimesOpened: number;
   showingHidden: boolean;
   setShowingHidden: React.Dispatch<React.SetStateAction<boolean>>;
@@ -95,6 +98,7 @@ export default function PinListItem(props: {
     revalidatePins,
     groups,
     revalidateGroups,
+    tagStore,
     maxTimesOpened,
     showingHidden,
     setShowingHidden,
@@ -124,9 +128,14 @@ export default function PinListItem(props: {
   if (preferences.showFragment) addTextFragmentAccessory(pin, accessories);
   if (preferences.showLinkCount) addLinksAccessory(pin, accessories, pins, groups);
   if (preferences.showFrequency) addFrequencyAccessory(pin, accessories, maxTimesOpened);
-  if (preferences.showTags) addTagAccessories(pin, accessories);
+  if (preferences.showTags) addTagAccessories(pin, tagStore.toMap("name"), accessories);
 
-  const group = groups.find((group) => group.name == pin.group) || { name: "None", icon: "Minus", id: -1 };
+  const group = groups.find((group) => group.name == pin.group) || {
+    name: "None",
+    icon: "Minus",
+    id: -1,
+    itemType: ItemType.GROUP,
+  };
 
   return (
     <List.Item
@@ -258,7 +267,7 @@ export default function PinListItem(props: {
               </ActionPanel.Section>
             </ActionPanel.Submenu>
 
-            <DeletePinAction pin={pin} setPins={setPins} />
+            <DeleteItemAction item={pin} onDelete={async () => await deletePin(pin, setPins)} />
             <Action
               title="Delete All Pins (Keep Groups)"
               icon={Icon.Trash}
@@ -273,7 +282,7 @@ export default function PinListItem(props: {
               shortcut={Keyboard.Shortcut.Common.RemoveAll}
             />
           </ActionPanel.Section>
-          <CreateNewPinAction setPins={setPins} />
+          <CreateNewItemAction itemType={ItemType.PIN} formView={<PinForm setPins={setPins} pins={pins} />} />
           {!examplesInstalled ? (
             <InstallExamplesAction
               setExamplesInstalled={setExamplesInstalled}

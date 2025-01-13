@@ -11,8 +11,9 @@
 import { Keyboard } from "@raycast/api";
 
 export enum ItemType {
-  PIN,
-  GROUP,
+  PIN = "Pin",
+  GROUP = "Group",
+  TAG = "Tag",
 }
 
 /**

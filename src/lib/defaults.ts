@@ -10,7 +10,7 @@
 
 import { LocalStorage, showToast, Toast } from "@raycast/api";
 
-import { StorageKey } from "./constants";
+import { ItemType, StorageKey } from "./constants";
 import { getNextGroupID, Group } from "./Groups";
 import { getNextPinID, Pin } from "./Pins";
 import { getStorage, setStorage } from "./storage";
@@ -26,6 +26,7 @@ const examplePins: Pin[] = [
     icon: "Favicon / File Icon",
     group: "None",
     application: "None",
+    itemType: ItemType.PIN,
   },
   {
     id: 2,
@@ -34,6 +35,7 @@ const examplePins: Pin[] = [
     icon: "Favicon / File Icon",
     group: "Dev Utils",
     application: "None",
+    itemType: ItemType.PIN,
   },
   {
     id: 3,
@@ -42,6 +44,7 @@ const examplePins: Pin[] = [
     icon: "Favicon / File Icon",
     group: "Dev Utils",
     application: "None",
+    itemType: ItemType.PIN,
   },
   {
     id: 4,
@@ -51,6 +54,7 @@ const examplePins: Pin[] = [
     group: "Dev Utils",
     application: "None",
     tags: ["terminal"],
+    itemType: ItemType.PIN,
   },
   {
     id: 5,
@@ -60,6 +64,7 @@ const examplePins: Pin[] = [
     group: "Scripts",
     application: "None",
     execInBackground: true,
+    itemType: ItemType.PIN,
   },
   {
     id: 6,
@@ -69,6 +74,7 @@ const examplePins: Pin[] = [
     group: "Scripts",
     application: "None",
     execInBackground: true,
+    itemType: ItemType.PIN,
   },
   {
     id: 7,
@@ -77,6 +83,7 @@ const examplePins: Pin[] = [
     icon: "Terminal",
     group: "Scripts",
     application: "None",
+    itemType: ItemType.PIN,
   },
   {
     id: 8,
@@ -85,6 +92,7 @@ const examplePins: Pin[] = [
     icon: "Favicon / File Icon",
     group: "None",
     application: "None",
+    itemType: ItemType.PIN,
   },
   {
     id: 9,
@@ -93,6 +101,7 @@ const examplePins: Pin[] = [
     icon: "Favicon / File Icon",
     group: "None",
     application: "None",
+    itemType: ItemType.PIN,
   },
   {
     id: 10,
@@ -101,6 +110,7 @@ const examplePins: Pin[] = [
     icon: "Favicon / File Icon",
     group: "None",
     application: "None",
+    itemType: ItemType.PIN,
   },
   {
     id: 11,
@@ -109,6 +119,7 @@ const examplePins: Pin[] = [
     icon: "Favicon / File Icon",
     group: "Raycast Stuff",
     application: "None",
+    itemType: ItemType.PIN,
   },
   {
     id: 12,
@@ -117,6 +128,7 @@ const examplePins: Pin[] = [
     icon: "Favicon / File Icon",
     group: "Raycast Stuff",
     application: "None",
+    itemType: ItemType.PIN,
   },
   {
     id: 13,
@@ -125,6 +137,7 @@ const examplePins: Pin[] = [
     icon: "Favicon / File Icon",
     group: "Raycast Stuff",
     application: "None",
+    itemType: ItemType.PIN,
   },
   {
     id: 14,
@@ -135,6 +148,7 @@ const examplePins: Pin[] = [
     application: "None",
     iconColor: "raycast-green",
     tags: ["AI"],
+    itemType: ItemType.PIN,
   },
   {
     id: 15,
@@ -144,6 +158,7 @@ const examplePins: Pin[] = [
     group: "Raycast AI Examples",
     application: "None",
     tags: ["AI", "selection"],
+    itemType: ItemType.PIN,
   },
   {
     id: 16,
@@ -153,6 +168,7 @@ const examplePins: Pin[] = [
     group: "Raycast AI Examples",
     application: "None",
     tags: ["AI"],
+    itemType: ItemType.PIN,
   },
   {
     id: 17,
@@ -161,6 +177,7 @@ const examplePins: Pin[] = [
     icon: "Calendar",
     group: "Placeholder Examples",
     application: "None",
+    itemType: ItemType.PIN,
   },
   {
     id: 18,
@@ -169,6 +186,7 @@ const examplePins: Pin[] = [
     icon: "Calendar",
     group: "Placeholder Examples",
     application: "None",
+    itemType: ItemType.PIN,
   },
   {
     id: 19,
@@ -177,6 +195,7 @@ const examplePins: Pin[] = [
     icon: "Clock",
     group: "Placeholder Examples",
     application: "None",
+    itemType: ItemType.PIN,
   },
   {
     id: 20,
@@ -186,6 +205,7 @@ const examplePins: Pin[] = [
     group: "Placeholder Examples",
     application: "None",
     execInBackground: true,
+    itemType: ItemType.PIN,
   },
   {
     id: 21,
@@ -195,6 +215,7 @@ const examplePins: Pin[] = [
     group: "Raycast AI Examples",
     application: "None",
     tags: ["AI", "selection"],
+    itemType: ItemType.PIN,
   },
   {
     id: 22,
@@ -203,6 +224,7 @@ const examplePins: Pin[] = [
     icon: "House",
     group: "Placeholder Examples",
     application: "None",
+    itemType: ItemType.PIN,
   },
   {
     id: 23,
@@ -211,6 +233,7 @@ const examplePins: Pin[] = [
     icon: "Number27",
     group: "Placeholder Examples",
     application: "None",
+    itemType: ItemType.PIN,
   },
 ];
 
@@ -219,12 +242,14 @@ const exampleGroups: Group[] = [
     id: 1,
     name: "Dev Utils",
     icon: "CodeBlock",
+    itemType: ItemType.GROUP,
   },
   {
     id: 2,
     name: "Scripts",
     icon: "Text",
     iconColor: "raycast-orange",
+    itemType: ItemType.GROUP,
   },
   {
     id: 3,
@@ -232,12 +257,14 @@ const exampleGroups: Group[] = [
     icon: "RaycastLogoNeg",
     iconColor: "raycast-red",
     parent: 1,
+    itemType: ItemType.GROUP,
   },
   {
     id: 4,
     name: "Placeholder Examples",
     icon: "Bolt",
     iconColor: "raycast-blue",
+    itemType: ItemType.GROUP,
   },
   {
     id: 5,
@@ -245,6 +272,7 @@ const exampleGroups: Group[] = [
     icon: "Stars",
     iconColor: "raycast-purple",
     parent: 4,
+    itemType: ItemType.GROUP,
   },
 ];
 

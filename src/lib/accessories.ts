@@ -40,7 +40,7 @@ export const mapAmountToColor = (amount: number, maxAmount: number) => {
 export const addTagAccessories = (pin: Pin, tagMap: LocalObjectMap<Tag>, accessories: List.Item.Accessory[]) => {
   const tagAccessories = pin.tags?.map((tagName) => {
     const tag = tagMap.get(tagName);
-    return { tag: { value: tag?.name, color: Color.SecondaryText }, tooltip: `Tagged '${tag?.name}'` };
+    return { tag: { value: tag?.name, color: tag?.color }, tooltip: `Tagged '${tag?.name}'` };
   });
   accessories.push(...(tagAccessories || []));
 };

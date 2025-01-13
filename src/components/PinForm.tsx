@@ -21,12 +21,16 @@ import { getFavicon } from "@raycast/utils";
 import { KEYBOARD_SHORTCUT, PinAction, Visibility } from "../lib/constants";
 import { Group, useGroups } from "../lib/Groups";
 import { iconMap } from "../lib/icons";
-import { createNewPin, getPins, getPinStatistics, modifyPin, Pin } from "../lib/Pins";
+import { createNewPin, deletePin, getPins, getPinStatistics, modifyPin, Pin } from "../lib/Pins";
 import { ExtensionPreferences } from "../lib/preferences";
 import CopyPinActionsSubmenu from "./actions/CopyPinActionsSubmenu";
-import DeletePinAction from "./actions/DeletePinAction";
 import { PLChecker } from "placeholders-toolkit";
 import PinsPlaceholders from "../lib/placeholders";
+import useLocalObjectStore from "../hooks/useLocalObjectStore";
+import { Tag } from "../lib/tag";
+import { storageMethods } from "../lib/storage";
+import TagForm from "./TagForm";
+import DeleteItemAction from "./actions/DeleteItemAction";
 
 export interface PinFormValues {
   nameField: string;
@@ -38,7 +42,7 @@ export interface PinFormValues {
   execInBackgroundField: boolean;
   fragmentField: boolean;
   iconColorField: string;
-  tagsField: string;
+  tagsField: string[];
   notesField: string;
   tooltipField: string;
   visibilityField: Visibility;
@@ -64,8 +68,9 @@ export const PinForm = (props: {
   draftValues?: PinFormValues;
 }) => {
   const { pin, setPins, pins, draftValues } = props;
+  const tagStore = useLocalObjectStore<Tag>("local-tags", storageMethods);
   const { groups } = useGroups();
-  const { pop } = useNavigation();
+  const { push, pop } = useNavigation();
   const [applications, setApplications] = useState<Application[]>([]);
   const [placeholderTooltip, setPlaceholderTooltip] = useState<string>("");
   const [urlError, setUrlError] = useState<string | undefined>();
@@ -78,7 +83,7 @@ export const PinForm = (props: {
     application: draftValues?.openWithField || (pin ? pin.application : undefined),
     expireDate: draftValues?.dateField || (pin ? pin.expireDate : undefined),
     expirationAction: draftValues?.expirationActionField || (pin ? pin.expirationAction : undefined),
-    tags: draftValues?.tagsField || (pin ? pin.tags?.join(", ") : undefined),
+    tags: draftValues?.tagsField || (pin ? pin.tags : undefined),
     aliases: draftValues?.aliasesField || (pin ? pin.aliases?.join(", ") : undefined),
   });
 
@@ -214,10 +219,7 @@ export const PinForm = (props: {
                     execInBackground: values.execInBackgroundField,
                     fragment: values.fragmentField,
                     iconColor: values.iconColorField,
-                    tags: (values.tagsField as string)
-                      .split(",")
-                      .map((tag) => tag.trim())
-                      .filter((tag) => tag.length > 0),
+                    tags: values.tagsField as string[],
                     notes: values.notesField,
                     tooltip: values.tooltipField,
                     visibility: values.visibilityField,
@@ -247,10 +249,7 @@ export const PinForm = (props: {
                   execInBackground: values.execInBackgroundField,
                   fragment: values.fragmentField,
                   iconColor: values.iconColorField,
-                  tags: (values.tagsField as string)
-                    .split(",")
-                    .map((tag) => tag.trim())
-                    .filter((tag) => tag.length > 0),
+                  tags: values.tagsField as string[],
                   notes: values.notesField,
                   tooltip: values.tooltipField,
                   visibility: values.visibilityField,
@@ -280,7 +279,9 @@ export const PinForm = (props: {
           />
 
           {pin && pins ? <CopyPinActionsSubmenu pin={pin} pins={pins} /> : null}
-          {pin && setPins ? <DeletePinAction pin={pin} setPins={setPins} pop={pop} /> : null}
+          {pin && setPins ? (
+            <DeleteItemAction item={pin} onDelete={async () => await deletePin(pin, setPins)} onCompletion={pop} />
+          ) : null}
         </ActionPanel>
       }
     >
@@ -478,13 +479,41 @@ export const PinForm = (props: {
 
       <Form.Separator />
 
-      <Form.TextField
+      <Form.TagPicker
         id="tagsField"
         title="Tags"
-        info="The comma-separated list of tags associated with the pin. Tags can be used to filter pins in the 'View Pins' command."
-        value={values.tags || ""}
-        onChange={(value) => setValues({ ...values, tags: value })}
-      />
+        info="The tags associated with the pin. Tags can be used to filter pins in the 'View Pins' command."
+        value={values.tags}
+        onChange={(newValue) => {
+          if (newValue.includes("new-tag")) {
+            push(
+              <TagForm
+                tagStore={tagStore}
+                onSubmit={(tag) => {
+                  setValues({
+                    ...values,
+                    tags: [...(values.tags?.filter((tag) => tag !== "new-tag") || []), tag.name],
+                  });
+                }}
+              />,
+            );
+          } else {
+            setValues({ ...values, tags: newValue });
+          }
+        }}
+      >
+        {tagStore.objects.map((tag) => {
+          return (
+            <Form.TagPicker.Item
+              key={tag.id}
+              title={tag.name}
+              value={tag.name}
+              icon={{ source: Icon.Tag, tintColor: tag.color }}
+            />
+          );
+        })}
+        <Form.TagPicker.Item key="new-tag" title="+ New Tag" value="new-tag" />
+      </Form.TagPicker>
 
       <Form.TextField
         id="aliasesField"

@@ -24,7 +24,7 @@ import {
   showToast,
 } from "@raycast/api";
 import { useEffect, useState } from "react";
-import { SORT_FN, StorageKey, SORT_STRATEGY, Visibility, PinAction } from "./constants";
+import { SORT_FN, StorageKey, SORT_STRATEGY, Visibility, PinAction, ItemType } from "./constants";
 import { objectFromNonNullableEntriesOfObject, runCommand, runCommandInTerminal } from "./utils";
 import { ExtensionPreferences } from "./preferences";
 import * as fs from "fs";
@@ -35,6 +35,8 @@ import { PLApplicator } from "placeholders-toolkit";
 import PinsPlaceholders from "./placeholders";
 import { getStorage, setStorage } from "./storage";
 import { FileRef, TrackRef } from "./LocalData";
+import { upgradeTags } from "./tag";
+import { useTagStoreContext } from "../contexts/TagStoreContext";
 
 /**
  * A pin object.
@@ -144,6 +146,8 @@ export type Pin = {
    * Other names that the pin can be referred to by.
    */
   aliases?: string[];
+
+  itemType: ItemType.PIN;
 };
 
 /**
@@ -172,6 +176,16 @@ export const PinKeys = [
   "expirationAction",
   "aliases",
 ] as const;
+
+export function isPin(obj: unknown): obj is Pin {
+  return (
+    obj != undefined &&
+    typeof obj === "object" &&
+    PinKeys.every((key) => {
+      return (obj as Record<string, unknown>)[key] != undefined;
+    })
+  );
+}
 
 /**
  * Gets the stored pins.
@@ -291,15 +305,18 @@ export const checkExpirations = async () => {
 export const validatePins = async (pins: Pin[]) => {
   const checkedPins: Pin[] = [];
   for (const [index, pin] of pins.entries()) {
+    // Ensure all pins have unique IDs
     for (const [index2, pin2] of pins.entries()) {
       if (index != index2 && pin.id == pin2.id) {
         pin.id = await getNextPinID();
       }
     }
+
     checkedPins.push({
       ...pin,
       group: pin.group == undefined ? "None" : pin.group,
       id: pin.id == undefined ? await getNextPinID() : pin.id,
+      itemType: ItemType.PIN,
     });
   }
   return checkedPins;
@@ -311,13 +328,20 @@ export const validatePins = async (pins: Pin[]) => {
  */
 export const usePins = () => {
   const [pins, setPins] = useCachedState<Pin[]>("pins", []);
-  const [loading, setLoading] = useState<boolean>(true);
+  const tagStore = useTagStoreContext();
+  const [loading, setLoading] = useState<boolean>();
 
   const revalidatePins = async () => {
     setLoading(true);
     const storedPins: Pin[] = await getPins();
 
     const validatedPins = await validatePins(storedPins);
+    const pinTags = validatedPins
+      .map((pin) => pin.tags)
+      .flat()
+      .filter((tag) => tag != undefined);
+    upgradeTags(pinTags, tagStore);
+
     setPins(validatedPins);
     setLoading(false);
   };
@@ -450,9 +474,9 @@ export const getNextPinID = async () => {
   // Get the stored pins
   const storedPins = await getPins();
 
-  // Get the next available group ID
+  // Get the next available pin ID
   let newID = ((await getStorage(StorageKey.NEXT_PIN_ID))[0] as number) || 1;
-  while (storedPins.some((pin: Group) => pin.id == newID)) {
+  while (storedPins.some((pin: Pin) => pin.id == newID)) {
     newID++;
   }
   setStorage(StorageKey.NEXT_PIN_ID, [newID + 1]);
@@ -729,7 +753,7 @@ export const getTotalPinExecutions = (pins: Pin[]) => {
  * @returns The percentile of the pin's frequency compared to all other pins.
  */
 export const calculatePinFrequencyPercentile = (pin: Pin, pins: Pin[]) => {
-  const pinsSortedByFrequency = pins.sort((a, b) => (a.timesOpened || 0) - (b.timesOpened || 0));
+  const pinsSortedByFrequency = [...pins].sort((a, b) => (a.timesOpened || 0) - (b.timesOpened || 0));
   const pinIndex = pinsSortedByFrequency.findIndex(
     (p) => p.id == pin.id || (p.timesOpened || 0) >= (pin.timesOpened || 0),
   );

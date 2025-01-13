@@ -26,23 +26,8 @@ import CopyGroupActionsSubmenu from "./components/actions/CopyGroupActionsSubmen
 import { ExtensionPreferences, ViewGroupsPreferences } from "./lib/preferences";
 import { pluralize } from "./lib/utils";
 import useExamples from "./hooks/useExamples";
-
-/**
- * Action to create a new group. Opens a form view with blank/default fields.
- * @param props.setGroups The function to call to update the list of groups.
- * @returns An action component.
- */
-const CreateNewGroupAction = (props: { setGroups: (groups: Group[]) => void }) => {
-  const { setGroups } = props;
-  return (
-    <Action.Push
-      title="Create New Group"
-      icon={Icon.PlusCircle}
-      shortcut={Keyboard.Shortcut.Common.New}
-      target={<GroupForm setGroups={setGroups} />}
-    />
-  );
-};
+import CreateNewItemAction from "./components/actions/CreateNewItemAction";
+import DeleteItemAction from "./components/actions/DeleteItemAction";
 
 /**
  * Moves a group up or down in the list of groups.
@@ -75,7 +60,7 @@ export default function ViewGroupsCommand() {
       searchBarPlaceholder="Search groups..."
       actions={
         <ActionPanel>
-          <CreateNewGroupAction setGroups={setGroups as (groups: Group[]) => void} />
+          <CreateNewItemAction itemType={ItemType.GROUP} formView={<GroupForm setGroups={setGroups} />} />
           {!examplesInstalled || groups.length == 0 ? (
             <InstallExamplesAction
               setExamplesInstalled={setExamplesInstalled}
@@ -123,23 +108,10 @@ export default function ViewGroupsCommand() {
                     target={<GroupForm group={group} setGroups={setGroups as (groups: Group[]) => void} />}
                     shortcut={Keyboard.Shortcut.Common.Edit}
                   />
-
-                  <Action
-                    title="Delete Group"
-                    icon={Icon.Trash}
-                    onAction={async () => {
-                      if (
-                        await confirmAlert({
-                          title: "Delete Group (Keep Pins)",
-                          message: "Are you sure?",
-                          primaryAction: { title: "Delete", style: Alert.ActionStyle.Destructive },
-                        })
-                      ) {
-                        await deleteGroup(group, setGroups as (groups: Group[]) => void);
-                      }
-                    }}
-                    style={Action.Style.Destructive}
-                    shortcut={Keyboard.Shortcut.Common.Remove}
+                  <DeleteItemAction
+                    item={group}
+                    onDelete={async () => await deleteGroup(group, setGroups)}
+                    customTitle="Delete Group (Keep Pins)"
                   />
                   <Action
                     title="Delete Group And Pins"
@@ -206,7 +178,7 @@ export default function ViewGroupsCommand() {
                     />
                   ) : null}
                 </ActionPanel.Section>
-                <CreateNewGroupAction setGroups={setGroups as (groups: Group[]) => void} />
+                <CreateNewItemAction itemType={ItemType.GROUP} formView={<GroupForm setGroups={setGroups} />} />
                 <Action.Push
                   title="Create Subgroup"
                   icon={Icon.Layers}
@@ -219,6 +191,7 @@ export default function ViewGroupsCommand() {
                         parent: group.id,
                         sortStrategy: group.sortStrategy,
                         id: -1,
+                        itemType: ItemType.GROUP,
                       }}
                       setGroups={setGroups as (groups: Group[]) => void}
                     />

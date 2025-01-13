@@ -2,6 +2,20 @@
 
 ## 1.9.1 Release, TBA
 
+### 2025-01-12
+
+- Added 'View Tags' command to view and manage tags.
+- Added ability to rename tags globally.
+- Added ability to open all pins with a specific tag at once.
+- Added support for tag aliases.
+- Added support for tag colors.
+- Added support for tag notes/descriptions.
+- Updated pin edit form to support improved tag management.
+
+### 2025-01-11
+
+- Added underlying logic for more advanced tag management, as well as object management in general.
+
 ### 2025-01-10
 
 - Added drafts support when creating new pins or groups.

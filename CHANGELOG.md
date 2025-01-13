@@ -1,7 +1,8 @@
 # Pins Changelog
 
-## [1.9.1 - Drafts] - 2024-08-05
+## [1.9.1 - ] - 2024-08-05
 
+- Added 'View Tags' command to view and manage tags.
 - Added drafts support for 'New Pin' and 'New Pin Group' commands.
 
 ## [1.9.0 - Aliases, Visibility, & Expiration Actions] - 2024-07-21

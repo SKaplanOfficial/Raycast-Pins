@@ -11,7 +11,7 @@
 import { useEffect, useState } from "react";
 import { getStorage, setStorage } from "./storage";
 import { useCachedState } from "@raycast/utils";
-import { SORT_FN, SORT_STRATEGY, StorageKey, Visibility } from "./constants";
+import { ItemType, SORT_FN, SORT_STRATEGY, StorageKey, Visibility } from "./constants";
 import { environment, showToast } from "@raycast/api";
 import { Pin, getPins, sortPins } from "./Pins";
 import { GroupDisplaySetting } from "./preferences";
@@ -64,6 +64,8 @@ export type Group = {
    * How the group should be displayed in the menubar.
    */
   menubarDisplay?: GroupDisplaySetting;
+
+  itemType: ItemType.GROUP;
 };
 
 /**
@@ -77,7 +79,7 @@ export const GroupKeys = ["name", "icon", "id", "parent", "sortStrategy", "iconC
  * @returns Whether or not the item is a group.
  */
 export const isGroup = (obj: object): obj is Group => {
-  return (obj as Pin).url == undefined;
+  return (obj as Group).itemType == ItemType.GROUP;
 };
 
 /**
@@ -162,6 +164,7 @@ export const validateGroups = async (groups: Group[]) => {
       group.id = await getNextGroupID();
     }
     seenIDs.add(group.id);
+    group.itemType = ItemType.GROUP;
     checkedGroups.push(group);
   }
 
@@ -246,6 +249,7 @@ export const dummyGroup = (): Group => {
     name: "None",
     icon: "Minus",
     id: -1,
+    itemType: ItemType.GROUP,
   };
 };
 

@@ -155,6 +155,15 @@ export type LocalObjectStore<T> = {
    * @returns A map of the objects in the store, with the provided key as the map key.
    */
   toMap: (key: keyof T) => LocalObjectMap<T>;
+
+  /**
+   * Updates the value of the given key for every object in the store.
+   * @param key The key to update.
+   * @param value The new value for the key.
+   * @param commit Whether to save the updated list to storage.
+   * @returns A promise that resolves when the objects have been updated (and saved, if applicable).
+   */
+  fillKey: (key: keyof T, value: T[keyof T], commit?: boolean) => Promise<void>;
 };
 
 export function objectStoreDefaultState<T>(): LocalObjectStore<T> {
@@ -171,6 +180,7 @@ export function objectStoreDefaultState<T>(): LocalObjectStore<T> {
     clear: async () => {},
     sort: async () => {},
     toMap: () => new Map(),
+    fillKey: async () => {},
   };
 }
 
@@ -396,7 +406,9 @@ export default function useLocalObjectStore<T>(...args: LocalObjectStoreArgs<T>)
   async function update(object: LocalObjectType<T>, commit = true) {
     log(`Updating object ${object.id}...`);
     stage.current = StoreOperationStage.UPDATING;
-    const processedObjects = objects.map((existingObject) => (existingObject.id === object.id ? object : existingObject));
+    const processedObjects = objects.map((existingObject) =>
+      existingObject.id === object.id ? object : existingObject,
+    );
     setObjects(processedObjects);
     if (commit) {
       await save(processedObjects);
@@ -416,7 +428,7 @@ export default function useLocalObjectStore<T>(...args: LocalObjectStoreArgs<T>)
     }
     stage.current = StoreOperationStage.UPDATED;
     log(`Finished moving object ${object.id}.`);
-  };
+  }
 
   async function deduplicate(
     keys: (keyof T)[],
@@ -482,6 +494,19 @@ export default function useLocalObjectStore<T>(...args: LocalObjectStoreArgs<T>)
     return objectMap;
   }
 
+  async function fillKey(key: keyof T, value: T[keyof T], commit = true) {
+    log(`Filling key ${String(key)} with value ${value}...`);
+    stage.current = StoreOperationStage.UPDATING;
+    const processedObjects = objects.map((object) => ({ ...object, [key]: value }));
+    console.log(processedObjects);
+    setObjects(processedObjects);
+    if (commit) {
+      await save(processedObjects);
+    }
+    stage.current = StoreOperationStage.UPDATED;
+    log(`Finished filling key ${String(key)}.`);
+  }
+
   useEffect(() => {
     if (loading && stage.current === StoreOperationStage.INIT) {
       stage.current = StoreOperationStage.LOADING;
@@ -502,5 +527,6 @@ export default function useLocalObjectStore<T>(...args: LocalObjectStoreArgs<T>)
     clear,
     deduplicate,
     toMap,
+    fillKey,
   };
 }

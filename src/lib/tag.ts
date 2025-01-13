@@ -1,4 +1,5 @@
 import { LocalObjectStore, LocalObjectType } from "../hooks/useLocalObjectStore";
+import { ItemType } from "./constants";
 
 export type Tag = {
   /**
@@ -20,6 +21,8 @@ export type Tag = {
    * User-defined notes about the tag.
    */
   notes: string;
+
+  itemType: ItemType.TAG;
 };
 
 export async function upgradeTags(
@@ -27,12 +30,13 @@ export async function upgradeTags(
   tagStore: LocalObjectStore<Tag>,
 ): Promise<LocalObjectType<Tag>[]> {
   const tagsToCreate: Tag[] = stringTags
-    .filter((tagName) => !tagStore.objects.some((tag) => tag.name === tagName))
+    .filter((tagName, index) => !tagStore.objects.some((tag) => tag.name === tagName) && stringTags.indexOf(tagName) === index)
     .map((tagName) => ({
       name: tagName,
       color: "",
       aliases: [],
       notes: "",
+      itemType: ItemType.TAG,
     }));
   return tagStore.add(tagsToCreate);
 }

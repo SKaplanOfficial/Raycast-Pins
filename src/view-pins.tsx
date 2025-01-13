@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-  Icon,
-  List,
-  ActionPanel,
-  getPreferenceValues,
-} from "@raycast/api";
+import { Icon, List, ActionPanel, getPreferenceValues } from "@raycast/api";
 import { pluralize } from "./lib/utils";
 import { ExtensionPreferences } from "./lib/preferences";
 import { PinForm } from "./components/PinForm";
@@ -16,13 +11,15 @@ import { InstallExamplesAction } from "./components/actions/InstallExamplesActio
 import { ViewPinsPreferences } from "./lib/preferences";
 import { useLocalData } from "./lib/LocalData";
 import PinListItem from "./components/PinListItem";
-import CreateNewPinAction from "./components/actions/CreateNewPinAction";
 import useExamples from "./hooks/useExamples";
+import TagStoreProvider, { useTagStoreContext } from "./contexts/TagStoreContext";
+import CreateNewItemAction from "./components/actions/CreateNewItemAction";
 
 /**
  * Raycast command to view all pins in a list within the Raycast window.
  */
-export default function ViewPinsCommand(args: { launchContext?: { pinID?: number; action?: PinAction } }) {
+function PinsList(props: { args: { launchContext?: { pinID?: number; action?: PinAction } } }) {
+  const { args } = props;
   const { pins, setPins, loadingPins, revalidatePins } = usePins();
   const { groups, loadingGroups, revalidateGroups } = useGroups();
   const preferences = getPreferenceValues<ExtensionPreferences & ViewPinsPreferences>();
@@ -31,6 +28,7 @@ export default function ViewPinsCommand(args: { launchContext?: { pinID?: number
   const [filteredTag, setFilteredTag] = useState<string>("all");
   const [showingHidden, setShowingHidden] = useState<boolean>(false);
   const { examplesInstalled, setExamplesInstalled } = useExamples([ItemType.PIN]);
+  const tagStore = useTagStoreContext();
 
   if (args.launchContext?.pinID) {
     const pin = pins.find((pin) => pin.id == args.launchContext?.pinID);
@@ -56,30 +54,30 @@ export default function ViewPinsCommand(args: { launchContext?: { pinID?: number
           pin.visibility === Visibility.VIEW_PINS_ONLY ||
           pin.visibility === undefined,
     );
-    return sortPins(visiblePins, groups)
-      .map((pin, index) => {
-        return (
-          <PinListItem
-            key={pin.id}
-            index={index}
-            pin={pin}
-            visiblePins={visiblePins}
-            pins={pins}
-            setPins={setPins}
-            revalidatePins={revalidatePins}
-            groups={groups}
-            revalidateGroups={revalidateGroups}
-            maxTimesOpened={maxTimesOpened}
-            lastOpenedPin={lastOpenedPin}
-            showingHidden={showingHidden}
-            setShowingHidden={setShowingHidden}
-            localData={localData}
-            preferences={preferences}
-            examplesInstalled={examplesInstalled}
-            setExamplesInstalled={setExamplesInstalled}
-          />
-        );
-      });
+    return sortPins(visiblePins, groups).map((pin, index) => {
+      return (
+        <PinListItem
+          key={pin.id}
+          index={index}
+          pin={pin}
+          visiblePins={visiblePins}
+          pins={pins}
+          setPins={setPins}
+          revalidatePins={revalidatePins}
+          groups={groups}
+          revalidateGroups={revalidateGroups}
+          tagStore={tagStore}
+          maxTimesOpened={maxTimesOpened}
+          lastOpenedPin={lastOpenedPin}
+          showingHidden={showingHidden}
+          setShowingHidden={setShowingHidden}
+          localData={localData}
+          preferences={preferences}
+          examplesInstalled={examplesInstalled}
+          setExamplesInstalled={setExamplesInstalled}
+        />
+      );
+    });
   };
 
   const tagCounts = pins.reduce(
@@ -119,7 +117,7 @@ export default function ViewPinsCommand(args: { launchContext?: { pinID?: number
       }
       actions={
         <ActionPanel>
-          <CreateNewPinAction setPins={setPins} />
+          <CreateNewItemAction itemType={ItemType.PIN} formView={<PinForm setPins={setPins} />} />
           {!examplesInstalled || pins.length == 0 ? (
             <InstallExamplesAction
               setExamplesInstalled={setExamplesInstalled}
@@ -171,7 +169,7 @@ export default function ViewPinsCommand(args: { launchContext?: { pinID?: number
       <RecentApplicationsList
         pinActions={
           <>
-            <CreateNewPinAction setPins={setPins} />
+            <CreateNewItemAction itemType={ItemType.PIN} formView={<PinForm setPins={setPins} />} />
             {!examplesInstalled || pins.length == 0 ? (
               <InstallExamplesAction
                 setExamplesInstalled={setExamplesInstalled}
@@ -184,5 +182,13 @@ export default function ViewPinsCommand(args: { launchContext?: { pinID?: number
         }
       />
     </List>
+  );
+}
+
+export default function ViewPinsCommand(args: { launchContext?: { pinID?: number; action?: PinAction } }) {
+  return (
+    <TagStoreProvider>
+      <PinsList args={args} />
+    </TagStoreProvider>
   );
 }
