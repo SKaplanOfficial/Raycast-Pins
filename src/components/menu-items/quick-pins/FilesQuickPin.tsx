@@ -1,10 +1,11 @@
 import { Application, MenuBarExtra } from "@raycast/api";
 import { FileRef } from "../../../lib/LocalData";
-import { createNewPin } from "../../../lib/Pins";
 import { Group, createNewGroup } from "../../../lib/Groups";
 import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
 import { cutoff } from "../../../lib/utils";
 import { useCachedState } from "@raycast/utils";
+import { buildPin } from "../../../lib/Pins";
+import { usePinStoreContext } from "../../../contexts/PinStoreContext";
 
 type FilesQuickPinProps = {
   /**
@@ -29,6 +30,7 @@ type FilesQuickPinProps = {
  */
 export default function FilesQuickPin(props: FilesQuickPinProps) {
   const { app, selectedFiles, groups } = props;
+  const { add: addPin } = usePinStoreContext();
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
 
   if (app.name != "Finder" || selectedFiles.length == 0) {
@@ -52,11 +54,12 @@ export default function FilesQuickPin(props: FilesQuickPinProps) {
       shortcut={KEYBOARD_SHORTCUT.PIN_SELECTED_FILES}
       onAction={async () => {
         if (selectedFiles.length == 1) {
-          await createNewPin({
+          const newPin = buildPin({
             name: selectedFiles[0].name,
             url: selectedFiles[0].path,
-            group: targetGroup?.name || "None",
+            group: targetGroup?.name,
           });
+          await addPin([newPin]);
         } else {
           let newGroupName = "New File Group";
           if (targetGroup) {
@@ -73,11 +76,12 @@ export default function FilesQuickPin(props: FilesQuickPinProps) {
             });
           }
           for (const file of selectedFiles) {
-            await createNewPin({
+            const newPin = buildPin({
               name: file.name,
               url: file.path,
               group: newGroupName,
             });
+            await addPin([newPin]);
           }
         }
       }}

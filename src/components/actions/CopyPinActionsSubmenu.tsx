@@ -1,15 +1,16 @@
 import { Action, ActionPanel, Icon, Keyboard } from "@raycast/api";
 import { Pin, getPinStatistics } from "../../lib/Pins";
 import { PinAction } from "../../lib/constants";
+import { usePinStoreContext } from "../../contexts/PinStoreContext";
 
 /**
  * Submenu for actions that copy information about a pin to the clipboard.
  * @param props.pin The pin to copy information about.
- * @param props.pins The list of pins to use for statistics.
  * @returns A submenu component.
  */
-export default function CopyPinActionsSubmenu(props: { pin: Pin; pins: Pin[] }) {
-  const { pin, pins } = props;
+export default function CopyPinActionsSubmenu(props: { pin: Pin }) {
+  const { pin } = props;
+  const { objects: pins } = usePinStoreContext();
 
   return (
     <ActionPanel.Submenu title="Clipboard Actions" icon={Icon.Clipboard} shortcut={Keyboard.Shortcut.Common.Copy}>

@@ -1,8 +1,9 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
-import { createNewPin } from "../../Pins";
 import { Group, createNewGroup } from "../../Groups";
 import { StorageKey } from "../../constants";
-import { getStorage } from "../../storage";
+import { getStorage, storageMethods } from "../../storage";
+import { buildPin, Pin } from "../../Pins";
+import { getObjectsFromStore, updateObjectInStore } from "../../../hooks/useLocalObjectStore";
 
 /**
  * Placeholder directive for creating a new pin.
@@ -26,11 +27,13 @@ const CreatePinDirective: Placeholder = {
       await createNewGroup({ name: group, icon: "None" });
     }
 
-    await createNewPin({
+    const newPin = buildPin({
       name,
       url: target,
       group,
     });
+    const pins = await getObjectsFromStore<Pin>(StorageKey.PIN_STORE, storageMethods);
+    await updateObjectInStore(pins, newPin, true, StorageKey.PIN_STORE, storageMethods);
     return { result: "" };
   },
   constant: false,

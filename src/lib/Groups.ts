@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import { getStorage, setStorage } from "./storage";
 import { useCachedState } from "@raycast/utils";
 import { ItemType, SORT_FN, SORT_STRATEGY, StorageKey, Visibility } from "./constants";
-import { environment, showToast } from "@raycast/api";
+import { Color, environment, showToast } from "@raycast/api";
 import { Pin, getPins, sortPins } from "./Pins";
 import { GroupDisplaySetting } from "./preferences";
 
@@ -71,15 +71,26 @@ export type Group = {
 /**
  * The keys of an {@link Group} object.
  */
-export const GroupKeys = ["name", "icon", "id", "parent", "sortStrategy", "iconColor", "dateCreated", "visibility"];
+export const GroupKeys = [
+  "name",
+  "icon",
+  "id",
+  "parent",
+  "sortStrategy",
+  "iconColor",
+  "dateCreated",
+  "visibility",
+  "menubarDisplay",
+  "itemType",
+] as const;
 
 /**
  * Checks if an object is a group.
  * @param obj The item to check.
  * @returns Whether or not the item is a group.
  */
-export const isGroup = (obj: object): obj is Group => {
-  return (obj as Group).itemType == ItemType.GROUP;
+export const isGroup = (object: unknown): object is Group => {
+  return typeof object === "object" && object !== null && "itemType" in object && object["itemType"] === ItemType.GROUP;
 };
 
 /**
@@ -240,15 +251,22 @@ export const createNewGroup = async (attributes: Partial<Group>) => {
   return newGroup;
 };
 
+// TODO: This comment
 /**
  * Creates a dummy group object.
  * @returns The group object with placeholder values and an ID of -1.
  */
-export const dummyGroup = (): Group => {
+export const buildGroup = (properties: Partial<Group>): Group => {
   return {
-    name: "None",
-    icon: "Minus",
+    name: properties.name || "New Group",
+    icon: properties.icon || "Minus",
     id: -1,
+    parent: properties.parent,
+    sortStrategy: properties.sortStrategy,
+    iconColor: properties.iconColor || Color.PrimaryText,
+    dateCreated: properties.dateCreated || new Date().toISOString(),
+    visibility: properties.visibility || Visibility.USE_PARENT,
+    menubarDisplay: properties.menubarDisplay || GroupDisplaySetting.SUBMENUS,
     itemType: ItemType.GROUP,
   };
 };

@@ -12,7 +12,7 @@ import {
 import { setStorage, getStorage } from "./lib/storage";
 import { Direction, ItemType, StorageKey } from "./lib/constants";
 import { Group, deleteGroup, useGroups } from "./lib/Groups";
-import { Pin, openPin, usePins } from "./lib/Pins";
+import { Pin, openPin } from "./lib/Pins";
 import {
   addIDAccessory,
   addParentGroupAccessory,
@@ -28,6 +28,8 @@ import { pluralize } from "./lib/utils";
 import useExamples from "./hooks/useExamples";
 import CreateNewItemAction from "./components/actions/CreateNewItemAction";
 import DeleteItemAction from "./components/actions/DeleteItemAction";
+import PinStoreProvider, { usePinStoreContext } from "./contexts/PinStoreContext";
+import { useEffect } from "react";
 
 /**
  * Moves a group up or down in the list of groups.
@@ -48,9 +50,9 @@ const moveGroup = async (index: number, dir: Direction, setGroups: React.Dispatc
 /**
  * Raycast command to view all pin groups in a list within the Raycast window.
  */
-export default function ViewGroupsCommand() {
+export function GroupsList() {
   const { groups, setGroups, revalidateGroups } = useGroups();
-  const { pins } = usePins();
+  const pinStore = usePinStoreContext();
   const { examplesInstalled, setExamplesInstalled } = useExamples([ItemType.GROUP]);
   const preferences = getPreferenceValues<ExtensionPreferences & ViewGroupsPreferences>();
 
@@ -73,7 +75,7 @@ export default function ViewGroupsCommand() {
     >
       <List.EmptyView title="No Groups Found" icon="no-view.png" />
       {((groups as Group[]) || []).map((group, index) => {
-        const groupPins = pins.filter((pin: Pin) => pin.group == group.name);
+        const groupPins = pinStore.objects.filter((pin: Pin) => pin.group == group.name);
         const maxID = Math.max(...groups.map((group) => group.id));
         const accessories: List.Item.Accessory[] = [];
         if (preferences.showVisibility) addVisibilityAccessory(group, accessories, true);
@@ -97,7 +99,16 @@ export default function ViewGroupsCommand() {
                     onAction={async () => {
                       await Promise.all(
                         groupPins.map(async (pin) => {
-                          await openPin(pin, preferences);
+                          await openPin(
+                            pin,
+                            preferences,
+                            async (pin: Pin) => {
+                              await pinStore.add([pin]);
+                            },
+                            async (pin: Pin) => {
+                              await pinStore.update(pin);
+                            },
+                          );
                         }),
                       );
                     }}
@@ -111,7 +122,7 @@ export default function ViewGroupsCommand() {
                   <DeleteItemAction
                     item={group}
                     onDelete={async () => await deleteGroup(group, setGroups)}
-                    customTitle="Delete Group (Keep Pins)"
+                    options={{ customTitle: "Delete Group (Keep Pins)" }}
                   />
                   <Action
                     title="Delete Group And Pins"
@@ -205,12 +216,30 @@ export default function ViewGroupsCommand() {
                     kind="groups"
                   />
                 ) : null}
-                <CopyGroupActionsSubmenu group={group} groups={groups} pins={pins} />
+                <CopyGroupActionsSubmenu group={group} groups={groups} />
               </ActionPanel>
             }
           />
         );
       })}
     </List>
+  );
+}
+
+export default function ViewGroupsCommand() {
+  useEffect(() => {
+    const logMemUsage = () => {
+      const used = process.memoryUsage().heapUsed / 1024 / 1024;
+      console.log(`Memory usage: ${Math.round(used * 100) / 100} MB`);
+    };
+
+    const interval = setInterval(logMemUsage, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <PinStoreProvider>
+      <GroupsList />
+    </PinStoreProvider>
   );
 }

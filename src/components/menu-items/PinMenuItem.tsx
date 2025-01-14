@@ -1,11 +1,13 @@
 import { Clipboard, LaunchType, MenuBarExtra, launchCommand, showToast } from "@raycast/api";
 import { getPinIcon } from "../../lib/icons";
-import { Pin, deletePin, disablePin, hidePin, openPin } from "../../lib/Pins";
+import { Pin, disablePin, hidePin, openPin } from "../../lib/Pins";
 import { ExtensionPreferences, PinsMenubarPreferences, RightClickAction } from "../../lib/preferences";
 import { LocalDataObject } from "../../lib/LocalData";
 import { bulkApply } from "placeholders-toolkit/dist/lib/apply";
 import { PinsInfoPlaceholders } from "../../lib/placeholders";
 import { useEffect, useState } from "react";
+import { usePinStoreContext } from "../../contexts/PinStoreContext";
+import { deleteItem } from "../actions/DeleteItemAction";
 
 /**
  * A menu item for a pin.
@@ -21,9 +23,9 @@ export default function PinMenuItem(props: {
   preferences: ExtensionPreferences & PinsMenubarPreferences;
   relevant: boolean;
   localData: LocalDataObject;
-  setPins: React.Dispatch<React.SetStateAction<Pin[]>>;
 }) {
-  const { pin, relevant, preferences, localData, setPins } = props;
+  const { pin, relevant, preferences, localData } = props;
+  const pinStore = usePinStoreContext();
   const [title, setTitle] = useState<string>(
     pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url),
   );
@@ -45,15 +47,35 @@ export default function PinMenuItem(props: {
       shortcut={pin.shortcut}
       onAction={async (event) => {
         if (event.type == "left-click") {
-          await openPin(pin, preferences, localData as unknown as { [key: string]: string });
+          await openPin(
+            pin,
+            preferences,
+            async (pin: Pin) => {
+              await pinStore.add([pin]);
+            },
+            async (pin: Pin) => {
+              await pinStore.update(pin);
+            },
+            localData as unknown as { [key: string]: string },
+          );
         } else {
           // Handle right-click based on user's preferences
           switch (preferences.rightClickAction) {
             case RightClickAction.Open:
-              await openPin(pin, preferences, localData as unknown as { [key: string]: string });
+              await openPin(
+                pin,
+                preferences,
+                async (pin: Pin) => {
+                  await pinStore.add([pin]);
+                },
+                async (pin: Pin) => {
+                  await pinStore.update(pin);
+                },
+                localData as unknown as { [key: string]: string },
+              );
               break;
             case RightClickAction.Delete:
-              await deletePin(pin, setPins);
+              await deleteItem(pin, pinStore.remove);
               break;
             case RightClickAction.Copy:
               await Clipboard.copy(pin.url);
@@ -63,10 +85,10 @@ export default function PinMenuItem(props: {
               launchCommand({ name: "view-pins", type: LaunchType.UserInitiated, context: { pinID: pin.id } });
               break;
             case RightClickAction.Hide:
-              await hidePin(pin, setPins);
+              await hidePin(pin, pinStore.update);
               break;
             case RightClickAction.Disable:
-              await disablePin(pin, setPins);
+              await disablePin(pin, pinStore.update);
               break;
           }
         }

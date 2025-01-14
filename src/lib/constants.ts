@@ -33,7 +33,7 @@ export enum StorageKey {
   LOCAL_GROUPS = "localGroups",
 
   GROUP_STORE = "local-groups",
-  
+
   TAG_STORE = "local-tags",
 
   /**

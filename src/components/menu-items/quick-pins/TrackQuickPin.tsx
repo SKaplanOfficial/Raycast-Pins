@@ -3,9 +3,10 @@ import { TrackRef } from "../../../lib/LocalData";
 import { cutoff } from "../../../lib/utils";
 import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
 import { getMusicTrackScript, getSpotifyTrackScript, getTVTrackScript } from "../../../lib/scripts";
-import { createNewPin } from "../../../lib/Pins";
 import { useCachedState } from "@raycast/utils";
 import { Group } from "../../../lib/Groups";
+import { buildPin } from "../../../lib/Pins";
+import { usePinStoreContext } from "../../../contexts/PinStoreContext";
 
 type TrackQuickPinProps = {
   /**
@@ -25,6 +26,7 @@ type TrackQuickPinProps = {
  */
 export default function TrackQuickPin(props: TrackQuickPinProps) {
   const { app, track } = props;
+  const { add: addPin } = usePinStoreContext();
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
 
   if (track.name == "") {
@@ -53,12 +55,13 @@ export default function TrackQuickPin(props: TrackQuickPinProps) {
           trackScript = getTVTrackScript(track.name, track.artist, track.album);
         }
 
-        await createNewPin({
-          name: `Play Track '${track.name}'`,
+        const newPin = buildPin({
+          name: track.name,
           url: `{{as:${trackScript}}}`,
           icon: app.path,
-          group: targetGroup?.name || "None",
+          group: targetGroup?.name,
         });
+        await addPin([newPin]);
       }}
     />
   );

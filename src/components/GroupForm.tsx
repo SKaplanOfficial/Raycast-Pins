@@ -21,8 +21,8 @@ import {
 import { useState } from "react";
 import { getIcon } from "../lib/icons";
 import { ItemType, SORT_STRATEGY, Visibility } from "../lib/constants";
-import { usePins } from "../lib/Pins";
 import { GroupDisplaySetting } from "../lib/preferences";
+import { usePinStoreContext } from "../contexts/PinStoreContext";
 
 export interface GroupFormValues {
   nameField: string;
@@ -47,7 +47,7 @@ export default function GroupForm(props: {
   draftValues?: GroupFormValues;
 }) {
   const { group, setGroups, draftValues } = props;
-  const { pins } = usePins();
+  const { objects: pins } = usePinStoreContext();
   const [visibility, setVisibility] = useState<Visibility>(
     draftValues?.visibilityField || (group?.visibility ?? Visibility.USE_PARENT),
   );

@@ -9,9 +9,11 @@ import DeleteItemAction from "./components/actions/DeleteItemAction";
 import TagStoreProvider, { useTagStoreContext } from "./contexts/TagStoreContext";
 import CreateNewItemAction from "./components/actions/CreateNewItemAction";
 import { setStorage } from "./lib/storage";
+import PinStoreProvider, { usePinStoreContext } from "./contexts/PinStoreContext";
 
 export function TagsList() {
   const tagStore = useTagStoreContext();
+  const pinStore = usePinStoreContext();
   const [associations, setAssociations] = useState<{ [key: string]: { tag: Tag; pins: Pin[] } }>({});
   const preferences = getPreferenceValues<ExtensionPreferences>();
 
@@ -35,7 +37,7 @@ export function TagsList() {
       findAssociations();
     }
   }, [tagStore.loading, tagStore.objects]);
-  
+
   return (
     <List
       isLoading={tagStore.loading}
@@ -82,21 +84,33 @@ export function TagsList() {
                       onAction={async () => {
                         await Promise.all(
                           associatedPins.map(async (pin) => {
-                            await openPin(pin, preferences);
+                            await openPin(
+                              pin,
+                              preferences,
+                              async (pin: Pin) => {
+                                await pinStore.add([pin]);
+                              },
+                              async (pin: Pin) => {
+                                await pinStore.update(pin);
+                              },
+                            );
                           }),
                         );
                       }}
                     />
                   ) : null}
-                  <DeleteItemAction item={tag} onDelete={async (tag) => {
-                    await tagStore.remove(tag)
-                    const pins = await getPins();
-                    const updatedPins = pins.map((pin) => ({
-                      ...pin,
-                      tags: pin.tags?.filter((pinTag) => pinTag !== tag.name),
-                    }));
-                    await setStorage(StorageKey.LOCAL_PINS, updatedPins);
-                    }} />
+                  <DeleteItemAction
+                    item={tag}
+                    onDelete={async (tag) => {
+                      await tagStore.remove(tag);
+                      const pins = await getPins();
+                      const updatedPins = pins.map((pin) => ({
+                        ...pin,
+                        tags: pin.tags?.filter((pinTag) => pinTag !== tag.name),
+                      }));
+                      await setStorage(StorageKey.LOCAL_PINS, updatedPins);
+                    }}
+                  />
                   <Action
                     title="Delete All Tags"
                     icon={Icon.Trash}
@@ -155,9 +169,21 @@ export function TagsList() {
  * Raycast command to view all currently used tags.
  */
 export default function ViewTagsCommands() {
+  useEffect(() => {
+    const logMemUsage = () => {
+      const used = process.memoryUsage().heapUsed / 1024 / 1024;
+      console.log(`Memory usage: ${Math.round(used * 100) / 100} MB`);
+    };
+
+    const interval = setInterval(logMemUsage, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <TagStoreProvider>
-      <TagsList />
-    </TagStoreProvider>
+    <PinStoreProvider>
+      <TagStoreProvider>
+        <TagsList />
+      </TagStoreProvider>
+    </PinStoreProvider>
   );
 }

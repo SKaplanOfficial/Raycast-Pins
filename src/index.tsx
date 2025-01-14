@@ -24,7 +24,7 @@ import { KEYBOARD_SHORTCUT, Visibility } from "./lib/constants";
 import { getSubgroups, Group, useGroups } from "./lib/Groups";
 import { getGroupIcon } from "./lib/icons";
 import { useLocalData } from "./lib/LocalData";
-import { copyPinData, openPin, Pin, sortPins, usePins } from "./lib/Pins";
+import { copyPinData, openPin, Pin, sortPins } from "./lib/Pins";
 import { ExtensionPreferences, GroupDisplaySetting } from "./lib/preferences";
 import { PinsMenubarPreferences } from "./lib/preferences";
 import PinsPlaceholders from "./lib/placeholders";
@@ -38,13 +38,15 @@ import DirectoryQuickPin from "./components/menu-items/quick-pins/DirectoryQuick
 import DocumentQuickPin from "./components/menu-items/quick-pins/DocumentQuickPin";
 import TrackQuickPin from "./components/menu-items/quick-pins/TrackQuickPin";
 import TargetGroupMenu from "./components/TargetGroupMenu";
+import { usePinStoreContext } from "./contexts/PinStoreContext";
 
+// TODO: need to wrap this in providers
 /**
  * Raycast menu bar command providing quick access to pins.
  */
 export default function ShowPinsCommand() {
   const { groups, loadingGroups, revalidateGroups, getAncestorsOfGroup, shouldDisplayGroup } = useGroups();
-  const { pins, setPins, loadingPins, revalidatePins } = usePins();
+  const pinStore = usePinStoreContext();
   const [relevantPins, setRelevantPins] = useCachedState<Pin[]>("relevant-pins", []);
   const [irrelevantPins, setIrrelevantPins] = useCachedState<Pin[]>("irrelevant-pins", []);
   const { localData, loadingLocalData } = useLocalData();
@@ -58,12 +60,12 @@ export default function ShowPinsCommand() {
 
   useEffect(() => {
     Promise.resolve(revalidateGroups())
-      .then(() => Promise.resolve(revalidatePins()))
+      .then(() => Promise.resolve(pinStore.load()))
       .then(async () => {
         if (!preferences.showInapplicablePins) {
           const applicablePins = [];
           const inapplicablePins = [];
-          for (const pin of pins) {
+          for (const pin of pinStore.objects) {
             const targetRaw = pin.url.startsWith("~") ? pin.url.replace("~", os.homedir()) : pin.url;
             let containsPlaceholder = false;
             let passesTests = true;
@@ -97,7 +99,7 @@ export default function ShowPinsCommand() {
   );
 
   const allPins = sortPins(
-    pins
+    pinStore.objects
       .filter((p) => preferences.showInapplicablePins || !irrelevantPins.find((pin) => pin.id == p.id))
       .filter(
         (pin) =>
@@ -150,7 +152,6 @@ export default function ShowPinsCommand() {
                 relevant={relevantPins.find((p) => p.id == pin.id) != undefined && !preferences.showInapplicablePins}
                 preferences={preferences}
                 localData={localData}
-                setPins={setPins}
                 key={pin.id}
               />
             ))}
@@ -178,7 +179,17 @@ export default function ShowPinsCommand() {
             subtitle={memberPins.length > 0 ? "  ✧" : ""}
             onAction={async () => {
               for (const pin of memberPins) {
-                await openPin(pin, preferences, localData as unknown as { [key: string]: string });
+                await openPin(
+                  pin,
+                  preferences,
+                  async (pin: Pin) => {
+                    await pinStore.add([pin]);
+                  },
+                  async (pin: Pin) => {
+                    await pinStore.update(pin);
+                  },
+                  localData as unknown as { [key: string]: string },
+                );
               }
               for (const subgroup of allSubgroups) {
                 const ancestors = getAncestorsOfGroup(subgroup, { excluding: [group] });
@@ -187,7 +198,17 @@ export default function ShowPinsCommand() {
                   subgroup.menubarDisplay === GroupDisplaySetting.USE_PARENT;
                 if (openSubgroup) {
                   for (const pin of allPins.filter((p) => p.group == subgroup.name)) {
-                    await openPin(pin, preferences, localData as unknown as { [key: string]: string });
+                    await openPin(
+                      pin,
+                      preferences,
+                      async (pin: Pin) => {
+                        await pinStore.add([pin]);
+                      },
+                      async (pin: Pin) => {
+                        await pinStore.update(pin);
+                      },
+                      localData as unknown as { [key: string]: string },
+                    );
                   }
                 }
               }
@@ -221,7 +242,6 @@ export default function ShowPinsCommand() {
               relevant={relevantPins.find((p) => p.id == pin.id) != undefined && !preferences.showInapplicablePins}
               preferences={preferences}
               localData={localData}
-              setPins={setPins}
               key={pin.id}
             />
           ))}
@@ -259,7 +279,6 @@ export default function ShowPinsCommand() {
                 relevant={relevantPins.find((p) => p.id == pin.id) != undefined && !preferences.showInapplicablePins}
                 preferences={preferences}
                 localData={localData}
-                setPins={setPins}
                 key={pin.id}
               />
             )),
@@ -295,9 +314,13 @@ export default function ShowPinsCommand() {
           .map((group) => getSubsections(group, groups))
           .filter((g) => g != null);
 
+  console.log(pinStore.loading, loadingGroups, loadingLocalData);
+
+  return <MenuBarExtra icon={pinIcon} isLoading={pinStore.loading || loadingGroups || loadingLocalData} />;
+
   // Display the menu
   return (
-    <MenuBarExtra icon={pinIcon} isLoading={loadingPins || loadingGroups || loadingLocalData}>
+    <MenuBarExtra icon={pinIcon} isLoading={pinStore.loading || loadingGroups || loadingLocalData}>
       {[
         [
           ungroupedPins.length > 0 ? (
@@ -309,7 +332,6 @@ export default function ShowPinsCommand() {
                   relevant={relevantPins.find((p) => p.id == pin.id) != undefined && !preferences.showInapplicablePins}
                   preferences={preferences}
                   localData={localData}
-                  setPins={setPins}
                   key={pin.id}
                 />
               ))}
@@ -353,7 +375,7 @@ export default function ShowPinsCommand() {
             onAction={() => launchCommand({ name: "new-pin", type: LaunchType.UserInitiated })}
           />
         ) : null}
-        {pins.length > 0 && preferences.showCopyPinData ? (
+        {pinStore.objects.length > 0 && preferences.showCopyPinData ? (
           <MenuBarExtra.Item
             title="Copy Pin Data"
             icon={Icon.CopyClipboard}

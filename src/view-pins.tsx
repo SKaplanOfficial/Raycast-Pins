@@ -4,8 +4,8 @@ import { pluralize } from "./lib/utils";
 import { ExtensionPreferences } from "./lib/preferences";
 import { PinForm } from "./components/PinForm";
 import { ItemType, PinAction, Visibility } from "./lib/constants";
-import { Pin, getLastOpenedPin, sortPins, usePins } from "./lib/Pins";
-import { dummyGroup, useGroups } from "./lib/Groups";
+import { Pin, getLastOpenedPin, sortPins } from "./lib/Pins";
+import { buildGroup, useGroups } from "./lib/Groups";
 import RecentApplicationsList from "./components/RecentApplicationsList";
 import { InstallExamplesAction } from "./components/actions/InstallExamplesAction";
 import { ViewPinsPreferences } from "./lib/preferences";
@@ -14,13 +14,14 @@ import PinListItem from "./components/PinListItem";
 import useExamples from "./hooks/useExamples";
 import TagStoreProvider, { useTagStoreContext } from "./contexts/TagStoreContext";
 import CreateNewItemAction from "./components/actions/CreateNewItemAction";
+import PinStoreProvider, { usePinStoreContext } from "./contexts/PinStoreContext";
 
 /**
  * Raycast command to view all pins in a list within the Raycast window.
  */
 function PinsList(props: { args: { launchContext?: { pinID?: number; action?: PinAction } } }) {
   const { args } = props;
-  const { pins, setPins, loadingPins, revalidatePins } = usePins();
+  const pinStore = usePinStoreContext();
   const { groups, loadingGroups, revalidateGroups } = useGroups();
   const preferences = getPreferenceValues<ExtensionPreferences & ViewPinsPreferences>();
   const { localData, loadingLocalData } = useLocalData();
@@ -31,14 +32,14 @@ function PinsList(props: { args: { launchContext?: { pinID?: number; action?: Pi
   const tagStore = useTagStoreContext();
 
   if (args.launchContext?.pinID) {
-    const pin = pins.find((pin) => pin.id == args.launchContext?.pinID);
+    const pin = pinStore.objects.find((pin) => pin.id == args.launchContext?.pinID);
     if (pin && args.launchContext.action !== PinAction.OPEN) {
-      return <PinForm pin={pin} setPins={setPins} pins={pins} />;
+      return <PinForm pin={pin} pinStore={pinStore} tagStore={tagStore} />;
     }
   }
 
-  const maxTimesOpened = Math.max(...pins.map((pin) => pin.timesOpened || 0));
-  const lastOpenedPin = getLastOpenedPin(pins);
+  const maxTimesOpened = Math.max(...pinStore.objects.map((pin) => pin.timesOpened || 0));
+  const lastOpenedPin = getLastOpenedPin(pinStore.objects);
 
   /**
    * Gets the list of pins as a list of ListItems.
@@ -61,9 +62,6 @@ function PinsList(props: { args: { launchContext?: { pinID?: number; action?: Pi
           index={index}
           pin={pin}
           visiblePins={visiblePins}
-          pins={pins}
-          setPins={setPins}
-          revalidatePins={revalidatePins}
           groups={groups}
           revalidateGroups={revalidateGroups}
           tagStore={tagStore}
@@ -80,7 +78,7 @@ function PinsList(props: { args: { launchContext?: { pinID?: number; action?: Pi
     });
   };
 
-  const tagCounts = pins.reduce(
+  const tagCounts = pinStore.objects.reduce(
     (acc, pin) => {
       pin.tags?.forEach((tag) => {
         acc[tag] = (acc[tag] || 0) + 1;
@@ -91,18 +89,18 @@ function PinsList(props: { args: { launchContext?: { pinID?: number; action?: Pi
   );
   const tagNames = Object.keys(tagCounts);
 
-  const pinsWithNotes = pins.filter((pin) => pin.notes?.length).map((pin) => pin.id.toString());
+  const pinsWithNotes = pinStore.objects.filter((pin) => pin.notes?.length).map((pin) => pin.id.toString());
 
   return (
     <List
-      isLoading={loadingPins || loadingGroups || loadingLocalData}
+      isLoading={pinStore.loading || loadingGroups || loadingLocalData}
       searchBarPlaceholder="Search pins..."
       filtering={{ keepSectionOrder: true }}
       onSelectionChange={(pinID) => selectedPinID != pinID && setSelectedPinID(pinID)}
       isShowingDetail={pinsWithNotes.includes(selectedPinID || "")}
       searchBarAccessory={
         tagNames.length > 0 ? (
-          <List.Dropdown tooltip="Filter by Tag" isLoading={loadingPins} onChange={setFilteredTag}>
+          <List.Dropdown tooltip="Filter by Tag" isLoading={pinStore.loading} onChange={setFilteredTag}>
             <List.Dropdown.Item title="All Tags" value="all" icon={Icon.Tag} />
             {tagNames.map((tag) => (
               <List.Dropdown.Item
@@ -117,11 +115,10 @@ function PinsList(props: { args: { launchContext?: { pinID?: number; action?: Pi
       }
       actions={
         <ActionPanel>
-          <CreateNewItemAction itemType={ItemType.PIN} formView={<PinForm setPins={setPins} />} />
-          {!examplesInstalled || pins.length == 0 ? (
+          <CreateNewItemAction itemType={ItemType.PIN} formView={<PinForm pinStore={pinStore} tagStore={tagStore} />} />
+          {!examplesInstalled || pinStore.objects.length == 0 ? (
             <InstallExamplesAction
               setExamplesInstalled={setExamplesInstalled}
-              revalidatePins={revalidatePins}
               revalidateGroups={revalidateGroups}
               kind="pins"
             />
@@ -134,11 +131,11 @@ function PinsList(props: { args: { launchContext?: { pinID?: number; action?: Pi
         description="Add a custom pin (⌘N)  or install some examples (⌘E)"
         icon="no-view.png"
       />
-      {[dummyGroup()].concat(groups).map((group) =>
+      {[buildGroup({ name: "None" })].concat(groups).map((group) =>
         preferences.showGroups ? (
           !showingHidden && (group.visibility === Visibility.HIDDEN || group.visibility === Visibility.MENUBAR_ONLY) ? (
             getPinListItems(
-              pins.filter(
+              pinStore.objects.filter(
                 (pin) =>
                   (filteredTag === "all" || pin.tags?.some((tag) => tag === filteredTag)) &&
                   pin.group == group.name &&
@@ -149,7 +146,7 @@ function PinsList(props: { args: { launchContext?: { pinID?: number; action?: Pi
           ) : (
             <List.Section title={group.name == "None" ? "Other" : group.name} key={group.id}>
               {getPinListItems(
-                pins.filter(
+                pinStore.objects.filter(
                   (pin) =>
                     (filteredTag === "all" || pin.tags?.some((tag) => tag === filteredTag)) && pin.group == group.name,
                 ),
@@ -158,7 +155,7 @@ function PinsList(props: { args: { launchContext?: { pinID?: number; action?: Pi
           )
         ) : (
           getPinListItems(
-            pins.filter(
+            pinStore.objects.filter(
               (pin) =>
                 (filteredTag === "all" || pin.tags?.some((tag) => tag === filteredTag)) && pin.group == group.name,
             ),
@@ -169,11 +166,13 @@ function PinsList(props: { args: { launchContext?: { pinID?: number; action?: Pi
       <RecentApplicationsList
         pinActions={
           <>
-            <CreateNewItemAction itemType={ItemType.PIN} formView={<PinForm setPins={setPins} />} />
-            {!examplesInstalled || pins.length == 0 ? (
+            <CreateNewItemAction
+              itemType={ItemType.PIN}
+              formView={<PinForm pinStore={pinStore} tagStore={tagStore} />}
+            />
+            {!examplesInstalled || pinStore.objects.length == 0 ? (
               <InstallExamplesAction
                 setExamplesInstalled={setExamplesInstalled}
-                revalidatePins={revalidatePins}
                 revalidateGroups={revalidateGroups}
                 kind="pins"
               />
@@ -186,9 +185,22 @@ function PinsList(props: { args: { launchContext?: { pinID?: number; action?: Pi
 }
 
 export default function ViewPinsCommand(args: { launchContext?: { pinID?: number; action?: PinAction } }) {
+  // TODO: remove
+  // useEffect(() => {
+  //   const logMemUsage = () => {
+  //     const used = process.memoryUsage().heapUsed / 1024 / 1024;
+  //     console.log(`Memory usage: ${Math.round(used * 100) / 100} MB`);
+  //   }
+
+  //   const interval = setInterval(logMemUsage, 1000);
+  //   return () => clearInterval(interval);
+  // }, []);
+
   return (
-    <TagStoreProvider>
-      <PinsList args={args} />
-    </TagStoreProvider>
+    <PinStoreProvider>
+      <TagStoreProvider>
+        <PinsList args={args} />
+      </TagStoreProvider>
+    </PinStoreProvider>
   );
 }

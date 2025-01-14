@@ -8,22 +8,19 @@
  * Last modified  : 2024-07-05 01:57:20
  */
 
-import { useCachedState } from "@raycast/utils";
 import {
-  Alert,
   Application,
   Clipboard,
+  Color,
   Keyboard,
   LaunchType,
   Toast,
-  confirmAlert,
   environment,
   getPreferenceValues,
   open,
   showHUD,
   showToast,
 } from "@raycast/api";
-import { useEffect, useState } from "react";
 import { SORT_FN, StorageKey, SORT_STRATEGY, Visibility, PinAction, ItemType } from "./constants";
 import { objectFromNonNullableEntriesOfObject, runCommand, runCommandInTerminal } from "./utils";
 import { ExtensionPreferences } from "./preferences";
@@ -35,8 +32,7 @@ import { PLApplicator } from "placeholders-toolkit";
 import PinsPlaceholders from "./placeholders";
 import { getStorage, setStorage } from "./storage";
 import { FileRef, TrackRef } from "./LocalData";
-import { upgradeTags } from "./tag";
-import { useTagStoreContext } from "../contexts/TagStoreContext";
+import { LocalObjectStore } from "../hooks/useLocalObjectStore";
 
 /**
  * A pin object.
@@ -175,16 +171,11 @@ export const PinKeys = [
   "visibility",
   "expirationAction",
   "aliases",
+  "itemType",
 ] as const;
 
 export function isPin(obj: unknown): obj is Pin {
-  return (
-    obj != undefined &&
-    typeof obj === "object" &&
-    PinKeys.every((key) => {
-      return (obj as Record<string, unknown>)[key] != undefined;
-    })
-  );
+  return typeof obj === "object" && obj != null && (obj as Pin).itemType === ItemType.PIN;
 }
 
 /**
@@ -192,7 +183,7 @@ export function isPin(obj: unknown): obj is Pin {
  * @returns The list of pin objects.
  */
 export const getPins = async () => {
-  return (await getStorage(StorageKey.LOCAL_PINS)) as Pin[];
+  return (await getStorage(StorageKey.PIN_STORE)) as Pin[];
 };
 
 /**
@@ -323,42 +314,6 @@ export const validatePins = async (pins: Pin[]) => {
 };
 
 /**
- * Gets the stored pins.
- * @returns The list of pins alongside an update function.
- */
-export const usePins = () => {
-  const [pins, setPins] = useCachedState<Pin[]>("pins", []);
-  const tagStore = useTagStoreContext();
-  const [loading, setLoading] = useState<boolean>();
-
-  const revalidatePins = async () => {
-    setLoading(true);
-    const storedPins: Pin[] = await getPins();
-
-    const validatedPins = await validatePins(storedPins);
-    const pinTags = validatedPins
-      .map((pin) => pin.tags)
-      .flat()
-      .filter((tag) => tag != undefined);
-    upgradeTags(pinTags, tagStore);
-
-    setPins(validatedPins);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    revalidatePins();
-  }, []);
-
-  return {
-    pins: pins,
-    setPins: setPins,
-    loadingPins: loading,
-    revalidatePins: revalidatePins,
-  };
-};
-
-/**
  * Opens a pin.
  * @param pin The pin to open.
  * @param preferences The extension preferences object.
@@ -366,6 +321,8 @@ export const usePins = () => {
 export const openPin = async (
   pin: Pin,
   preferences: { preferredBrowser?: Application },
+  addPin: (pin: Pin) => Promise<void>,
+  updatePin: (pin: Pin) => Promise<void>,
   context?: { [key: string]: unknown },
 ) => {
   const startDate = new Date();
@@ -457,9 +414,8 @@ export const openPin = async (
         ? Math.round((pin.averageExecutionTime * (pin.timesOpened || 0) + timeElapsed) / ((pin.timesOpened || 0) + 1))
         : timeElapsed,
     },
-    () => {
-      null;
-    },
+    addPin,
+    updatePin,
     () => {
       null;
     },
@@ -483,78 +439,64 @@ export const getNextPinID = async () => {
   return newID;
 };
 
-/**
- * Creates a new pin; updates local storage.
- * @param attributes The attributes of the new pin.
- * @returns The new pin object.
- */
-export const createNewPin = async (attributes: Partial<Pin>) => {
-  // Get the stored pins
-  const storedPins = await getPins();
-  const newID = await getNextPinID();
-
-  // Add the new pin to the list of stored pins
-  const newData = [...storedPins];
-  const newPin = {
-    ...attributes,
-    name: attributes.name?.toString() || "New Pin",
-    url: attributes.url?.toString() || "",
-    icon: attributes.icon?.toString() || "Favicon / File Icon",
-    group: attributes.group?.toString() || "None",
-    application: attributes.application?.toString() || "None",
-    id: newID,
-    expireDate: attributes.expireDate ? new Date(attributes.expireDate as string).toUTCString() : undefined,
-    dateCreated: new Date().toUTCString(),
-    visibility: attributes.visibility || Visibility.VISIBLE,
-    expirationAction: attributes.expirationAction || PinAction.DELETE,
-  } as Pin;
-  newData.push(newPin);
-
-  // Update the stored pins
-  await setStorage(StorageKey.LOCAL_PINS, newData);
-  return newPin;
-};
+// TODO: Comment
+export function buildPin(properties: Partial<Pin>): Pin {
+  return {
+    name: properties.name || "New Pin",
+    url: properties.url || "",
+    icon: properties.icon || "Favicon / File Icon",
+    group: properties.group || "None",
+    application: properties.application || "None",
+    id: properties.id || -1,
+    expireDate: properties.expireDate ? new Date(properties.expireDate as string).toISOString() : undefined,
+    fragment: properties.fragment || false,
+    execInBackground: properties.execInBackground || false,
+    shortcut: properties.shortcut,
+    lastOpened: properties.lastOpened ? new Date(properties.lastOpened as string).toISOString() : undefined,
+    timesOpened: properties.timesOpened || 0,
+    iconColor: properties.iconColor || Color.PrimaryText,
+    averageExecutionTime: properties.averageExecutionTime || 0,
+    tags: properties.tags || [],
+    notes: properties.notes || "",
+    tooltip: properties.tooltip || "",
+    dateCreated: new Date().toISOString(),
+    visibility: properties.visibility || Visibility.VISIBLE,
+    expirationAction: properties.expirationAction || PinAction.DELETE,
+    aliases: properties.aliases || [],
+    itemType: ItemType.PIN,
+  };
+}
 
 /**
  * Updates a pin; updates local storage.
  * @param pin The pin to update.
  * @param attributes The attributes to update, along with their new values.
- * @param setPins The function to update the list of pins.
+ * @param pinStore The local pin store.
  * @param pop The function to close the modal.
  * @param notify Whether to display a notification.
  */
 export const modifyPin = async (
   pin: Pin,
   attributes: Partial<Pin>,
-  setPins: React.Dispatch<React.SetStateAction<Pin[]>>,
+  addPin: (pin: Pin) => Promise<void>,
+  updatePin: (pin: Pin) => Promise<void>,
   pop: () => void,
   notify = true,
 ) => {
-  const storedPins = await getPins();
-  const validatedPins = await validatePins(storedPins);
-
-  const newData: Pin[] = validatedPins.map((oldPin: Pin) => {
-    // Update pin if it exists
-    if (pin.id != -1 && oldPin.id == pin.id) {
-      return {
-        ...oldPin,
-        ...attributes,
-        expireDate: attributes.expireDate ? new Date(attributes.expireDate as string).toUTCString() : undefined,
-        dateCreated: new Date().toUTCString(),
-      } as Pin;
-    } else {
-      return oldPin;
-    }
-  });
+  const updatedPin = {
+    ...pin,
+    ...attributes,
+    expireDate: attributes.expireDate ? new Date(attributes.expireDate as string).toUTCString() : undefined,
+    dateCreated: new Date().toUTCString(),
+  } as Pin;
 
   // Add new pin if it doesn't exist
   if (pin.id == -1) {
-    const newPin = await createNewPin(attributes);
-    newData.push(newPin);
+    const newPin = buildPin(attributes);
+    addPin(newPin);
+  } else {
+    await updatePin(updatedPin);
   }
-
-  setPins(newData);
-  await setStorage(StorageKey.LOCAL_PINS, newData);
 
   if (notify) {
     await showToast({ title: `Updated pin!` });
@@ -563,95 +505,36 @@ export const modifyPin = async (
 };
 
 /**
- * Sets the value of a pin attribute and updates local storage.
- * @param pin The pin to update.
- * @param attribute The name of the attribute to update.
- * @param value The new value of the attribute.
- * @param setPins The function to update the list of pins.
- */
-export const setPinAttribute = async (
-  pin: Pin,
-  attribute: keyof Pin,
-  value: Pin[keyof Pin],
-  setPins: React.Dispatch<React.SetStateAction<Pin[]>>,
-) => {
-  const storedPins = await getPins();
-  const newData: Pin[] = storedPins.map((oldPin: Pin) => {
-    if (oldPin.id == pin.id) {
-      return {
-        ...oldPin,
-        [attribute]: value,
-      };
-    }
-    return oldPin;
-  });
-
-  setPins(newData);
-  await setStorage(StorageKey.LOCAL_PINS, newData);
-};
-
-/**
  * Hides a pin; updates local storage.
  * @param pin The pin to hide.
  * @param setPins The function to update the list of pins.
  */
-export const hidePin = async (pin: Pin, setPins: React.Dispatch<React.SetStateAction<Pin[]>>) =>
-  setPinAttribute(pin, "visibility", Visibility.HIDDEN, setPins);
+export const hidePin = async (pin: Pin, updatePin: LocalObjectStore<Pin>["update"]) =>
+  await updatePin({ ...pin, visibility: Visibility.HIDDEN });
 
 /**
  * Unhides a pin; updates local storage.
  * @param pin The pin to unhide.
  * @param setPins The function to update the list of pins.
  */
-export const unhidePin = async (pin: Pin, setPins: React.Dispatch<React.SetStateAction<Pin[]>>) =>
-  setPinAttribute(pin, "visibility", Visibility.VISIBLE, setPins);
+export const unhidePin = async (pin: Pin, updatePin: LocalObjectStore<Pin>["update"]) =>
+  await updatePin({ ...pin, visibility: Visibility.VISIBLE });
 
 /**
  * Disables a pin; updates local storage.
  * @param pin The pin to disable.
  * @param setPins The function to update the list of pins.
  */
-export const disablePin = async (pin: Pin, setPins: React.Dispatch<React.SetStateAction<Pin[]>>) =>
-  setPinAttribute(pin, "visibility", Visibility.DISABLED, setPins);
+export const disablePin = async (pin: Pin, updatePin: LocalObjectStore<Pin>["update"]) =>
+  await updatePin({ ...pin, visibility: Visibility.DISABLED });
 
 /**
  * Moves a pin to the specified group; updates local storage.
  * @param pin The pin to enable.
  * @param setPins The function to update the list of pins.
  */
-export const movePin = async (pin: Pin, group: string, setPins?: React.Dispatch<React.SetStateAction<Pin[]>>) =>
-  setPinAttribute(pin, "group", group, setPins || (() => {}));
-
-/**
- * Deletes a pin; updates local storage.
- * @param pin The pin to delete.
- * @param setPins The function to update the list of pins.
- */
-export const deletePin = async (
-  pin: Pin,
-  setPins: React.Dispatch<React.SetStateAction<Pin[]>>,
-  showAlert = true,
-  displayToast = true,
-) => {
-  if (
-    !showAlert ||
-    (await confirmAlert({
-      title: `Delete Pin '${pin.name}'`,
-      message: "Are you sure?",
-      primaryAction: { title: "Delete", style: Alert.ActionStyle.Destructive },
-    }))
-  ) {
-    const storedPins = await getPins();
-
-    const filteredPins = storedPins.filter((oldPin: Pin) => {
-      return oldPin.id != pin.id;
-    });
-
-    setPins(filteredPins);
-    await setStorage(StorageKey.LOCAL_PINS, filteredPins);
-    if (displayToast) await showToast({ title: `Removed pin!` });
-  }
-};
+export const movePin = async (pin: Pin, group: string, updatePin: LocalObjectStore<Pin>["update"]) =>
+  await updatePin({ ...pin, group: group });
 
 /**
  * Gets the last opened pin.

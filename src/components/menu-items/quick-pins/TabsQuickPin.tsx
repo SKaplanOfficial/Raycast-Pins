@@ -2,9 +2,10 @@ import { Application, Icon, MenuBarExtra } from "@raycast/api";
 import { TabRef } from "../../../lib/LocalData";
 import { utils } from "placeholders-toolkit";
 import { Group, createNewGroup } from "../../../lib/Groups";
-import { createNewPin } from "../../../lib/Pins";
 import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
 import { useCachedState } from "@raycast/utils";
+import { buildPin } from "../../../lib/Pins";
+import { usePinStoreContext } from "../../../contexts/PinStoreContext";
 
 type TabsQuickPinProps = {
   /**
@@ -29,6 +30,7 @@ type TabsQuickPinProps = {
  */
 export default function TabsQuickPin(props: TabsQuickPinProps) {
   const { app, tabs, groups } = props;
+  const { add: addPin } = usePinStoreContext();
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
 
   if (!utils.SupportedBrowsers.find((b) => b.name == app.name) || tabs.length == 0) {
@@ -62,12 +64,13 @@ export default function TabsQuickPin(props: TabsQuickPinProps) {
           });
         }
         for (const tab of tabs) {
-          await createNewPin({
+          const newPin = buildPin({
             name: tab.name,
             url: tab.url,
             application: app.name,
             group: newGroupName,
           });
+          await addPin([newPin]);
         }
       }}
     />

@@ -1,16 +1,17 @@
 import { Action, ActionPanel, Clipboard, Icon, showHUD } from "@raycast/api";
 import { Pin } from "../../lib/Pins";
 import { Group, getGroupStatistics } from "../../lib/Groups";
+import { usePinStoreContext } from "../../contexts/PinStoreContext";
 
 /**
  * Submenu for actions that copy information about a group to the clipboard.
  * @param props.group The group to copy information about.
  * @param props.groups The list of groups to use for statistics.
- * @param props.pins The list of pins to use for statistics.
  * @returns A submenu component.
  */
-export default function CopyGroupActionsSubmenu(props: { group: Group; groups: Group[]; pins: Pin[] }) {
-  const { group, groups, pins } = props;
+export default function CopyGroupActionsSubmenu(props: { group: Group; groups: Group[] }) {
+  const { group, groups } = props;
+  const { objects: pins } = usePinStoreContext();
 
   return (
     <ActionPanel.Submenu title="Clipboard Actions" icon={Icon.Clipboard}>

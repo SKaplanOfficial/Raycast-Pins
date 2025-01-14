@@ -21,16 +21,15 @@ import { getFavicon } from "@raycast/utils";
 import { KEYBOARD_SHORTCUT, PinAction, Visibility } from "../lib/constants";
 import { Group, useGroups } from "../lib/Groups";
 import { iconMap } from "../lib/icons";
-import { createNewPin, deletePin, getPins, getPinStatistics, modifyPin, Pin } from "../lib/Pins";
+import { buildPin, getPinStatistics, modifyPin, Pin } from "../lib/Pins";
 import { ExtensionPreferences } from "../lib/preferences";
 import CopyPinActionsSubmenu from "./actions/CopyPinActionsSubmenu";
 import { PLChecker } from "placeholders-toolkit";
 import PinsPlaceholders from "../lib/placeholders";
-import useLocalObjectStore from "../hooks/useLocalObjectStore";
-import { Tag } from "../lib/tag";
-import { storageMethods } from "../lib/storage";
 import TagForm from "./TagForm";
 import DeleteItemAction from "./actions/DeleteItemAction";
+import { LocalObjectStore } from "../hooks/useLocalObjectStore";
+import { Tag } from "../lib/tag";
 
 export interface PinFormValues {
   nameField: string;
@@ -63,12 +62,11 @@ export interface PinFormValues {
  */
 export const PinForm = (props: {
   pin?: Pin;
-  setPins?: React.Dispatch<React.SetStateAction<Pin[]>>;
-  pins?: Pin[];
+  pinStore: LocalObjectStore<Pin>;
+  tagStore: LocalObjectStore<Tag>;
   draftValues?: PinFormValues;
 }) => {
-  const { pin, setPins, pins, draftValues } = props;
-  const tagStore = useLocalObjectStore<Tag>("local-tags", storageMethods);
+  const { pin, pinStore, tagStore, draftValues } = props;
   const { groups } = useGroups();
   const { push, pop } = useNavigation();
   const [applications, setApplications] = useState<Application[]>([]);
@@ -92,6 +90,8 @@ export const PinForm = (props: {
   iconList.unshift("None");
 
   const preferences = getPreferenceValues<ExtensionPreferences>();
+
+  console.log(pinStore.loading, pinStore.objects);
 
   /**
    * Get the list of applications that can be used to open the target.
@@ -186,7 +186,7 @@ export const PinForm = (props: {
                 }
 
                 // Check if the shortcut is already in use by another pin
-                const usedShortcut = pins?.find(
+                const usedShortcut = pinStore.objects.find(
                   (pin) =>
                     pin.shortcut?.modifiers.every((modifier) => shortcut.modifiers.includes(modifier)) &&
                     pin.shortcut?.key == shortcut.key,
@@ -205,7 +205,7 @@ export const PinForm = (props: {
                 expirationAction = `custom:${values.expirationActionCustomField}`;
               }
 
-              if (pin && setPins) {
+              if (pin) {
                 await modifyPin(
                   pin,
                   {
@@ -234,16 +234,20 @@ export const PinForm = (props: {
                       .map((alias) => alias.trim())
                       .filter((alias) => alias.length > 0),
                   },
-                  setPins,
+                  async (pin: Pin) => {
+                    await pinStore.add([pin]);
+                  },
+                  async (pin: Pin) => {
+                    await pinStore.update(pin);
+                  },
                   pop,
                 );
               } else {
-                await createNewPin({
-                  ...pin,
+                const newPin = buildPin({
                   name: values.nameField || values.urlField.substring(0, 50),
                   url: values.urlField,
                   icon: values.iconField,
-                  group: values.groupField || "None",
+                  group: values.groupField,
                   application: values.openWithField,
                   expireDate: values.dateField ? new Date(values.dateField).toUTCString() : undefined,
                   execInBackground: values.execInBackgroundField,
@@ -262,9 +266,7 @@ export const PinForm = (props: {
                     .map((alias) => alias.trim())
                     .filter((alias) => alias.length > 0),
                 });
-                if (setPins) {
-                  setPins(await getPins());
-                }
+                await pinStore.add([newPin]);
                 await showToast({ title: `Added pin for "${values.nameField}"` });
                 pop();
               }
@@ -278,9 +280,13 @@ export const PinForm = (props: {
             shortcut={{ modifiers: ["cmd"], key: "g" }}
           />
 
-          {pin && pins ? <CopyPinActionsSubmenu pin={pin} pins={pins} /> : null}
-          {pin && setPins ? (
-            <DeleteItemAction item={pin} onDelete={async () => await deletePin(pin, setPins)} onCompletion={pop} />
+          {pin ? <CopyPinActionsSubmenu pin={pin} /> : null}
+          {pin ? (
+            <DeleteItemAction
+              item={pin}
+              onDelete={async () => await pinStore.remove(pin)}
+              options={{ onCompletion: pop }}
+            />
           ) : null}
         </ActionPanel>
       }
@@ -641,7 +647,7 @@ export const PinForm = (props: {
       {pin?.id != undefined ? (
         <>
           <Form.Separator />
-          <Form.Description title="Statistics" text={getPinStatistics(pin, pins || []) as string} />
+          <Form.Description title="Statistics" text={getPinStatistics(pin, pinStore.objects) as string} />
         </>
       ) : null}
     </Form>

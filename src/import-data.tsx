@@ -8,7 +8,7 @@ import YAML from "yaml";
 import * as TOML from "@iarna/toml";
 import { Action, ActionPanel, Form, Icon, popToRoot, showToast, Toast } from "@raycast/api";
 
-import { StorageKey, SORT_STRATEGY, Visibility } from "./lib/constants";
+import { StorageKey, SORT_STRATEGY, Visibility, ItemType } from "./lib/constants";
 import { getGroups, Group, isGroup, validateGroups } from "./lib/Groups";
 import { getPins, Pin, validatePins } from "./lib/Pins";
 import { setStorage } from "./lib/storage";
@@ -71,7 +71,7 @@ const importJSONData = async (data: { groups?: Group[]; pins?: Pin[] }, importMe
     const dataGroups = data.groups;
     const oldGroups = await getGroups();
     const newGroups = await mergeRemovingDuplicates(dataGroups || [], oldGroups);
-    await validateGroups(newGroups);
+    await validateGroups(newGroups as Group[]);
     await setStorage(StorageKey.LOCAL_GROUPS, newGroups);
 
     // Remove pin duplicates
@@ -151,6 +151,7 @@ const importCSVData = async (data: string[][], importMethod: string) => {
                 .split(",")
                 .map((alias) => alias.trim())
                 .filter((alias) => alias.length > 0),
+        itemType: ItemType.PIN,
       };
     });
     await importJSONData({ pins: newPins }, importMethod);
@@ -179,6 +180,7 @@ const importCSVData = async (data: string[][], importMethod: string) => {
           indices.menubarDisplay == -1
             ? undefined
             : (row[indices.menubarDisplay] as GroupDisplaySetting) || GroupDisplaySetting.USE_PARENT,
+        itemType: ItemType.GROUP,
       };
     });
     await importJSONData({ groups: newGroups }, importMethod);

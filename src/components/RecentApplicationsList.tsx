@@ -2,9 +2,11 @@ import { Action, ActionPanel, environment, getPreferenceValues, Icon, List, Menu
 
 import { getIcon } from "../lib/icons";
 import { useRecentApplications } from "../lib/LocalData";
-import { openPin } from "../lib/Pins";
+import { openPin, Pin } from "../lib/Pins";
 import { ExtensionPreferences } from "../lib/preferences";
 import OpenAllMenuItem from "./menu-items/OpenAllMenuItem";
+import { ItemType } from "../lib/constants";
+import { usePinStoreContext } from "../contexts/PinStoreContext";
 
 /**
  * A list of recent applications as menu bar extra items (default) or list items (in the 'View Pins' command).
@@ -13,17 +15,19 @@ import OpenAllMenuItem from "./menu-items/OpenAllMenuItem";
  */
 export default function RecentApplicationsList(props: { pinActions?: JSX.Element }) {
   const { pinActions } = props;
+  const pinStore = usePinStoreContext();
   const { recentApplications, loadingRecentApplications } = useRecentApplications();
   const preferences = getPreferenceValues<ExtensionPreferences>();
 
   // Wrap each recent application in a pseudo-pin
-  const pseudoPins = recentApplications.map((app) => ({
+  const pseudoPins: Pin[] = recentApplications.map((app) => ({
     name: app.name,
     url: app.path,
     group: "Recent Applications",
     id: -1,
     icon: "Favicon / File Icon",
     application: "None",
+    itemType: ItemType.PIN,
   }));
 
   if (preferences.showRecentApplications && (recentApplications.length > 1 || loadingRecentApplications)) {
@@ -37,7 +41,18 @@ export default function RecentApplicationsList(props: { pinActions?: JSX.Element
                 key={pin.url}
                 icon={getIcon(pin.url)}
                 title={pin.name.length > 20 ? pin.name.substring(0, 19) + "..." : pin.name}
-                onAction={async () => await openPin(pin, preferences)}
+                onAction={async () =>
+                  await openPin(
+                    pin,
+                    preferences,
+                    async (pin: Pin) => {
+                      await pinStore.add([pin]);
+                    },
+                    async (pin: Pin) => {
+                      await pinStore.update(pin);
+                    },
+                  )
+                }
               />
             );
           })}

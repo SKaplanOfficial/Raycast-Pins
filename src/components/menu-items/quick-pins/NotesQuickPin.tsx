@@ -2,9 +2,10 @@ import { Application, MenuBarExtra } from "@raycast/api";
 import { NoteRef } from "../../../lib/LocalData";
 import { cutoff } from "../../../lib/utils";
 import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
-import { createNewPin } from "../../../lib/Pins";
 import { Group, createNewGroup } from "../../../lib/Groups";
 import { useCachedState } from "@raycast/utils";
+import { usePinStoreContext } from "../../../contexts/PinStoreContext";
+import { buildPin } from "../../../lib/Pins";
 
 type NotesQuickPinProps = {
   /**
@@ -29,6 +30,7 @@ type NotesQuickPinProps = {
  */
 export default function NotesQuickPin(props: NotesQuickPinProps) {
   const { app, notes, groups } = props;
+  const { add: addPin } = usePinStoreContext();
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
 
   if (app.name != "Notes" || notes.length == 0) {
@@ -49,12 +51,13 @@ export default function NotesQuickPin(props: NotesQuickPinProps) {
       onAction={async () => {
         if (notes.length == 1) {
           const cmd = `osascript -e 'Application("Notes").notes.byId("${notes[0].id}").show()' -l "JavaScript"`;
-          await createNewPin({
+          const newPin = buildPin({
             name: notes[0].name,
             url: cmd,
             icon: app.path,
-            group: targetGroup?.name || "None",
+            group: targetGroup?.name,
           });
+          await addPin([newPin]);
         } else {
           let newGroupName = "New Note Group";
           if (targetGroup) {
@@ -69,12 +72,13 @@ export default function NotesQuickPin(props: NotesQuickPinProps) {
           }
           for (const note of notes) {
             const cmd = `osascript -e 'Application("Notes").notes.byId("${note.id}").show()' -l "JavaScript"`;
-            await createNewPin({
+            const newPin = buildPin({
               name: note.name,
               url: cmd,
               icon: app.path,
               group: newGroupName,
             });
+            await addPin([newPin]);
           }
         }
       }}

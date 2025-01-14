@@ -1,8 +1,9 @@
 import { Application, MenuBarExtra } from "@raycast/api";
-import { createNewPin } from "../../../lib/Pins";
 import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
 import { useCachedState } from "@raycast/utils";
 import { Group } from "../../../lib/Groups";
+import { buildPin } from "../../../lib/Pins";
+import { usePinStoreContext } from "../../../contexts/PinStoreContext";
 
 type AppQuickPinProps = {
   /**
@@ -17,6 +18,7 @@ type AppQuickPinProps = {
  */
 export default function AppQuickPin(props: AppQuickPinProps) {
   const { app } = props;
+  const { add: addPin } = usePinStoreContext();
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
 
   if (app.name.length == 0 || app.name == "Finder" || app.name == "Desktop") {
@@ -35,11 +37,12 @@ export default function AppQuickPin(props: AppQuickPinProps) {
       tooltip="Add a pin whose target path is the path of the current app"
       shortcut={KEYBOARD_SHORTCUT.PIN_CURRENT_APP}
       onAction={async () => {
-        await createNewPin({
+        const newPin = buildPin({
           name: app.name,
           url: app.path,
-          group: targetGroup?.name || "None",
+          group: targetGroup?.name,
         });
+        await addPin([newPin]);
       }}
     />
   );

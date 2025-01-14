@@ -5,15 +5,17 @@
  * @author Stephen Kaplan <skaplanofficial@gmail.com>
  *
  * Created at     : 2023-09-03 12:43:31
- * Last modified  : 2024-07-05 01:56:56
+ * Last modified  : 2025-01-14 02:27:57
  */
 
 import { LocalStorage, showToast, Toast } from "@raycast/api";
 
 import { ItemType, StorageKey } from "./constants";
 import { getNextGroupID, Group } from "./Groups";
-import { getNextPinID, Pin } from "./Pins";
-import { getStorage, setStorage } from "./storage";
+import { buildPin, Pin } from "./Pins";
+import { getStorage, setStorage, storageMethods } from "./storage";
+import { addObjectsToStore, getObjectsFromStore } from "../hooks/useLocalObjectStore";
+import { buildTag, Tag } from "./tag";
 
 /**
  * A set of example pins and groups to help users get started.
@@ -281,22 +283,20 @@ const exampleGroups: Group[] = [
  */
 export const installExamples = async (kind: "pins" | "groups") => {
   if (kind == "pins") {
-    const storedPins: Pin[] = (await getStorage(StorageKey.LOCAL_PINS)) || [];
+    const storedPins = await getObjectsFromStore<Pin>(StorageKey.PIN_STORE, storageMethods);
+    const newPins = examplePins
+      .filter((pin) => !storedPins.some((storedPin) => storedPin.name == pin.name))
+      .map((pin) => buildPin(pin));
+    await addObjectsToStore(StorageKey.PIN_STORE, storedPins, newPins, storageMethods);
 
-    let nextPinID = await getNextPinID();
-    const examplesWithValidIDs = examplePins
-      .map((pin) => {
-        if (pin.id < nextPinID) {
-          pin.id = nextPinID;
-          nextPinID++;
-        }
-        pin.dateCreated = new Date().toUTCString();
-        return pin;
-      })
-      .filter((pin) => !storedPins.some((storedPin) => storedPin.url == pin.url));
-
-    const allPins = [...storedPins, ...examplesWithValidIDs];
-    await setStorage(StorageKey.LOCAL_PINS, allPins);
+    const storedTags = await getObjectsFromStore<Tag>(StorageKey.TAG_STORE, storageMethods);
+    const newTags = examplePins
+      .map((pin) => pin.tags)
+      .flat()
+      .filter((tag) => tag != undefined && !storedTags.some((storedTag) => storedTag.name == tag))
+      .filter((tag, index, self) => self.indexOf(tag) === index)
+      .map((tagName) => buildTag({ name: tagName }));
+    await addObjectsToStore(StorageKey.TAG_STORE, storedTags, newTags, storageMethods);
     await LocalStorage.setItem(StorageKey.EXAMPLE_PINS_INSTALLED, true);
   }
 

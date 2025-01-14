@@ -2,9 +2,10 @@ import { Application, MenuBarExtra } from "@raycast/api";
 import { FileRef } from "../../../lib/LocalData";
 import { cutoff } from "../../../lib/utils";
 import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
-import { createNewPin } from "../../../lib/Pins";
 import { useCachedState } from "@raycast/utils";
 import { Group } from "../../../lib/Groups";
+import { buildPin } from "../../../lib/Pins";
+import { usePinStoreContext } from "../../../contexts/PinStoreContext";
 
 type DirectoryQuickPinProps = {
   /**
@@ -24,6 +25,7 @@ type DirectoryQuickPinProps = {
  */
 export default function DirectoryQuickPin(props: DirectoryQuickPinProps) {
   const { app, directory } = props;
+  const { add: addPin } = usePinStoreContext();
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
 
   if (app.name != "Finder" || directory.name == "Desktop") {
@@ -42,11 +44,12 @@ export default function DirectoryQuickPin(props: DirectoryQuickPinProps) {
       tooltip="Create a pin whose target path is the current directory of Finder"
       shortcut={KEYBOARD_SHORTCUT.PIN_CURRENT_DIRECTORY}
       onAction={async () => {
-        await createNewPin({
+        const newPin = buildPin({
           name: directory.name,
           url: directory.path,
-          group: targetGroup?.name || "None",
+          group: targetGroup?.name,
         });
+        await addPin([newPin]);
       }}
     />
   );

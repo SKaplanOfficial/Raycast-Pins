@@ -9,8 +9,12 @@ const MonthCalendarPlaceholder: Placeholder = {
   rules: [],
   apply: async () => {
     const year = new Date().getFullYear();
-    const months = Array.from({ length: 12 }, (_, i) => new Date(year, i, 1).toLocaleString("default", { month: "long" }));
-    const days = Array.from({ length: 7 }, (_, i) => new Date(year, 0, i).toLocaleString("default", { weekday: "narrow" }));
+    const months = Array.from({ length: 12 }, (_, i) =>
+      new Date(year, i, 1).toLocaleString("default", { month: "long" }),
+    );
+    const days = Array.from({ length: 7 }, (_, i) =>
+      new Date(year, 0, i).toLocaleString("default", { weekday: "narrow" }),
+    );
 
     const boldNumbers = [
       "⓪",

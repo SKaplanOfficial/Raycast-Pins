@@ -21,7 +21,8 @@ const PinJSONPlaceholder: Placeholder = {
     return { result: JSON.stringify(data).replaceAll("{{", "[[[").replaceAll("}}", "]]]") };
   },
   constant: false,
-  fn: async (context?) => (await PinJSONPlaceholder.apply(`{{pinJSON}}`, context as unknown as { [key: string]: unknown })).result,
+  fn: async (context?) =>
+    (await PinJSONPlaceholder.apply(`{{pinJSON}}`, context as unknown as { [key: string]: unknown })).result,
   example: "{{pinJSON}}",
   description: "Gets the JSON representation of the current pin.",
   hintRepresentation: "{{pinJSON}}",

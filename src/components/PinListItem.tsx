@@ -1,10 +1,9 @@
 import { Action, ActionPanel, Icon, Keyboard, List, environment, getPreferenceValues, showToast } from "@raycast/api";
 import { LocalDataObject, getRecentApplications } from "../lib/LocalData";
-import { Pin, deletePin, disablePin, getPinKeywords, getPins, hidePin, openPin, unhidePin } from "../lib/Pins";
+import { Pin, disablePin, getPinKeywords, getPins, hidePin, openPin, unhidePin } from "../lib/Pins";
 import { PinForm } from "./PinForm";
 import { getPinIcon } from "../lib/icons";
-import { Direction, ItemType, PinAction, SORT_STRATEGY, StorageKey, Visibility } from "../lib/constants";
-import { setStorage } from "../lib/storage";
+import { Direction, ItemType, PinAction, SORT_STRATEGY, Visibility } from "../lib/constants";
 import { cutoff } from "../lib/utils";
 import { ExtensionPreferences, ViewPinsPreferences } from "../lib/preferences";
 import path from "path";
@@ -20,7 +19,7 @@ import {
   addTextFragmentAccessory,
   addVisibilityAccessory,
 } from "../lib/accessories";
-import { Group } from "../lib/Groups";
+import { buildGroup, Group } from "../lib/Groups";
 import { PinsInfoPlaceholders } from "../lib/placeholders";
 import { bulkApply } from "placeholders-toolkit/dist/lib/apply";
 import CopyPinActionsSubmenu from "./actions/CopyPinActionsSubmenu";
@@ -30,6 +29,7 @@ import { LocalObjectStore } from "../hooks/useLocalObjectStore";
 import { Tag } from "../lib/tag";
 import CreateNewItemAction from "./actions/CreateNewItemAction";
 import DeleteItemAction from "./actions/DeleteItemAction";
+import { usePinStoreContext } from "../contexts/PinStoreContext";
 
 /**
  * Moves a pin up or down in the list of pins. Pins stay within their groups unless grouping is disabled in preferences.
@@ -37,22 +37,35 @@ import DeleteItemAction from "./actions/DeleteItemAction";
  * @param direction The direction to move the pin in. One of {@link Direction}.
  * @param setPins The function to update the list of pins.
  */
-const movePin = async (pin: Pin, direction: Direction, setPins: React.Dispatch<React.SetStateAction<Pin[]>>) => {
+const movePinInGroup = async (pin: Pin, direction: Direction, pinStore: LocalObjectStore<Pin>) => {
   const storedPins: Pin[] = await getPins();
   const preferences = getPreferenceValues<ExtensionPreferences & ViewPinsPreferences>();
 
   const localPinGroup = storedPins.filter((p) => p.group == pin.group || !preferences.showGroups);
   const positionInGroup = localPinGroup.findIndex((p) => p.id == pin.id);
-  const positionOverall = storedPins.findIndex((p) => p.id == pin.id);
   const targetPosition = direction == Direction.UP ? positionInGroup - 1 : positionInGroup + 1;
 
   if (direction == Direction.UP ? targetPosition >= 0 : targetPosition < localPinGroup.length) {
     const targetPin = localPinGroup[targetPosition];
     const targetGlobalIndex = storedPins.findIndex((p) => p.id == targetPin.id);
-    storedPins.splice(targetGlobalIndex, 0, storedPins.splice(positionOverall, 1)[0]);
-    setPins(storedPins);
-    await setStorage(StorageKey.LOCAL_PINS, storedPins);
+    await pinStore.move(pin, targetGlobalIndex);
+    await pinStore.load();
   }
+};
+
+const movePinToGroup = async (pin: Pin, group: Group, pinStore: LocalObjectStore<Pin>) => {
+  const groupPins = pinStore.objects.filter((p) => p.group == group.name);
+  const pinIndex = pinStore.objects.findIndex((p) => p.id == pin.id);
+  if (groupPins.length == 0 || pinIndex == -1) return;
+
+  const updatedPins = [...pinStore.objects];
+  updatedPins.splice(pinIndex, 1);
+
+  pin.group = group.name;
+  const groupStart = pinStore.objects.findIndex((p) => p.id == groupPins[0].id);
+  const targetIndex = groupStart + groupPins.length;
+  await pinStore.move(pin, targetIndex);
+  await pinStore.load();
 };
 
 /**
@@ -74,9 +87,6 @@ export default function PinListItem(props: {
   index: number;
   pin: Pin;
   visiblePins: Pin[];
-  pins: Pin[];
-  setPins: React.Dispatch<React.SetStateAction<Pin[]>>;
-  revalidatePins: () => Promise<void>;
   groups: Group[];
   revalidateGroups: () => Promise<void>;
   tagStore: LocalObjectStore<Tag>;
@@ -93,9 +103,6 @@ export default function PinListItem(props: {
     index,
     pin,
     visiblePins,
-    pins,
-    setPins,
-    revalidatePins,
     groups,
     revalidateGroups,
     tagStore,
@@ -108,6 +115,7 @@ export default function PinListItem(props: {
     examplesInstalled,
     setExamplesInstalled,
   } = props;
+  const pinStore = usePinStoreContext();
   const [title, setTitle] = useState<string>(pin.name || cutoff(pin.url, 20));
 
   useEffect(() => {
@@ -115,7 +123,7 @@ export default function PinListItem(props: {
       const newTitle = await bulkApply(pin.name, { allPlaceholders: PinsInfoPlaceholders });
       setTitle(newTitle);
     })();
-  }, [pins, pin.name]);
+  }, [pinStore.objects, pin.name]);
 
   // Add accessories based on the user's preferences
   const accessories: List.Item.Accessory[] = [];
@@ -126,7 +134,7 @@ export default function PinListItem(props: {
   if (preferences.showApplication) addApplicationAccessory(pin, accessories);
   if (preferences.showExecutionVisibility) addExecutionVisibilityAccessory(pin, accessories);
   if (preferences.showFragment) addTextFragmentAccessory(pin, accessories);
-  if (preferences.showLinkCount) addLinksAccessory(pin, accessories, pins, groups);
+  if (preferences.showLinkCount) addLinksAccessory(pin, accessories, pinStore.objects, groups);
   if (preferences.showFrequency) addFrequencyAccessory(pin, accessories, maxTimesOpened);
   if (preferences.showTags) addTagAccessories(pin, tagStore.toMap("name"), accessories);
 
@@ -156,8 +164,18 @@ export default function PinListItem(props: {
               shortcut={pin.shortcut}
               onAction={async () => {
                 await getRecentApplications();
-                await openPin(pin, preferences, localData as unknown as { [key: string]: unknown });
-                await revalidatePins();
+                await openPin(
+                  pin,
+                  preferences,
+                  async (pin: Pin) => {
+                    await pinStore.add([pin]);
+                  },
+                  async (pin: Pin) => {
+                    await pinStore.update(pin);
+                  },
+                  localData as unknown as { [key: string]: unknown },
+                );
+                await pinStore.load();
                 await revalidateGroups();
               }}
             />
@@ -166,13 +184,15 @@ export default function PinListItem(props: {
               title="Edit"
               icon={Icon.Pencil}
               shortcut={Keyboard.Shortcut.Common.Edit}
-              target={<PinForm pin={pin} setPins={setPins} pins={pins} />}
+              target={<PinForm pin={pin} pinStore={pinStore} tagStore={tagStore} />}
             />
             <Action.Push
               title="Duplicate"
               icon={Icon.EyeDropper}
               shortcut={Keyboard.Shortcut.Common.Duplicate}
-              target={<PinForm pin={{ ...pin, name: pin.name + " Copy", id: -1 }} setPins={setPins} pins={pins} />}
+              target={
+                <PinForm pin={{ ...pin, name: pin.name + " Copy", id: -1 }} pinStore={pinStore} tagStore={tagStore} />
+              }
             />
 
             <Action.CreateQuicklink
@@ -203,11 +223,11 @@ export default function PinListItem(props: {
                   icon={Icon.ArrowUp}
                   shortcut={Keyboard.Shortcut.Common.MoveUp}
                   onAction={async () => {
-                    await movePin(pin, Direction.UP, setPins);
+                    await movePinInGroup(pin, Direction.UP, pinStore);
                   }}
                 />
               ) : null}
-              {index < pins.length - 1 &&
+              {index < visiblePins.length - 1 &&
               visiblePins.length > 1 &&
               (group?.sortStrategy == SORT_STRATEGY.manual ||
                 (!group?.sortStrategy && preferences.defaultSortStrategy == "manual") ||
@@ -217,7 +237,7 @@ export default function PinListItem(props: {
                   icon={Icon.ArrowDown}
                   shortcut={Keyboard.Shortcut.Common.MoveDown}
                   onAction={async () => {
-                    await movePin(pin, Direction.DOWN, setPins);
+                    await movePinInGroup(pin, Direction.DOWN, pinStore);
                   }}
                 />
               ) : null}
@@ -230,18 +250,7 @@ export default function PinListItem(props: {
                       key={group.id}
                       icon={Icon.ChevronRight}
                       onAction={async () => {
-                        const groupPins = pins.filter((p) => p.group == group.name);
-                        const pinIndex = pins.findIndex((p) => p.id == pin.id);
-                        if (groupPins.length == 0 || pinIndex == -1) return;
-
-                        pins.splice(pinIndex, 1);
-                        pin.group = group.name;
-                        const groupStart = pins.findIndex((p) => p.id == groupPins[0].id);
-                        const targetIndex = groupStart + groupPins.length;
-                        const newPins = [...pins.slice(0, targetIndex), pin, ...pins.slice(targetIndex)];
-
-                        await setStorage(StorageKey.LOCAL_PINS, newPins);
-                        await revalidatePins();
+                        await movePinToGroup(pin, group, pinStore);
                       }}
                     />
                   ))}
@@ -250,31 +259,22 @@ export default function PinListItem(props: {
                   key="Other"
                   icon={Icon.ChevronRight}
                   onAction={async () => {
-                    const groupPins = pins.filter((p) => p.group == "None");
-                    const pinIndex = pins.findIndex((p) => p.id == pin.id);
-                    if (groupPins.length == 0 || pinIndex == -1) return;
-
-                    pins.splice(pinIndex, 1);
-                    pin.group = "None";
-                    const groupStart = pins.findIndex((p) => p.id == groupPins[0].id);
-                    const targetIndex = groupStart + groupPins.length;
-                    const newPins = [...pins.slice(0, targetIndex), pin, ...pins.slice(targetIndex)];
-
-                    await setStorage(StorageKey.LOCAL_PINS, newPins);
-                    await revalidatePins();
+                    const noneGroup = buildGroup({ name: "None" });
+                    await movePinToGroup(pin, noneGroup, pinStore);
                   }}
                 />
               </ActionPanel.Section>
             </ActionPanel.Submenu>
 
-            <DeleteItemAction item={pin} onDelete={async () => await deletePin(pin, setPins)} />
+            <DeleteItemAction item={pin} onDelete={async () => await pinStore.remove(pin)} />
             <Action
               title="Delete All Pins (Keep Groups)"
               icon={Icon.Trash}
               onAction={async () => {
                 const storedPins = await getPins();
                 for (let index = 0; index < storedPins.length; index++) {
-                  await deletePin(storedPins[index], setPins, index == 0, false);
+                  // TODO: Add confirmation, move to own component
+                  await pinStore.remove(storedPins[index]);
                 }
                 await showToast({ title: "Deleted All Pins" });
               }}
@@ -282,11 +282,10 @@ export default function PinListItem(props: {
               shortcut={Keyboard.Shortcut.Common.RemoveAll}
             />
           </ActionPanel.Section>
-          <CreateNewItemAction itemType={ItemType.PIN} formView={<PinForm setPins={setPins} pins={pins} />} />
+          <CreateNewItemAction itemType={ItemType.PIN} formView={<PinForm pinStore={pinStore} tagStore={tagStore} />} />
           {!examplesInstalled ? (
             <InstallExamplesAction
               setExamplesInstalled={setExamplesInstalled}
-              revalidatePins={revalidatePins}
               revalidateGroups={revalidateGroups}
               kind="pins"
             />
@@ -298,9 +297,9 @@ export default function PinListItem(props: {
             shortcut={{ modifiers: ["cmd", "shift"], key: "h" }}
             onAction={async () => {
               if (pin.visibility === Visibility.HIDDEN) {
-                await unhidePin(pin, setPins);
+                await unhidePin(pin, pinStore.update);
               } else {
-                await hidePin(pin, setPins);
+                await hidePin(pin, pinStore.update);
               }
             }}
           />
@@ -310,9 +309,9 @@ export default function PinListItem(props: {
             shortcut={{ modifiers: ["cmd", "shift"], key: "d" }}
             onAction={async () => {
               if (pin.visibility === Visibility.DISABLED) {
-                await unhidePin(pin, setPins);
+                await unhidePin(pin, pinStore.update);
               } else {
-                await disablePin(pin, setPins);
+                await disablePin(pin, pinStore.update);
               }
             }}
           />
@@ -326,7 +325,7 @@ export default function PinListItem(props: {
           />
 
           <PlaceholdersGuideAction />
-          <CopyPinActionsSubmenu pin={pin} pins={pins} />
+          <CopyPinActionsSubmenu pin={pin} />
         </ActionPanel>
       }
     />

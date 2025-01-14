@@ -2,9 +2,10 @@ import { Application, MenuBarExtra } from "@raycast/api";
 import { FileRef } from "../../../lib/LocalData";
 import { cutoff } from "../../../lib/utils";
 import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
-import { createNewPin } from "../../../lib/Pins";
 import { useCachedState } from "@raycast/utils";
 import { Group } from "../../../lib/Groups";
+import { usePinStoreContext } from "../../../contexts/PinStoreContext";
+import { buildPin } from "../../../lib/Pins";
 
 type DocumentQuickPinProps = {
   /**
@@ -24,6 +25,7 @@ type DocumentQuickPinProps = {
  */
 export default function DocumentQuickPin(props: DocumentQuickPinProps) {
   const { app, document } = props;
+  const { add: addPin } = usePinStoreContext();
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
 
   if (document.path == "") {
@@ -42,11 +44,12 @@ export default function DocumentQuickPin(props: DocumentQuickPinProps) {
       tooltip="Create a pin whose target path is the document currently open in the frontmost application"
       shortcut={KEYBOARD_SHORTCUT.PIN_CURRENT_DOCUMENT}
       onAction={async () => {
-        await createNewPin({
+        const newPin = buildPin({
           name: document.name,
           url: document.path,
-          group: targetGroup?.name || "None",
+          group: targetGroup?.name,
         });
+        await addPin([newPin]);
       }}
     />
   );

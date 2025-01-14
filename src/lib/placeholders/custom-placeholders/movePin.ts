@@ -2,7 +2,8 @@ import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-
 import { Pin, movePin } from "../../Pins";
 import { Group, createNewGroup } from "../../Groups";
 import { StorageKey, Visibility } from "../../constants";
-import { getStorage } from "../../storage";
+import { getStorage, storageMethods } from "../../storage";
+import { updateObjectInStore } from "../../../hooks/useLocalObjectStore";
 
 /**
  * Placeholder directive for moving a pin to a different group.
@@ -32,7 +33,7 @@ const MovePinDirective: Placeholder = {
       }
     }
 
-    await movePin(pin, group);
+    await movePin(pin, group, (pin) => updateObjectInStore(allPins, pin, true, StorageKey.PIN_STORE, storageMethods));
     return { result: "" };
   },
   constant: false,
