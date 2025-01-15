@@ -1,24 +1,19 @@
-/**
- * @module lib/constants.ts Constants used throughout the Pins extension, including storage keys, keyboard shortcuts, and sorting strategies.
- *
- * @summary Constants used throughout the extension.
- * @author Stephen Kaplan <skaplanofficial@gmail.com>
- *
- * Created at     : 2023-09-04 17:31:40
- * Last modified  : 2024-07-05 01:57:20
- */
-
 import { Keyboard } from "@raycast/api";
 
 export enum ItemType {
-  PIN = "Pin",
-  GROUP = "Group",
-  TAG = "Tag",
+  PIN = "pin",
+  GROUP = "group",
+  TAG = "tag",
 }
 
 export type BaseItem = {
   id: string;
   name: string;
+  dateCreated: string;
+
+  /**
+   * T
+   */
   itemType: ItemType;
 }
 
@@ -26,21 +21,19 @@ export type BaseItem = {
  * Storage keys used throughout the extension.
  */
 export enum StorageKey {
-  /**
-   * The list of stored pins.
-   */
   LOCAL_PINS = "localPins",
-
-  PIN_STORE = "local-pins",
-
-  /**
-   * The list of stored groups.
-   */
   LOCAL_GROUPS = "localGroups",
 
+  PIN_STORE = "local-pins",
   GROUP_STORE = "local-groups",
-
   TAG_STORE = "local-tags",
+
+  APP_DATA = "local-app-data",
+
+  /**
+   * The list of recently used applications. This is used to cache the list of applications so that it does not need to be fetched every time the list of pins is displayed.
+   */
+  RECENT_APPS = "local-recent-apps",
 
   /**
    * The ID of the next pin to be created. This is generally the highest ID in the list of pins, but it is not guaranteed. It is used to ensure that each pin has a unique ID.
@@ -51,11 +44,6 @@ export enum StorageKey {
    * The ID of the next group to be created. This is generally the highest ID in the list of groups, but it is not guaranteed. It is used to ensure that each group has a unique ID.
    */
   NEXT_GROUP_ID = "nextGroupID",
-
-  /**
-   * The list of recently used applications. This is used to cache the list of applications so that it does not need to be fetched every time the list of pins is displayed.
-   */
-  RECENT_APPS = "recentApplications",
 
   /**
    * The current group to add new pins to by default.

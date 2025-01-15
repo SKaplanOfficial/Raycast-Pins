@@ -4,6 +4,7 @@ import { ItemType } from "../../lib/common";
 /**
  * Action to create a new item. Opens the provided form view with blank fields.
  * @param props.itemType The type of item to create. See {@link ItemType}.
+ * @param props.formView The form view to open.
  * @returns An action component.
  */
 export default function CreateNewItemAction(props: { itemType: ItemType; formView: JSX.Element }) {

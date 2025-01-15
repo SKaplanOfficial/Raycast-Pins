@@ -1,5 +1,9 @@
 import { exec } from "child_process";
-import { runAppleScript } from "@raycast/utils";
+import { getFavicon, runAppleScript } from "@raycast/utils";
+import { Icon } from "@raycast/api";
+import { Group } from "./group";
+import { Pin } from "./pin";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Runs a terminal command asynchronously.
@@ -89,4 +93,69 @@ export const isNullish = (value: unknown): value is null | undefined => {
 export const objectFromNonNullableEntriesOfObject = <T extends Record<string, unknown>>(obj: T): T => {
   const entries = Object.entries(obj);
   return Object.fromEntries(entries.filter(([, value]) => isNullish(value))) as T;
+}; /**
+ * A map of icon strings to their corresponding icon objects.
+ */
+
+export const iconMap = Icon as Record<string, Icon>;
+
+/**
+ * Converts a vague icon reference to an icon object.
+ * @param iconRef The icon reference to convert.
+ * @param color The color to tint the icon.
+ * @returns The icon object.
+ */
+export const getIcon = (iconRef: string, color?: string) => {
+  if (iconRef in iconMap) {
+    return { source: iconMap[iconRef], tintColor: color };
+  } else if (iconRef.startsWith("/") || iconRef.startsWith("~")) {
+    return { fileIcon: iconRef };
+  } else if (iconRef.match(/^[a-zA-Z0-9]*?:.*/g)) {
+    return getFavicon(iconRef);
+  } else if (iconRef == "None" || iconRef.replace(/{{(([^{]|{(?!{)|{{[\s\S]*?}})*?)}}/g, "").trim().length == 0) {
+    return { source: Icon.Minus, tintColor: color };
+  }
+  return { source: Icon.Terminal, tintColor: color };
 };
+
+/**
+ * Gets the icon for a given pin, regardless of whether it's a URL, file path, or icon reference.
+ * @param pin The pin to get the icon for.
+ * @returns The icon object.
+ */
+export const getPinIcon = (pin: Pin) => {
+  return pin.icon in iconMap || pin.icon == "None" || pin.icon.startsWith("/")
+    ? getIcon(pin.icon, pin.iconColor)
+    : pin.fragment
+      ? Icon.Text
+      : getIcon(pin.url);
+};
+
+/**
+ * Gets the icon for a given group.
+ * @param group The group to get the icon for.
+ * @returns The icon object.
+ */
+export const getGroupIcon = (group: Group) => {
+  return group.name == "Recent Applications"
+    ? Icon.Clock
+    : group.icon in iconMap
+      ? { source: iconMap[group.icon], tintColor: group.iconColor }
+      : Icon.Minus;
+};
+
+export default function useRenderCount(callback: (count: number) => void) {
+  const count = useRef<number>(0);
+  const [, setStep] = useState<number>(0);
+
+  useEffect(() => {
+    count.current++;
+    if ((count.current + 1) % 2 == 0) {
+      const trueCount = (count.current + 1) / 2;
+      callback(trueCount);
+      setStep(count.current);
+    }
+  });
+
+  return count.current;
+}

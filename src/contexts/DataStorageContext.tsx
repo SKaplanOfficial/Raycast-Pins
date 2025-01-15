@@ -1,90 +1,81 @@
-import { createContext, useEffect } from "react";
+import { createContext, useEffect, useMemo, useState } from "react";
 import useLocalObjectStore, { objectStoreDefaultState } from "../hooks/useLocalObjectStore";
 import { Tag, upgradeTags, validateTags } from "../lib/tag";
 import { useContext } from "react";
 import { StorageKey } from "../lib/common";
 import { getStorage, storageMethods } from "../lib/storage";
 import { Pin, validatePins } from "../lib/pin";
-import { Group, validateGroups } from "../lib/Groups";
+import { Group, validateGroups } from "../lib/group";
 import { LocalStorage } from "@raycast/api";
-import { useCachedState } from "@raycast/utils";
 
 const dataStoreDefaultState = {
   pinStore: objectStoreDefaultState<Pin>(),
   groupStore: objectStoreDefaultState<Group>(),
   tagStore: objectStoreDefaultState<Tag>(),
+  tagAssociations: {} as { [key: string]: { pins: string[] } },
+  loadingStores: true,
 };
 
 const DataStorageContext = createContext(dataStoreDefaultState);
-
-type AssociationsDict = {
-  groups: {
-    [key: string]: Group & { pins: Pin[] };
-  };
-  tags: {
-    [key: string]: Tag & { pins: Pin[] } & { groups: Group[] };
-  };
-};
 
 function DataStorageProvider(props: { children: React.ReactNode }) {
   const { children } = props;
   const pinStore = useLocalObjectStore<Pin>(StorageKey.PIN_STORE, storageMethods, validatePins);
   const groupStore = useLocalObjectStore<Group>(StorageKey.GROUP_STORE, storageMethods, validateGroups);
   const tagStore = useLocalObjectStore<Tag>(StorageKey.TAG_STORE, storageMethods, validateTags);
-  const [associations, setAssociations] = useCachedState<AssociationsDict>("data-associations", {
-    groups: {},
-    tags: {},
-  });
-
-  async function migratePins() {
-    const oldPins: Pin[] = await getStorage(StorageKey.LOCAL_PINS);
-    if (oldPins) {
-      await LocalStorage.removeItem(StorageKey.LOCAL_PINS);
-      await pinStore.add(oldPins);
-      const pinTags = oldPins
-        .map((pin) => pin.tags)
-        .flat()
-        .filter((tag) => tag != undefined);
-      upgradeTags(pinTags, tagStore);
-    }
-  }
-
-  function findAssociations() {
-    const groups = groupStore.objects.reduce(
-      (acc, group) => {
-        const pinsInGroup = pinStore.objects.filter((pin) => pin.group == group.name);
-        acc[group.id] = { ...group, pins: pinsInGroup };
-        return acc;
-      },
-      {} as { [key: string]: Group & { pins: Pin[] } },
-    );
-
-    const tags = tagStore.objects.reduce(
-      (acc, tag) => {
-        const pinsWithTag = pinStore.objects.filter((pin) => pin.tags?.includes(tag.name));
-        const groupsWithTag = groupStore.objects.filter((group) => group.tags?.includes(tag.name));
-        acc[tag.id] = { ...tag, pins: pinsWithTag, groups: groupsWithTag };
-        return acc;
-      },
-      {} as { [key: string]: Tag & { pins: Pin[] } & { groups: Group[] } },
-    );
-
-    setAssociations({ groups, tags });
-  }
+  const [migrationComplete, setMigrationComplete] = useState(false);
+  const [loadingStores, setLoadingStores] = useState(true);
+  const [tagAssociations, setTagAssociations] = useState(dataStoreDefaultState.tagAssociations);
 
   useEffect(() => {
-    if (!pinStore.loading) {
-      if (pinStore.objects.length === 0) {
-        migratePins();
+    async function migratePins() {
+      const oldPins: Pin[] = await getStorage(StorageKey.LOCAL_PINS);
+      if (oldPins) {
+        await LocalStorage.removeItem(StorageKey.LOCAL_PINS);
+        await pinStore.add(oldPins);
+        const pinTags = oldPins
+          .map((pin) => pin.tags)
+          .flat()
+          .filter((tag) => tag != undefined);
+        await upgradeTags(pinTags, tagStore);
       }
+      setMigrationComplete(true);
+    }
+
+    if (!pinStore.loading) {
+      migratePins();
     }
   }, [pinStore.loading, pinStore.objects]);
 
-  const dataStore = {
-    pinStore,
-    groupStore,
-    tagStore,
-  };
+  useEffect(() => {
+    if (!pinStore.loading && !groupStore.loading && !tagStore.loading && migrationComplete) {
+      const associations = tagStore.objects.reduce(
+        (acc, tag) => {
+          pinStore.objects.forEach((pin) => {
+            if (pin.tags?.includes(tag.name)) {
+              acc[tag.name] = acc[tag.name] || { pins: [] };
+              acc[tag.name].pins.push(pin.id);
+            }
+          });
+          return acc;
+        },
+        {} as { [key: string]: { pins: string[] } },
+      );
+      setTagAssociations(associations);
+      setLoadingStores(false);
+    }
+  }, [pinStore.loading, groupStore.loading, tagStore.loading, migrationComplete]);
+
+  const dataStore = useMemo(
+    () => ({
+      pinStore,
+      groupStore,
+      tagStore,
+      tagAssociations,
+      loadingStores,
+    }),
+    [pinStore, groupStore, tagStore, loadingStores],
+  );
 
   return <DataStorageContext.Provider value={dataStore}>{children}</DataStorageContext.Provider>;
 }

@@ -1,7 +1,7 @@
 import { Action, ActionPanel, environment, getPreferenceValues, Icon, List, MenuBarExtra, open } from "@raycast/api";
 
-import { getIcon } from "../lib/icons";
-import { useRecentApplications } from "../lib/LocalData";
+import { cutoff, getIcon } from "../lib/utils";
+import { useRecentApps } from "../hooks/useRecentApps";
 import { buildPin, openPin, Pin } from "../lib/pin";
 import { ExtensionPreferences } from "../lib/preferences";
 import OpenAllMenuItem from "./menu-items/OpenAllMenuItem";
@@ -15,10 +15,9 @@ import { useDataStorageContext } from "../contexts/DataStorageContext";
 export default function RecentApplicationsList(props: { pinActions?: JSX.Element }) {
   const { pinActions } = props;
   const { pinStore } = useDataStorageContext();
-  const { recentApplications, loadingRecentApplications } = useRecentApplications();
+  const { recentApplications, loadingRecentApplications } = useRecentApps();
   const preferences = getPreferenceValues<ExtensionPreferences>();
 
-  // Wrap each recent application in a pseudo-pin
   const pseudoPins: Pin[] = recentApplications.map((app) =>
     buildPin({
       name: app.name,
@@ -37,15 +36,11 @@ export default function RecentApplicationsList(props: { pinActions?: JSX.Element
               <MenuBarExtra.Item
                 key={pin.url}
                 icon={getIcon(pin.url)}
-                title={pin.name.length > 20 ? pin.name.substring(0, 19) + "..." : pin.name}
+                title={cutoff(pin.name, 20)}
                 onAction={async () =>
-                  await openPin(
-                    pin,
-                    preferences,
-                    async (pin: Pin) => {
-                      await pinStore.update([pin]);
-                    },
-                  )
+                  await openPin(pin, preferences, async (pin: Pin) => {
+                    await pinStore.update([pin]);
+                  })
                 }
               />
             );

@@ -1,43 +1,23 @@
 import { Action, ActionPanel, Alert, confirmAlert, getPreferenceValues, Icon, Keyboard, List } from "@raycast/api";
-import { Tag } from "./lib/tag";
 import TagForm from "./components/TagForm";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { getPins, openPin, Pin } from "./lib/pin";
 import { ItemType, SORT_FN } from "./lib/common";
 import { pluralize } from "./lib/utils";
 import DeleteItemAction from "./components/actions/DeleteItemAction";
 import CreateNewItemAction from "./components/actions/CreateNewItemAction";
 import DataStorageProvider, { useDataStorageContext } from "./contexts/DataStorageContext";
+import CopyActionsSubmenu from "./components/actions/CopyActionsSubmenu";
 
 export function TagList() {
-  const { pinStore, tagStore } = useDataStorageContext();
-  const [associations, setAssociations] = useState<{ [key: string]: { tag: Tag; pins: Pin[] } }>({});
+  const { pinStore, tagStore, loadingStores, tagAssociations } = useDataStorageContext();
   const preferences = getPreferenceValues<ExtensionPreferences>();
 
   const sortedTags = useMemo(() => tagStore.objects.sort(SORT_FN.ALPHA_ASC), [tagStore.objects]);
 
-  async function findAssociations() {
-    const pins = await getPins();
-    const foundAssociations = tagStore.objects.reduce(
-      (acc, tag) => {
-        const pinsWithTag = pins.filter((pin) => pin.tags?.includes(tag.name));
-        acc[tag.id] = { tag, pins: pinsWithTag };
-        return acc;
-      },
-      {} as { [key: string]: { tag: Tag; pins: Pin[] } },
-    );
-    setAssociations(foundAssociations);
-  }
-
-  useEffect(() => {
-    if (!tagStore.loading) {
-      findAssociations();
-    }
-  }, [tagStore.loading, tagStore.objects]);
-
   return (
     <List
-      isLoading={tagStore.loading}
+      isLoading={loadingStores}
       searchBarPlaceholder="Filter tags..."
       actions={
         <ActionPanel>
@@ -45,9 +25,9 @@ export function TagList() {
         </ActionPanel>
       }
     >
-      <List.EmptyView title="No Tags Yet!" description="Add a new tag (⌘N) to get started." icon="no-view.png" />
+      <List.EmptyView title="No Tags Yet!" description="Create a tag (⌘N) to get started." icon="no-view.png" />
       {sortedTags.map((tag) => {
-        const associatedPins = associations[tag.id]?.pins ?? [];
+        const associatedPins = tagAssociations[tag.id].pins;
         return (
           <List.Item
             key={tag.id}
@@ -61,7 +41,7 @@ export function TagList() {
                   value: associatedPins.length.toString(),
                 },
                 icon: Icon.Pin,
-                tooltip: `Number of associated pins: ${associations[tag.id]?.pins.length || 0}`,
+                tooltip: `${associatedPins.length || 0} associated ${pluralize("pin", associatedPins.length)}`,
               },
             ]}
             actions={
@@ -80,14 +60,12 @@ export function TagList() {
                       icon={Icon.ChevronRight}
                       onAction={async () => {
                         await Promise.all(
-                          associatedPins.map(async (pin) => {
-                            await openPin(
-                              pin,
-                              preferences,
-                              async (pin: Pin) => {
-                                await pinStore.update([pin]);
-                              },
-                            );
+                          associatedPins.map(async (pinID) => {
+                            const pin = pinStore.objects.find((pin) => pin.id === pinID);
+                            if (!pin) return;
+                            await openPin(pin, preferences, async (pin: Pin) => {
+                              await pinStore.update([pin]);
+                            });
                           }),
                         );
                       }}
@@ -124,32 +102,13 @@ export function TagList() {
                   />
                 </ActionPanel.Section>
                 <CreateNewItemAction itemType={ItemType.TAG} formView={<TagForm />} />
-                <ActionPanel.Submenu
-                  title="Clipboard Actions"
-                  icon={Icon.Clipboard}
-                  shortcut={Keyboard.Shortcut.Common.Copy}
-                >
-                  <Action.CopyToClipboard
-                    title="Copy Tag Name"
-                    content={tag.name}
-                    shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
-                  />
-                  <Action.CopyToClipboard
-                    title="Copy Tag ID"
-                    content={tag.id.toString()}
-                    shortcut={{ modifiers: ["cmd", "shift"], key: "i" }}
-                  />
+                <CopyActionsSubmenu item={tag}>
                   <Action.CopyToClipboard
                     title="Copy Tag Notes"
                     content={tag.notes}
                     shortcut={{ modifiers: ["cmd", "shift"], key: "n" }}
                   />
-                  <Action.CopyToClipboard
-                    title="Copy Tag JSON"
-                    content={JSON.stringify(tag)}
-                    shortcut={{ modifiers: ["cmd", "shift"], key: "j" }}
-                  />
-                </ActionPanel.Submenu>
+                </CopyActionsSubmenu>
               </ActionPanel>
             }
           />
@@ -159,9 +118,6 @@ export function TagList() {
   );
 }
 
-/**
- * Raycast command to view all currently used tags.
- */
 export default function ViewTagsCommand() {
   return (
     <DataStorageProvider>

@@ -4,7 +4,7 @@ import { getStorage } from "../../storage";
 import { StorageKey } from "../../common";
 
 /**
- * Placeholder for the name of the most recently opened pin before the current one. The substitution will be URL-encoded.
+ * Placeholder for the url-encoded name of the most recently opened pin before the current one.
  */
 const PreviousPinNamePlaceholder: Placeholder = {
   name: "previousPinName",
@@ -33,7 +33,7 @@ const PreviousPinNamePlaceholder: Placeholder = {
   result_keys: ["previousPinName"],
   fn: async () => (await PreviousPinNamePlaceholder.apply(`{{previousPinName}}`)).result,
   example: "{{previousPinName}}",
-  description: "The name of the most recently opened pin before the current one. The substitution will be URL-encoded.",
+  description: "The url-encoded name of the most recently opened pin before the current one.",
   hintRepresentation: "{{previousPinName}}",
   fullRepresentation: "Last Opened Pin Name",
   type: PlaceholderType.Informational,

@@ -1,13 +1,3 @@
-/**
- * @module lib/scheduled-execution.ts A collection of functions for managing scheduled executions, i.e. delayed evaluation of pin targets and placeholders.
- *
- * @summary Utilities for carrying out scheduled/delayed execution of pins and placeholders.
- * @author Stephen Kaplan <skaplanofficial@gmail.com>
- *
- * Created at     : 2023-09-03 12:37:46
- * Last modified  : 2024-01-13 01:04:51
- */
-
 import { environment, showHUD, showToast } from "@raycast/api";
 
 import { StorageKey } from "./common";

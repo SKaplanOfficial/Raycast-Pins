@@ -1,21 +1,11 @@
-/**
- * @module lib/Groups.ts A collection of functions for managing groups. This includes creating, modifying, and deleting groups, as well as getting the next available group ID.
- *
- * @summary Group utilities.
- * @author Stephen Kaplan <skaplanofficial@gmail.com>
- *
- * Created at     : 2023-09-04 17:35:11
- * Last modified  : 2024-07-05 01:57:13
- */
-
 import { useEffect, useState } from "react";
-import { getStorage, setStorage } from "./storage";
+import { getStorage, setStorage, storageMethods } from "./storage";
 import { useCachedState } from "@raycast/utils";
 import { BaseItem, ItemType, SORT_FN, SORT_STRATEGY, StorageKey, Visibility } from "./common";
 import { Color, environment, showToast } from "@raycast/api";
 import { Pin, sortPins } from "./pin";
 import { GroupDisplaySetting } from "./preferences";
-import { LocalObjectStore } from "../hooks/useLocalObjectStore";
+import { getStoredObjects, LocalObjectStore } from "../hooks/useLocalObjectStore";
 
 /**
  * A group of pins.
@@ -27,14 +17,14 @@ export type Group = BaseItem & {
   icon: string;
 
   /**
-   * The ID of the parent group.
+   * The name of the parent group.
    */
   parent?: string;
 
   /**
    * The method used to sort the group's pins.
    */
-  sortStrategy: typeof SORT_STRATEGY[keyof typeof SORT_STRATEGY];
+  sortStrategy: (typeof SORT_STRATEGY)[keyof typeof SORT_STRATEGY];
 
   /**
    * The color to tint the icon.
@@ -92,7 +82,7 @@ export const isGroup = (object: unknown): object is Group => {
  * @returns The list of groups.
  */
 export const getGroups = async () => {
-  return (await getStorage(StorageKey.LOCAL_GROUPS)) as Group[];
+  return await getStoredObjects<Group>(StorageKey.GROUP_STORE, storageMethods, validateGroups);
 };
 
 /**
@@ -122,7 +112,7 @@ export const getAncestorsOfGroup = (group: Group, allGroups: Group[], options?: 
   let currentGroup = group;
   while (currentGroup.parent != undefined) {
     const parent = allGroups.find(
-      (g) => g.id == currentGroup.parent && !options?.excluding.some((eg) => eg.id == g.id),
+      (g) => g.name == currentGroup.parent && !options?.excluding.some((eg) => eg.id == g.id),
     );
     if (parent) {
       ancestors.push(parent);
@@ -143,7 +133,7 @@ export const getAncestorsOfGroup = (group: Group, allGroups: Group[], options?: 
 export const shouldDisplayGroup = (group: Group, allGroups: Group[]): boolean => {
   const visibilityChecks = {
     [Visibility.USE_PARENT]: () => {
-      const parent = allGroups.find((g) => g.id == group.parent);
+      const parent = allGroups.find((g) => g.name == group.parent);
       return parent ? shouldDisplayGroup(parent, allGroups) : true;
     },
     [Visibility.VISIBLE]: () => true,
@@ -208,31 +198,6 @@ export const useGroups = () => {
   };
 };
 
-/**
- * Creates a new group; updates local storage.
- * @param attributes The attributes of the new group.
- * @returns The new group object.
- */
-export const createNewGroup = async (attributes: Partial<Group>) => {
-  const storedGroups = await getGroups();
-  const newID = await getNextGroupID();
-
-  // Add the new group to the stored groups
-  const newData = [...storedGroups];
-  const newGroup = {
-    ...attributes,
-    id: newID,
-    dateCreated: new Date().toUTCString(),
-    visibility: attributes.visibility || Visibility.USE_PARENT,
-    menubarDisplay: attributes.menubarDisplay || GroupDisplaySetting.SUBMENUS,
-  } as Group;
-  newData.push(newGroup);
-
-  // Update the stored groups
-  await setStorage(StorageKey.LOCAL_GROUPS, newData);
-  return newGroup;
-};
-
 // TODO: This comment
 /**
  * Creates a dummy group object.
@@ -245,7 +210,11 @@ export const buildGroup = (properties?: Partial<Group>): Group => {
     icon: data.icon || "Minus",
     id: data.id || "",
     parent: data.parent,
-    sortStrategy: data.sortStrategy ? data.sortStrategy in SORT_STRATEGY ? SORT_STRATEGY[data.sortStrategy as keyof typeof SORT_STRATEGY] : data.sortStrategy : SORT_STRATEGY.MANUAL,
+    sortStrategy: data.sortStrategy
+      ? data.sortStrategy in SORT_STRATEGY
+        ? SORT_STRATEGY[data.sortStrategy as keyof typeof SORT_STRATEGY]
+        : data.sortStrategy
+      : SORT_STRATEGY.MANUAL,
     iconColor: data.iconColor || Color.PrimaryText,
     dateCreated: data.dateCreated || new Date().toISOString(),
     visibility: data.visibility || Visibility.USE_PARENT,
@@ -296,31 +265,21 @@ export const deleteGroup = async (
   pinStore: LocalObjectStore<Pin>,
   displayToast = true,
 ) => {
-  const updatedGroups = groupStore.objects.map((g) => {
-    if (g.parent == group.id) {
-      if (group.parent != undefined && groupStore.objects.some((g) => g.id == group.parent)) {
-        g.parent = group.parent;
-      } else {
-        g.parent = undefined;
+  const updatedGroups = groupStore.objects
+    .map((g) => {
+      if (g.parent == group.name) {
+        g.parent = groupStore.objects.find((g) => g.name == group.parent)?.name;
       }
-    }
-    return g;
-  });
+      return g;
+    })
+    .filter((g) => g.id != group.id);
   await groupStore.remove([group]);
   await groupStore.update(updatedGroups);
 
-  const isDuplicate =
-    updatedGroups.filter((oldGroup: Group) => {
-      return oldGroup.name == group.name;
-    }).length != 0;
-
+  const isDuplicate = updatedGroups.some((g) => g.name == group.name);
   const updatedPins = pinStore.objects.map((pin: Pin) => {
     if (pin.group == group.name && !isDuplicate) {
-      if (group.parent != undefined && groupStore.objects.some((g) => g.id == group.parent)) {
-        pin.group = groupStore.objects.filter((g) => g.id == group.parent)[0].name;
-      } else {
-        pin.group = "None";
-      }
+      pin.group = updatedGroups.find((g) => g.name == group.parent)?.name || "None";
     }
     return pin;
   });
@@ -339,7 +298,6 @@ export const checkGroupNameField = (
   setNameError: (error: string | undefined) => void,
   groupNames: string[],
 ) => {
-  // Checks for non-empty (non-spaces-only) name
   if (name.trim().length == 0) {
     setNameError("Name cannot be empty!");
   } else if (groupNames.includes(name)) {
@@ -393,7 +351,7 @@ export const getMemberPins = (group: Group, groups: Group[], pins: Pin[], recurs
 };
 
 /**
- * Gets the list of subgroups of a given group. If `recursive` is true, then the list of subgroups will include the subgroups of the subgroups, and so on.
+ * Gets the list of subgroups of a given group, optionally including subgroups of subgroups, and so on.
  * @param group The group to get the subgroups of.
  * @param groups The list of all groups.
  * @param recursive Whether or not to recursively search for subgroups.
@@ -402,9 +360,9 @@ export const getMemberPins = (group: Group, groups: Group[], pins: Pin[], recurs
 export const getSubgroups = (group: Group, groups: Group[], recursive = false) => {
   const subgroups: Group[] = [];
   for (const g of groups) {
-    if (recursive && g.parent == group.id) {
+    if (recursive && g.parent == group.name) {
       subgroups.push(g, ...getSubgroups(g, groups));
-    } else if (g.parent == group.id) {
+    } else if (g.parent == group.name) {
       subgroups.push(g);
     }
   }
@@ -412,9 +370,9 @@ export const getSubgroups = (group: Group, groups: Group[], recursive = false) =
 };
 
 /**
- * Gets the statistics (i.e. usage and creation info, not just raw stats) for a given group as either a string (default) or an object. In string form, each statistic is separated by two newlines.
+ * Gets the statistics for a given group as either a string (default) or an object.
  *
- * @param group The groups to get statistics for.
+ * @param group The group to get statistics for.
  * @param groups The list of all groups.
  * @param pins The list of all pins.
  * @param format The format to return the statistics in. Defaults to "string".

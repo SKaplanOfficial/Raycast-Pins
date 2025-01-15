@@ -10,7 +10,7 @@ import {
   showToast,
 } from "@raycast/api";
 import { Direction, ItemType } from "./lib/common";
-import { Group, buildGroup, deleteGroup } from "./lib/Groups";
+import { Group, buildGroup, deleteGroup, getGroupStatistics } from "./lib/group";
 import { Pin, openPin } from "./lib/pin";
 import {
   addIDAccessory,
@@ -18,10 +18,9 @@ import {
   addSortingStrategyAccessory,
   addVisibilityAccessory,
 } from "./lib/accessories";
-import { getGroupIcon } from "./lib/icons";
+import { getGroupIcon } from "./lib/utils";
 import GroupForm from "./components/GroupForm";
 import { InstallExamplesAction } from "./components/actions/InstallExamplesAction";
-import CopyGroupActionsSubmenu from "./components/actions/CopyGroupActionsSubmenu";
 import { ExtensionPreferences, ViewGroupsPreferences } from "./lib/preferences";
 import { pluralize } from "./lib/utils";
 import useExamples from "./hooks/useExamples";
@@ -29,6 +28,7 @@ import CreateNewItemAction from "./components/actions/CreateNewItemAction";
 import DeleteItemAction from "./components/actions/DeleteItemAction";
 import DataStorageProvider, { useDataStorageContext } from "./contexts/DataStorageContext";
 import { LocalObjectStore } from "./hooks/useLocalObjectStore";
+import CopyActionsSubmenu from "./components/actions/CopyActionsSubmenu";
 
 /**
  * Moves a group up or down in the list of groups.
@@ -46,28 +46,29 @@ const moveGroup = async (group: Group, direction: Direction, groupStore: LocalOb
   }
 };
 
-/**
- * Raycast command to view all pin groups in a list within the Raycast window.
- */
 export function GroupList() {
-  const { pinStore, groupStore } = useDataStorageContext();
+  const { pinStore, groupStore, loadingStores } = useDataStorageContext();
   const { examplesInstalled, setExamplesInstalled } = useExamples([ItemType.GROUP]);
   const preferences = getPreferenceValues<ExtensionPreferences & ViewGroupsPreferences>();
 
   return (
     <List
-      isLoading={groupStore.loading}
+      isLoading={loadingStores}
       searchBarPlaceholder="Search groups..."
       actions={
         <ActionPanel>
           <CreateNewItemAction itemType={ItemType.GROUP} formView={<GroupForm />} />
           {!examplesInstalled || groupStore.objects.length == 0 ? (
-            <InstallExamplesAction setExamplesInstalled={setExamplesInstalled} kind="groups" />
+            <InstallExamplesAction setExamplesInstalled={setExamplesInstalled} kind={ItemType.GROUP} />
           ) : null}
         </ActionPanel>
       }
     >
-      <List.EmptyView title="No Groups Found" icon="no-view.png" />
+      <List.EmptyView
+        title="No Groups Yet!"
+        description="Create a group (⌘N)  or install some examples (⌘E)"
+        icon="no-view.png"
+      />
       {groupStore.objects.map((group, index) => {
         const groupPins = pinStore.objects.filter((pin: Pin) => pin.group == group.name);
         const accessories: List.Item.Accessory[] = [];
@@ -92,13 +93,9 @@ export function GroupList() {
                     onAction={async () => {
                       await Promise.all(
                         groupPins.map(async (pin) => {
-                          await openPin(
-                            pin,
-                            preferences,
-                            async (pin: Pin) => {
-                              await pinStore.update([pin]);
-                            },
-                          );
+                          await openPin(pin, preferences, async (pin: Pin) => {
+                            await pinStore.update([pin]);
+                          });
                         }),
                       );
                     }}
@@ -195,9 +192,20 @@ export function GroupList() {
                   shortcut={{ modifiers: ["cmd", "shift"], key: "s" }}
                 />
                 {!examplesInstalled ? (
-                  <InstallExamplesAction setExamplesInstalled={setExamplesInstalled} kind="groups" />
+                  <InstallExamplesAction setExamplesInstalled={setExamplesInstalled} kind={ItemType.GROUP} />
                 ) : null}
-                <CopyGroupActionsSubmenu group={group} />
+                <CopyActionsSubmenu item={group}>
+                  <Action.CopyToClipboard
+                    title={`Copy Formatted Group Statistics`}
+                    content={getGroupStatistics(group, groupStore.objects, pinStore.objects) as string}
+                    shortcut={{ modifiers: ["cmd", "shift"], key: "s" }}
+                  />
+                  <Action.CopyToClipboard
+                    title={`Copy Group Statistics JSON`}
+                    content={JSON.stringify(getGroupStatistics(group, groupStore.objects, pinStore.objects, "object"))}
+                    shortcut={{ modifiers: ["cmd", "opt", "shift"], key: "j" }}
+                  />
+                </CopyActionsSubmenu>
               </ActionPanel>
             }
           />

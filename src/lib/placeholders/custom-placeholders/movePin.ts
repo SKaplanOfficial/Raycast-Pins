@@ -1,9 +1,9 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
-import { Pin, validatePins } from "../../pin";
-import { Group, createNewGroup } from "../../Groups";
+import { getPins, validatePins } from "../../pin";
+import { Group, buildGroup, getGroups, validateGroups } from "../../group";
 import { StorageKey, Visibility } from "../../common";
 import { storageMethods } from "../../storage";
-import { getStoredObjects, updateStoredObjects } from "../../../hooks/useLocalObjectStore";
+import { saveObjects, updateStoredObjects } from "../../../hooks/useLocalObjectStore";
 
 /**
  * Placeholder directive for moving a pin to a different group.
@@ -17,20 +17,29 @@ const MovePinDirective: Placeholder = {
     const pinRef = matches?.[1] || "";
     if (!pinRef) return { result: "" };
 
-    const allPins: Pin[] = await getStoredObjects<Pin>(StorageKey.PIN_STORE, storageMethods);
+    const allPins = await getPins();
     const pin = allPins.find((p) => p.name == pinRef || p.id.toString() == pinRef);
     if (!pin) return { result: "" };
 
     const group = matches?.[4];
     if (!group) return { result: "" };
 
-    const allGroups: Group[] = await getStoredObjects<Group>(StorageKey.GROUP_STORE, storageMethods);
+    const allGroups = await getGroups();
     if (group != "None" && !allGroups.some((g) => g.name == group)) {
+      let newGroup: Group;
       if (group === "Expired Pins") {
-        await createNewGroup({ name: group, icon: "BellDisabled", visibility: Visibility.HIDDEN });
+        newGroup = buildGroup({
+          name: group,
+          icon: "BellDisabled",
+          visibility: Visibility.HIDDEN,
+        });
       } else {
-        await createNewGroup({ name: group, icon: "None" });
+        newGroup = buildGroup({
+          name: group,
+          icon: "None",
+        });
       }
+      await saveObjects([newGroup], allGroups, StorageKey.GROUP_STORE, storageMethods, validateGroups);
     }
 
     await updateStoredObjects([{ ...pin, group: group }], allPins, StorageKey.PIN_STORE, storageMethods, validatePins);

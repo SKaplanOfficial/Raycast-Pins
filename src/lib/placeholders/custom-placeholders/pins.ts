@@ -1,9 +1,6 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
-import { storageMethods } from "../../storage";
-import { StorageKey } from "../../common";
-import { Pin } from "../../pin";
+import { getPins } from "../../pin";
 import { Clipboard } from "@raycast/api";
-import { getStoredObjects } from "../../../hooks/useLocalObjectStore";
 
 /**
  * Placeholder for the JSON representation of all pins.
@@ -15,7 +12,7 @@ const PinsPlaceholder: Placeholder = {
   apply: async (str: string) => {
     let numToSelect = parseInt(str.match(/(?<=amount=)[0-9]+/)?.[0] || "-1");
     try {
-      const pins = await getStoredObjects<Pin>(StorageKey.PIN_STORE, storageMethods);
+      const pins = await getPins();
       if (numToSelect >= 0) {
         numToSelect = Math.min(numToSelect, pins.length);
         while (pins.length > numToSelect) {

@@ -1,10 +1,11 @@
-import { Action, ActionPanel, Icon, Keyboard } from "@raycast/api";
+import { Action } from "@raycast/api";
 import { Pin, getPinStatistics } from "../../lib/pin";
 import { PinAction } from "../../lib/common";
 import { useDataStorageContext } from "../../contexts/DataStorageContext";
+import CopyActionsSubmenu from "./CopyActionsSubmenu";
 
 /**
- * Submenu for actions that copy information about a pin to the clipboard.
+ * Submenu for actions that copy pin information to the clipboard.
  * @param props.pin The pin to copy information about.
  * @returns A submenu component.
  */
@@ -13,21 +14,11 @@ export default function CopyPinActionsSubmenu(props: { pin: Pin }) {
   const { pinStore } = useDataStorageContext();
 
   return (
-    <ActionPanel.Submenu title="Clipboard Actions" icon={Icon.Clipboard} shortcut={Keyboard.Shortcut.Common.Copy}>
-      <Action.CopyToClipboard
-        title="Copy Pin Name"
-        content={pin.name}
-        shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
-      />
+    <CopyActionsSubmenu item={pin}>
       <Action.CopyToClipboard
         title="Copy Pin Target"
         content={pin.url}
         shortcut={{ modifiers: ["cmd", "shift"], key: "u" }}
-      />
-      <Action.CopyToClipboard
-        title="Copy Pin ID"
-        content={pin.id.toString()}
-        shortcut={{ modifiers: ["cmd", "shift"], key: "i" }}
       />
       <Action.CopyToClipboard
         title="Copy Deeplink"
@@ -40,11 +31,6 @@ export default function CopyPinActionsSubmenu(props: { pin: Pin }) {
         shortcut={{ modifiers: ["cmd", "shift"], key: "l" }}
       />
       <Action.CopyToClipboard
-        title="Copy Pin JSON"
-        content={JSON.stringify({ groups: [], pins: [pin] })}
-        shortcut={{ modifiers: ["cmd", "shift"], key: "j" }}
-      />
-      <Action.CopyToClipboard
         title="Copy Formatted Pin Statistics"
         content={getPinStatistics(pin, pinStore.objects) as string}
         shortcut={{ modifiers: ["cmd", "shift"], key: "s" }}
@@ -54,6 +40,6 @@ export default function CopyPinActionsSubmenu(props: { pin: Pin }) {
         content={JSON.stringify(getPinStatistics(pin, pinStore.objects, "object"))}
         shortcut={{ modifiers: ["cmd", "opt", "shift"], key: "j" }}
       />
-    </ActionPanel.Submenu>
+    </CopyActionsSubmenu>
   );
 }

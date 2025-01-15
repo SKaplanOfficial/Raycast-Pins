@@ -1,20 +1,8 @@
-/**
- * @module lib/LocalData.ts A collection of functions for getting contextual information about the user's system. This includes the frontmost application, the current Finder directory, the selected Finder items, the selected text, the current document in document-based apps, etc.
- *
- * @summary Local data and context utilities.
- * @author Stephen Kaplan <skaplanofficial@gmail.com>
- *
- * Created at     : 2023-09-04 17:36:31
- * Last modified  : 2024-01-13 01:07:53
- */
-
-import { Application, getFrontmostApplication, getPreferenceValues } from "@raycast/api";
+import { Application } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { runAppleScript, useCachedState } from "@raycast/utils";
-import { getStorage, setStorage } from "./storage";
-import { ExtensionPreferences } from "./preferences";
-import { StorageKey } from "./common";
 import { utils } from "placeholders-toolkit";
+import { getRecentApplications } from "../hooks/useRecentApps";
 
 /**
  * A reference to a tab in a browser.
@@ -99,19 +87,19 @@ const dummyData = (): LocalDataObject => {
   return {
     currentApplication: { name: "", path: "", bundleId: "" },
     recentApplications: [],
-    tabs: [] as { name: string; url: string }[],
+    tabs: [],
     currentTab: { name: "", url: "" },
     currentDirectory: { name: "", path: "" },
-    selectedFiles: [] as { name: string; path: string }[],
-    selectedNotes: [] as { name: string; id: string }[],
+    selectedFiles: [],
+    selectedNotes: [],
     currentDocument: { name: "", path: "" },
     currentTrack: { name: "", artist: "", album: "", uri: "" },
   };
 };
 
 /**
- * Gets various contextual information about the user's active applications.
- * @returns A promise resolving to an object containing the current Finder directory, the selected Finder items, the selected notes, and the current document in document-based apps.
+ * Gets contextual information about the user's active applications.
+ * @returns A promise resolving to a partial {@link LocalDataObject}.
  */
 export const requestLocalData = async (): Promise<{
   currentDirectory: { name: string; path: string } | null;
@@ -234,88 +222,6 @@ export const requestLocalData = async (): Promise<{
     { language: "JavaScript", humanReadableOutput: false, timeout: 0 },
   );
   return JSON.parse(data);
-};
-
-/**
- * Gets the selected Finder items.
- * @returns A promise resolving to an array of objects containing the name and path of each selected item.
- */
-export const getFinderSelection = async (): Promise<{ name: string; path: string }[]> => {
-  const data = await runAppleScript(
-    `try
-      tell application "Finder"
-        set theSelection to selection
-        set thePath to {}
-        repeat with i in theSelection
-          set end of thePath to {name, POSIX path} of (i as alias)
-        end repeat
-        return thePath
-      end tell
-    end try`,
-    { humanReadableOutput: true, timeout: 0 },
-  );
-
-  const entries = data.split(", ");
-  const names = entries.filter((entry, index) => index % 2 == 0);
-  const paths = entries.filter((entry, index) => index % 2 == 1);
-  return names.map((name, index) => ({ name: name, path: paths[index] }));
-};
-
-/**
- * Tracks recently used applications (if enabled in the extension's settings).
- */
-export const updateRecentApplications = async () => {
-  try {
-    const app = await getFrontmostApplication();
-    const recentApps = await getStorage(StorageKey.RECENT_APPS);
-    const newRecentApps = recentApps.filter(
-      (recentApp: Application) => recentApp.name != app.name && recentApp.name != "Raycast",
-    );
-
-    if (app.name != "Raycast") {
-      newRecentApps.unshift(app);
-    }
-    while (newRecentApps.length > 10) {
-      newRecentApps.pop();
-    }
-    await setStorage(StorageKey.RECENT_APPS, newRecentApps);
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-/**
- * Gets the list of recently used applications.
- * @returns A promise resolving to an array of recently used applications as Application objects (name, path, bundleId).
- */
-export const getRecentApplications = async (): Promise<Application[]> => {
-  await updateRecentApplications();
-  const recentApps = await getStorage(StorageKey.RECENT_APPS);
-  return recentApps;
-};
-
-/**
- * Hook to get the list of recently used applications.
- * @returns An object containing the list of recently used applications and a boolean indicating whether the list is still loading.
- */
-export const useRecentApplications = () => {
-  const [recentApplications, setRecentApplications] = useState<Application[]>([]);
-  const [loadingRecentApplications, setLoadingRecentApplications] = useState(true);
-
-  const preferences = getPreferenceValues<ExtensionPreferences>();
-
-  useEffect(() => {
-    if (preferences.showRecentApplications) {
-      getRecentApplications().then((newRecentApplications) => {
-        setRecentApplications(newRecentApplications);
-        setLoadingRecentApplications(false);
-      });
-    } else {
-      setLoadingRecentApplications(false);
-    }
-  }, []);
-
-  return { recentApplications: recentApplications, loadingRecentApplications: loadingRecentApplications };
 };
 
 /**

@@ -5,12 +5,9 @@ import { useState } from "react";
 import {
   Action,
   ActionPanel,
-  Application,
   Color,
   environment,
   Form,
-  getApplications,
-  getPreferenceValues,
   Icon,
   Keyboard,
   showToast,
@@ -19,16 +16,16 @@ import {
 import { getFavicon } from "@raycast/utils";
 
 import { KEYBOARD_SHORTCUT, PinAction, Visibility } from "../lib/common";
-import { buildGroup, Group } from "../lib/Groups";
-import { iconMap } from "../lib/icons";
-import { buildPin, getPinStatistics, modifyPin, Pin } from "../lib/pin";
-import { ExtensionPreferences } from "../lib/preferences";
+import { buildGroup, Group } from "../lib/group";
+import { iconMap } from "../lib/utils";
+import { buildPin, getPinStatistics, Pin } from "../lib/pin";
 import CopyPinActionsSubmenu from "./actions/CopyPinActionsSubmenu";
 import { PLChecker } from "placeholders-toolkit";
 import PinsPlaceholders from "../lib/placeholders";
 import TagForm from "./TagForm";
 import DeleteItemAction from "./actions/DeleteItemAction";
 import { useDataStorageContext } from "../contexts/DataStorageContext";
+import useAppMatcher from "../hooks/useAppMatcher";
 
 export interface PinFormValues {
   nameField: string;
@@ -63,7 +60,6 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
   const { pin, draftValues } = props;
   const { pinStore, groupStore, tagStore } = useDataStorageContext();
   const { push, pop } = useNavigation();
-  const [applications, setApplications] = useState<Application[]>([]);
   const [placeholderTooltip, setPlaceholderTooltip] = useState<string>("");
   const [urlError, setUrlError] = useState<string | undefined>();
   const [shortcutError, setShortcutError] = useState<string | undefined>();
@@ -78,58 +74,12 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
     tags: draftValues?.tagsField || (pin ? pin.tags : undefined),
     aliases: draftValues?.aliasesField || (pin ? pin.aliases?.join(", ") : undefined),
   });
+  const { matchingApps, queryMatchingApps } = useAppMatcher();
 
   const iconList = Object.keys(Icon);
   iconList.unshift("Favicon / File Icon");
   iconList.unshift("None");
 
-  const preferences = getPreferenceValues<ExtensionPreferences>();
-
-  console.log(pinStore.loading, pinStore.objects);
-
-  /**
-   * Get the list of applications that can be used to open the target.
-   * @param target The target to open.
-   * @returns A tuple containing the preferred application and the list of all relevant applications.
-   */
-  const getMatchingApplications = async (target: string): Promise<[string, Application[]]> => {
-    let [app, apps] = [values.application as string, [] as Application[]];
-    try {
-      apps = await getApplications(target);
-      if (!apps.find((app) => app.name === "Terminal")) {
-        apps.push({
-          name: "Terminal",
-          path: "/System/Applications/Utilities/Terminal.app",
-          bundleId: "com.apple.Terminal",
-        });
-      }
-    } catch (error) {
-      const allApplications = await getApplications();
-      if (target.match(/^[a-zA-Z0-9]*?:.*/g)) {
-        // Target is URL-like, so use the preferred browser if one is set
-        const preferredBrowser = preferences.preferredBrowser ? preferences.preferredBrowser : { name: "Safari" };
-        const browser = allApplications.find((app) => app.name == preferredBrowser.name);
-        if (browser) {
-          apps = [browser, ...allApplications.filter((app) => app.name != preferredBrowser.name)];
-          if (app == undefined || app == "None") {
-            app = browser.path;
-          }
-        } else {
-          apps = allApplications;
-        }
-      } else {
-        app = "None";
-        apps = allApplications;
-      }
-    }
-    setApplications(apps);
-    return [app, apps];
-  };
-
-  /**
-   * Update the placeholder tooltip based on the current target.
-   * @param target The target to check for placeholders.
-   */
   const updatePlaceholderTooltip = async (target: string) => {
     let detectedPlaceholders = await PLChecker.checkForPlaceholders(target, { allPlaceholders: PinsPlaceholders });
     detectedPlaceholders = detectedPlaceholders.filter(
@@ -151,7 +101,7 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
 
   return (
     <Form
-      enableDrafts
+      enableDrafts={!pin}
       navigationTitle={pin ? `Edit Pin: ${pin.name}` : "New Pin"}
       searchBarAccessory={
         <Form.LinkAccessory
@@ -200,8 +150,7 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
               }
 
               if (pin) {
-                await modifyPin(
-                  pin,
+                await pinStore.update([
                   {
                     ...pin,
                     name: values.nameField,
@@ -213,7 +162,7 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
                     execInBackground: values.execInBackgroundField,
                     fragment: values.fragmentField,
                     iconColor: values.iconColorField,
-                    tags: values.tagsField as string[],
+                    tags: values.tagsField,
                     notes: values.notesField,
                     tooltip: values.tooltipField,
                     visibility: values.visibilityField,
@@ -221,17 +170,15 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
                     shortcut: values.modifiersField.length
                       ? { modifiers: values.modifiersField, key: values.keyField }
                       : undefined,
-                    lastOpened: pin.lastOpened ? new Date(pin.lastOpened).toUTCString() : undefined,
-                    dateCreated: pin.dateCreated ? new Date(pin.dateCreated).toUTCString() : new Date().toUTCString(),
+                    lastOpened: pin.lastOpened,
+                    dateCreated: pin.dateCreated ? pin.dateCreated : new Date().toUTCString(),
                     aliases: (values.aliasesField as string)
                       .split(",")
                       .map((alias) => alias.trim())
                       .filter((alias) => alias.length > 0),
                   },
-                  async (pin: Pin) => {
-                    await pinStore.update([pin]);
-                  },
-                );
+                ]);
+                await showToast({ title: `Updated Pin "${values.nameField}"` });
                 pop();
               } else {
                 const newPin = buildPin({
@@ -244,7 +191,7 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
                   execInBackground: values.execInBackgroundField,
                   fragment: values.fragmentField,
                   iconColor: values.iconColorField,
-                  tags: values.tagsField as string[],
+                  tags: values.tagsField,
                   notes: values.notesField,
                   tooltip: values.tooltipField,
                   visibility: values.visibilityField,
@@ -258,7 +205,7 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
                     .filter((alias) => alias.length > 0),
                 });
                 await pinStore.add([newPin]);
-                await showToast({ title: `Added pin for "${values.nameField}"` });
+                await showToast({ title: `Created Pin "${values.nameField}"` });
                 pop();
               }
             }}
@@ -271,14 +218,14 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
             shortcut={{ modifiers: ["cmd"], key: "g" }}
           />
 
-          {pin ? <CopyPinActionsSubmenu pin={pin} /> : null}
-          {pin ? (
+          {pin && <CopyPinActionsSubmenu pin={pin} />}
+          {pin && (
             <DeleteItemAction
               item={pin}
               onDelete={async () => await pinStore.remove([pin])}
               options={{ onCompletion: pop }}
             />
-          ) : null}
+          )}
         </ActionPanel>
       }
     >
@@ -286,14 +233,14 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
         id="nameField"
         title="Pin Name"
         placeholder="Enter pin name, e.g. Google, or leave blank to use target"
-        info="The name of the pin as it will appear in the list/menu. If left blank, the first 50 characters of the target (prior to placeholder substitution) will be used as the name."
-        defaultValue={draftValues?.nameField || (pin ? pin.name : undefined)}
+        info="The name of the pin as it will appear in the list/menu. If left blank, the first 50 characters of the target (prior to placeholder substitution) will be used."
+        defaultValue={draftValues?.nameField || pin?.name}
       />
 
       <Form.TextArea
         id="urlField"
         title="Target"
-        placeholder="Filepath, URL, or Terminal command to pin"
+        placeholder="Filepath, URL, or script command to pin"
         info={`The target URL, path, script, or text of the pin. Placeholders can be used to insert dynamic values into the target. See the Placeholders Guide (⌘G) for more information.${placeholderTooltip}`}
         error={urlError}
         onChange={async (value) => {
@@ -301,22 +248,17 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
             value = value.replace("~", os.homedir());
           }
 
-          const [app] = await getMatchingApplications(value);
+          const [, suggestion] = await queryMatchingApps(value, values.application as string);
           await updatePlaceholderTooltip(value);
-          setValues({ ...values, url: value, application: draftValues?.openWithField || app });
+          setValues({ ...values, url: value, application: draftValues?.openWithField || suggestion });
 
-          if (urlError !== undefined) {
-            setUrlError(undefined);
-          }
-        }}
-        onBlur={(event) => {
-          if (event.target.value?.length == 0) {
+          if (value.length == 0) {
             setUrlError("Target cannot be empty!");
-          } else if (urlError !== undefined) {
+          } else {
             setUrlError(undefined);
           }
         }}
-        defaultValue={draftValues?.urlField || (pin ? pin.url : undefined)}
+        defaultValue={draftValues?.urlField || pin?.url}
       />
 
       <Form.Checkbox
@@ -324,7 +266,7 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
         id="fragmentField"
         info="If checked, the target will be treated as a text fragment, regardless of its format. Text fragments are copied to the clipboard when the pin is opened."
         onChange={(value) => setValues({ ...values, isFragment: value })}
-        defaultValue={draftValues?.fragmentField || (pin ? pin.fragment : false)}
+        defaultValue={draftValues?.fragmentField || pin?.fragment || false}
       />
 
       {!values.isFragment &&
@@ -343,8 +285,8 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
       <Form.Dropdown
         id="iconField"
         title="Icon"
-        info="The icon displayed next to the pin's name in the list/menu. Favicons and file icons are automatically fetched. When an icon other than Favicon / File Icon is selected, the icon color can be changed (a color field will appear below)."
-        defaultValue={draftValues?.iconField || (pin ? pin.icon : "Favicon / File Icon")}
+        info="The icon displayed next to the pin's name in the list/menu. Favicons and file icons are automatically fetched. When an icon other than Favicon / File Icon is selected, the icon color can be changed."
+        defaultValue={draftValues?.iconField || pin?.icon || "Favicon / File Icon"}
         onChange={(value) => setValues({ ...values, icon: value })}
       >
         {iconList.map((icon) => {
@@ -379,7 +321,7 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
           title="Icon Color"
           info="The color of the Pin's icon when displayed in the list/menu."
           onChange={(value) => setValues({ ...values, iconColor: value })}
-          defaultValue={draftValues?.iconColorField || (pin?.iconColor ?? Color.PrimaryText)}
+          defaultValue={draftValues?.iconColorField || pin?.iconColor || Color.PrimaryText}
         >
           {Object.entries(Color).map(([key, color]) => {
             return (
@@ -399,7 +341,7 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
           title="Open With"
           id="openWithField"
           info="The application to open the pin with"
-          value={values.application ? (values.application as string) : "None"}
+          value={values?.application || "None"}
           onChange={(value) => {
             setValues({ ...values, application: value });
           }}
@@ -413,7 +355,7 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
               icon={{ fileIcon: draftValues?.openWithField || "/" }}
             />
           ) : null}
-          {applications
+          {matchingApps
             .filter(
               (app) => !(draftValues?.openWithField && app.name == path.basename(draftValues.openWithField, ".app")),
             )
@@ -434,7 +376,7 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
         id="visibilityField"
         title="Visibility"
         info="Controls the visibility of the pin in the 'View Pins' command and the menu bar dropdown. If set to 'Hidden', you can find the pin by using the 'Show Hidden Pins' action of the 'View Pins' command. Hidden pins can still be opened using deeplinks, while disabled pins cannot be opened at all."
-        defaultValue={draftValues?.visibilityField || (pin ? pin.visibility : Visibility.USE_PARENT)}
+        defaultValue={draftValues?.visibilityField || pin?.visibility || Visibility.USE_PARENT}
       >
         <Form.Dropdown.Item
           key="use_parent"
@@ -463,7 +405,7 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
         <Form.Dropdown
           id="groupField"
           title="Group"
-          defaultValue={draftValues?.groupField || (pin ? pin.group : "None")}
+          defaultValue={draftValues?.groupField || pin?.group || "None"}
           info="The group that this Pin is associated with in the 'View Pins' command and in the menu bar dropdown."
         >
           {[buildGroup({ name: "None" })].concat(groupStore.objects).map((group) => {
@@ -523,14 +465,14 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
         id="tooltipField"
         title="Tooltip"
         info="The tooltip that is displayed when hovering over the pin in the menu bar dropdown."
-        defaultValue={draftValues?.tooltipField || (pin ? pin.tooltip : undefined)}
+        defaultValue={draftValues?.tooltipField || pin?.tooltip}
       />
 
       <Form.TextArea
         id="notesField"
         title="Notes"
         info="Any additional notes about the pin. Notes are displayed in the 'View Pins' command. Markdown is supported."
-        defaultValue={draftValues?.notesField || (pin ? pin.notes : undefined)}
+        defaultValue={draftValues?.notesField || pin?.notes}
         enableMarkdown={true}
       />
 
@@ -540,8 +482,8 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
         id="dateField"
         title="Expiration Date"
         info="The date and time at which the pin will be automatically removed"
-        defaultValue={draftValues?.dateField || (pin && pin.expireDate ? new Date(pin.expireDate) : undefined)}
-        onChange={(value) => setValues({ ...values, expireDate: value?.toDateString() })}
+        defaultValue={draftValues?.dateField || (pin?.expireDate ? new Date(pin.expireDate) : undefined)}
+        onChange={(value) => setValues({ ...values, expireDate: value?.toISOString() })}
       />
 
       {values.expireDate ? (
@@ -576,12 +518,9 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
           title="Expiration Destination"
           info="The group to move the pin to when it expires"
           defaultValue={
-            draftValues?.expirationActionDestinationField ||
-            (pin
-              ? pin.expirationAction?.startsWith("custom-move")
-                ? pin.expirationAction.match(/:(.*?):(.*?):(.*?)/)?.[3] || "Expired Pins"
-                : "Expired Pins"
-              : "Expired Pins")
+            draftValues?.expirationActionDestinationField || pin?.expirationAction?.startsWith("custom-move")
+              ? pin?.expirationAction?.match(/:(.*?):(.*?):(.*?)/)?.[3] || "Expired Pins"
+              : "Expired Pins"
           }
         >
           {[{ name: "Expired Pins", icon: "BellDisabled", id: "" } as Group].concat(groupStore.objects).map((group) => {
@@ -604,7 +543,7 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
           info="The custom action to take when the pin expires"
           defaultValue={
             draftValues?.expirationActionCustomField ||
-            (pin ? pin.expirationAction?.replace("custom-move:", "").replace("custom:", "") : undefined)
+            pin?.expirationAction?.replace("custom-move:", "").replace("custom:", "")
           }
         />
       ) : null}
@@ -615,7 +554,7 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
         id="modifiersField"
         title="Keyboard Shortcut Modifiers"
         info="The keyboard modifiers to use for the keyboard shortcut that opens the pin. The combination of modifiers and key must be unique."
-        defaultValue={draftValues?.modifiersField || (pin ? pin.shortcut?.modifiers : undefined)}
+        defaultValue={draftValues?.modifiersField || pin?.shortcut?.modifiers}
         error={shortcutError}
         onChange={() => setShortcutError(undefined)}
       >
@@ -629,7 +568,7 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
         id="keyField"
         title="Keyboard Shortcut Key"
         info="The keyboard key to use for the keyboard shortcut that opens the pin. The combination of modifiers and key must be unique."
-        defaultValue={draftValues?.keyField || (pin ? pin.shortcut?.key : undefined)}
+        defaultValue={draftValues?.keyField || pin?.shortcut?.key}
         error={shortcutError}
         onChange={() => setShortcutError(undefined)}
       />

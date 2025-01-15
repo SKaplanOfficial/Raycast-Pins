@@ -1,13 +1,3 @@
-/**
- * @module lib/scripts.ts Utilities for running scripts and getting their formatted output.
- *
- * @summary Script utilities.
- * @author Stephen Kaplan <skaplanofficial@gmail.com>
- *
- * Created at     : 2023-09-04 17:39:13
- * Last modified  : 2024-01-13 01:05:17
- */
-
 import { environment } from "@raycast/api";
 import { execSync } from "child_process";
 import path from "path";

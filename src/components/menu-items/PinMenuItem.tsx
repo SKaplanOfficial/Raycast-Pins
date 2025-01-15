@@ -1,5 +1,5 @@
 import { Clipboard, LaunchType, MenuBarExtra, launchCommand, showToast } from "@raycast/api";
-import { getPinIcon } from "../../lib/icons";
+import { getPinIcon } from "../../lib/utils";
 import { Pin, openPin } from "../../lib/pin";
 import { ExtensionPreferences, PinsMenubarPreferences, RightClickAction } from "../../lib/preferences";
 import { LocalDataObject } from "../../lib/LocalData";

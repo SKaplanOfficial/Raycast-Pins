@@ -1,5 +1,5 @@
 import { Icon, MenuBarExtra, showHUD } from "@raycast/api";
-import { Group } from "../lib/Groups";
+import { Group } from "../lib/group";
 import { useCachedState } from "@raycast/utils";
 import { StorageKey } from "../lib/common";
 

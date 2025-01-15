@@ -14,23 +14,22 @@ import {
   buildGroup,
   checkGroupNameField,
   checkGroupParentField,
-  createNewGroup,
   getGroupStatistics,
   modifyGroup,
-} from "../lib/Groups";
+} from "../lib/group";
 import { useState } from "react";
-import { getIcon } from "../lib/icons";
+import { getIcon } from "../lib/utils";
 import { SORT_STRATEGY, Visibility } from "../lib/common";
 import { GroupDisplaySetting } from "../lib/preferences";
 import { useDataStorageContext } from "../contexts/DataStorageContext";
 export interface GroupFormValues {
-  nameField: string;
-  iconField: string;
-  iconColorField: string;
-  visibilityField: Visibility;
-  menubarDisplayField: GroupDisplaySetting;
-  sortStrategyField: string;
-  parentField: string;
+  name: string;
+  icon: string;
+  iconColor: string;
+  visibility: Visibility;
+  menubarDisplay: GroupDisplaySetting;
+  sortStrategy: string;
+  parent: string;
 }
 
 /**
@@ -42,79 +41,49 @@ export default function GroupForm(props: { group?: Group; draftValues?: GroupFor
   const { group, draftValues } = props;
   const { pinStore, groupStore } = useDataStorageContext();
   const [visibility, setVisibility] = useState<Visibility>(
-    draftValues?.visibilityField || (group?.visibility ?? Visibility.USE_PARENT),
+    draftValues?.visibility || (group?.visibility ?? Visibility.USE_PARENT),
   );
-  const [iconColor, setIconColor] = useState<string | undefined>(draftValues?.iconColorField || group?.iconColor);
+  const [iconColor, setIconColor] = useState<string | undefined>(draftValues?.iconColor || group?.iconColor);
   const [nameError, setNameError] = useState<string | undefined>();
-  const [parentID, setParentID] = useState<string | undefined>(
-    draftValues?.parentField ? draftValues.parentField : group?.parent,
-  );
   const [parentError, setParentError] = useState<string | undefined>();
   const { pop } = useNavigation();
 
-  // No group data provided -> we're creating a new group.
   const targetGroup =
-    group == undefined
-      ? buildGroup({
-          name: draftValues?.nameField || "",
-          icon: draftValues?.iconField || "BulletPoints",
-          parent: draftValues?.parentField ? draftValues.parentField : undefined,
-          sortStrategy: (draftValues?.sortStrategyField ||
-            SORT_STRATEGY.MANUAL) as (typeof SORT_STRATEGY)[keyof typeof SORT_STRATEGY],
-        })
-      : group;
+    group ??
+    buildGroup({
+      name: draftValues?.name || "",
+      icon: draftValues?.icon || "BulletPoints",
+      parent: draftValues?.parent ? draftValues.parent : undefined,
+      sortStrategy: (draftValues?.sortStrategy ||
+        SORT_STRATEGY.MANUAL) as (typeof SORT_STRATEGY)[keyof typeof SORT_STRATEGY],
+    });
 
-  const parent = group?.parent ? groupStore.objects.find((g) => g.id == group.parent) : undefined;
+  const parent = group?.parent ? groupStore.objects.find((g) => g.name == group.parent) : undefined;
   const timeSinceCreation = group?.dateCreated ? Date.now() - new Date(group.dateCreated).getTime() : 0;
 
   return (
     <Form
-      enableDrafts
+      enableDrafts={group ? false : true}
       navigationTitle={group ? `Edit Group: ${group.name}` : "New Group"}
       actions={
         <ActionPanel>
           <Action.SubmitForm
             icon={Icon.ChevronRight}
             onSubmit={async (values) => {
-              if (values.parentField == targetGroup.id.toString()) {
+              if (values.parent == targetGroup.name) {
                 setParentError("Group cannot be its own parent!");
                 return false;
               }
+
               if (environment.commandName == "new-group") {
-                await createNewGroup({
-                  name: values.nameField,
-                  icon: values.iconField,
-                  parent: values.parentField ? values.parentField : undefined,
-                  sortStrategy:
-                    values.sortStrategyField && values.sortStrategyField != "none"
-                      ? values.sortStrategyField
-                      : undefined,
-                  iconColor: values.iconColorField,
-                  visibility: values.visibilityField,
-                  menubarDisplay: values.menubarDisplayField,
-                });
+                const newGroup = buildGroup(values);
+                await groupStore.add([newGroup]);
                 await launchCommand({
                   name: "view-groups",
                   type: LaunchType.UserInitiated,
                 });
               } else {
-                await modifyGroup(
-                  targetGroup,
-                  {
-                    name: values.nameField,
-                    icon: values.iconField,
-                    parent: values.parentField ? values.parentField : undefined,
-                    sortStrategy:
-                      values.sortStrategyField && values.sortStrategyField != "none"
-                        ? values.sortStrategyField
-                        : undefined,
-                    iconColor: values.iconColorField,
-                    visibility: values.visibilityField,
-                    menubarDisplay: values.menubarDisplayField,
-                  },
-                  (group) => groupStore.update([group]),
-                  pinStore,
-                );
+                await modifyGroup(targetGroup, values, (group) => groupStore.update([group]), pinStore);
                 pop();
               }
             }}
@@ -123,9 +92,8 @@ export default function GroupForm(props: { group?: Group; draftValues?: GroupFor
       }
     >
       <Form.TextField
-        id="nameField"
+        id="name"
         title="Group Name"
-        placeholder="Enter the group name"
         error={nameError}
         onChange={(value) =>
           checkGroupNameField(
@@ -134,27 +102,20 @@ export default function GroupForm(props: { group?: Group; draftValues?: GroupFor
             groupStore.objects.filter((g) => g.id != targetGroup.id).map((group) => group.name),
           )
         }
-        onBlur={(event) =>
-          checkGroupNameField(
-            event.target.value as string,
-            setNameError,
-            groupStore.objects.filter((g) => g.id != targetGroup.id).map((group) => group.name),
-          )
-        }
         defaultValue={targetGroup.name}
       />
 
-      <Form.Dropdown id="iconField" title="Group Icon" defaultValue={targetGroup.icon}>
+      <Form.Dropdown id="icon" title="Group Icon" defaultValue={targetGroup.icon}>
         {["None"].concat(Object.keys(Icon)).map((icon) => {
           return <Form.Dropdown.Item key={icon} title={icon} value={icon} icon={getIcon(icon, iconColor)} />;
         })}
       </Form.Dropdown>
 
       <Form.Dropdown
-        id="iconColorField"
+        id="iconColor"
         title="Icon Color"
         onChange={(value) => setIconColor(value)}
-        defaultValue={draftValues?.iconColorField || (group?.iconColor ?? Color.PrimaryText)}
+        defaultValue={draftValues?.iconColor || (group?.iconColor ?? Color.PrimaryText)}
       >
         {Object.entries(Color).map(([key, color]) => {
           return (
@@ -169,9 +130,9 @@ export default function GroupForm(props: { group?: Group; draftValues?: GroupFor
       </Form.Dropdown>
 
       <Form.Dropdown
-        id="visibilityField"
+        id="visibility"
         title="Visibility"
-        info="Controls the visibility of the group and its pins in the 'View Pins' command and the menu bar dropdown."
+        info="Controls the visibility of the group and its pins"
         value={visibility}
         onChange={(value) => {
           setVisibility(value as Visibility);
@@ -207,10 +168,10 @@ export default function GroupForm(props: { group?: Group; draftValues?: GroupFor
         parent?.visibility !== Visibility.HIDDEN &&
         parent?.visibility !== Visibility.VIEW_PINS_ONLY) ? (
         <Form.Dropdown
-          id="menubarDisplayField"
+          id="menubarDisplay"
           title="Menubar Display"
-          info="Controls how the group is displayed in the menu bar dropdown."
-          defaultValue={draftValues?.menubarDisplayField || (group?.menubarDisplay ?? GroupDisplaySetting.SUBMENUS)}
+          info="How the group is displayed in the menu bar dropdown"
+          defaultValue={draftValues?.menubarDisplay || (group?.menubarDisplay ?? GroupDisplaySetting.SUBMENUS)}
         >
           <Form.Dropdown.Item
             key="useParent"
@@ -235,10 +196,10 @@ export default function GroupForm(props: { group?: Group; draftValues?: GroupFor
       ) : null}
 
       <Form.Dropdown
-        id="sortStrategyField"
+        id="sortStrategy"
         title="Sort Method"
         defaultValue={targetGroup.sortStrategy || "manual"}
-        info="The sorting rule applied to the group. You can manually adjust the order of pins, but you can choose to have them automatically sorted alphabetically, by frequency of usage, by most recent usage, or by initial creation date."
+        info="How pins are sorted in the group"
       >
         {targetGroup.sortStrategy ? null : (
           <Form.Dropdown.Item key="none" title="Not Set (Global Preference)" value="none" />
@@ -249,26 +210,22 @@ export default function GroupForm(props: { group?: Group; draftValues?: GroupFor
       </Form.Dropdown>
 
       <Form.TextField
-        id="parentField"
+        id="parent"
         title="Parent Group"
         placeholder="Parent Group ID"
-        value={parentID || ""}
-        info="The ID of this group's parent. You can use this to create multi-layer groupings within the menu bar dropdown menu."
+        defaultValue={targetGroup.parent}
+        info="The name of this group's parent; use this to create multi-layer groupings within the menu bar dropdown menu"
         error={parentError}
         onChange={async (value) => {
-          const isValid = await checkGroupParentField(value, setParentError, groupStore.objects);
-          if (isValid) {
-            setParentID(value);
-          }
+          await checkGroupParentField(value, setParentError, groupStore.objects);
         }}
-        onBlur={(event) => checkGroupParentField(event.target.value as string, setParentError, groupStore.objects)}
       />
 
       <Form.TextField
-        id="idField"
+        id="id"
         title="Group ID"
         value={targetGroup.id.toString()}
-        info="The ID of this group. You can use this to specify this group as a parent of other groups."
+        info="The ID of this group"
         onChange={() => null}
       />
 

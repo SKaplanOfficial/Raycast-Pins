@@ -1,8 +1,5 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
-import { storageMethods } from "../../storage";
-import { Pin } from "../../pin";
-import { StorageKey } from "../../common";
-import { getStoredObjects } from "../../../hooks/useLocalObjectStore";
+import { getPins } from "../../pin";
 
 /**
  * Placeholder for the comma-separated list of pin names. The list is sorted by most recently opened pin first.
@@ -14,7 +11,7 @@ const PinNamesPlaceholder: Placeholder = {
   apply: async (str: string) => {
     let numToSelect = parseInt(str.match(/(?<=amount=)[0-9]+/)?.[0] || "-1");
     try {
-      const pins = await getStoredObjects<Pin>(StorageKey.PIN_STORE, storageMethods);
+      const pins = await getPins();
       if (numToSelect >= 0) {
         numToSelect = Math.min(numToSelect, pins.length);
         while (pins.length > numToSelect) {

@@ -1,10 +1,11 @@
 import { Color } from "@raycast/api";
-import { LocalObjectStore, LocalObjectType } from "../hooks/useLocalObjectStore";
-import { BaseItem, ItemType } from "./common";
+import { getStoredObjects, LocalObjectStore, LocalObjectType } from "../hooks/useLocalObjectStore";
+import { BaseItem, ItemType, StorageKey } from "./common";
+import { storageMethods } from "./storage";
 
 export type Tag = BaseItem & {
   /**
-   * The name of the tag. Items will retain this tag even if the name is changed.
+   * The name of the tag.
    */
   name: string;
 
@@ -23,14 +24,16 @@ export type Tag = BaseItem & {
    */
   notes: string;
 
-  dateCreated: string;
-
   itemType: ItemType.TAG;
 };
 
 // TODO: Comment
 export function isTag(object: unknown): object is Tag {
   return typeof object === "object" && object !== null && "itemType" in object && object["itemType"] === ItemType.TAG;
+}
+
+export async function getTags() {
+  return await getStoredObjects<Tag>(StorageKey.TAG_STORE, storageMethods, validateTags);
 }
 
 export function validateTags(tags: Partial<Tag>[]): Tag[] {

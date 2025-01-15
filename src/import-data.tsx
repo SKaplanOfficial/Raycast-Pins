@@ -9,7 +9,7 @@ import * as TOML from "@iarna/toml";
 import { Action, ActionPanel, Form, Icon, popToRoot, showToast, Toast } from "@raycast/api";
 
 import { StorageKey, SORT_STRATEGY, Visibility } from "./lib/common";
-import { buildGroup, getGroups, Group, validateGroups } from "./lib/Groups";
+import { buildGroup, getGroups, Group, validateGroups } from "./lib/group";
 import { buildPin, getPins, Pin } from "./lib/pin";
 import { setStorage } from "./lib/storage";
 import { GroupDisplaySetting } from "./lib/preferences";
@@ -178,6 +178,7 @@ const importCSVData = async (data: string[][], importMethod: string) => {
           indices.menubarDisplay == -1
             ? undefined
             : (row[indices.menubarDisplay] as GroupDisplaySetting) || GroupDisplaySetting.USE_PARENT,
+        tags: indices.tags == -1 ? undefined : row[indices.tags].split(",").map((tag) => tag.trim()),
       });
     });
     await importJSONData({ groups: newGroups }, importMethod);
@@ -378,9 +379,6 @@ Note: When importing CSV files, import groups first, then pins.`}
   );
 };
 
-/**
- * Raycast command for importing pins and groups from a JSON string.
- */
 export default function ImportPinsDataCommand() {
   return <ImportDataForm />;
 }

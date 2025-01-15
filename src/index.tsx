@@ -21,32 +21,31 @@ import OpenAllMenuItem from "./components/menu-items/OpenAllMenuItem";
 import PinMenuItem from "./components/menu-items/PinMenuItem";
 import RecentApplicationsList from "./components/RecentApplicationsList";
 import { KEYBOARD_SHORTCUT, Visibility } from "./lib/common";
-import { getSubgroups, Group, useGroups } from "./lib/Groups";
-import { getGroupIcon } from "./lib/icons";
+import { getSubgroups, Group, useGroups } from "./lib/group";
+import { getGroupIcon } from "./lib/utils";
 import { useLocalData } from "./lib/LocalData";
 import { copyPinData, openPin, Pin, sortPins } from "./lib/pin";
 import { ExtensionPreferences, GroupDisplaySetting } from "./lib/preferences";
 import { PinsMenubarPreferences } from "./lib/preferences";
 import PinsPlaceholders from "./lib/placeholders";
-import NotesQuickPin from "./components/menu-items/quick-pins/NotesQuickPin";
-import AppQuickPin from "./components/menu-items/quick-pins/AppQuickPin";
-import TextQuickPin from "./components/menu-items/quick-pins/TextQuickPin";
-import TabQuickPin from "./components/menu-items/quick-pins/TabQuickPin";
-import TabsQuickPin from "./components/menu-items/quick-pins/TabsQuickPin";
-import FilesQuickPin from "./components/menu-items/quick-pins/FilesQuickPin";
-import DirectoryQuickPin from "./components/menu-items/quick-pins/DirectoryQuickPin";
-import DocumentQuickPin from "./components/menu-items/quick-pins/DocumentQuickPin";
-import TrackQuickPin from "./components/menu-items/quick-pins/TrackQuickPin";
+import {
+  NotesQuickPin,
+  AppQuickPin,
+  TextQuickPin,
+  DirectoryQuickPin,
+  DocumentQuickPin,
+  TrackQuickPin,
+  TabQuickPin,
+  TabsQuickPin,
+  FilesQuickPin,
+} from "./components/menu-items/QuickPinMenuItems";
 import TargetGroupMenu from "./components/TargetGroupMenu";
 import { useDataStorageContext } from "./contexts/DataStorageContext";
 
 // TODO: need to wrap this in providers
-/**
- * Raycast menu bar command providing quick access to pins.
- */
 export default function ShowPinsCommand() {
   const { getAncestorsOfGroup, shouldDisplayGroup } = useGroups(); // TODO: This
-  const { pinStore, groupStore } = useDataStorageContext();
+  const { pinStore, groupStore, loadingStores } = useDataStorageContext();
   const [relevantPins, setRelevantPins] = useCachedState<Pin[]>("relevant-pins", []);
   const [irrelevantPins, setIrrelevantPins] = useCachedState<Pin[]>("irrelevant-pins", []);
   const { localData, loadingLocalData } = useLocalData();
@@ -59,39 +58,40 @@ export default function ShowPinsCommand() {
   const pinIcon = { source: { light: "pin-icon.svg", dark: "pin-icon@dark.svg" }, tintColor: iconColor };
 
   useEffect(() => {
-    Promise.resolve(groupStore.load())
-      .then(() => Promise.resolve(pinStore.load()))
-      .then(async () => {
-        if (!preferences.showInapplicablePins) {
-          const applicablePins = [];
-          const inapplicablePins = [];
-          for (const pin of pinStore.objects) {
-            const targetRaw = pin.url.startsWith("~") ? pin.url.replace("~", os.homedir()) : pin.url;
-            let containsPlaceholder = false;
-            let passesTests = true;
-            let ruleCount = 0;
-            for (const placeholder of PinsPlaceholders) {
-              if (targetRaw.match(placeholder.regex)) {
-                containsPlaceholder = true;
-                for (const rule of placeholder.rules || []) {
-                  ruleCount++;
-                  if (!(await rule(targetRaw, localData as unknown as { [key: string]: unknown }))) {
-                    passesTests = false;
+    if (!loadingStores && !loadingLocalData) {
+      Promise.resolve(
+        (async () => {
+          if (!preferences.showInapplicablePins) {
+            const [applicablePins, inapplicablePins] = [[], []] as [Pin[], Pin[]];
+            for (const pin of pinStore.objects) {
+              const targetRaw = pin.url.startsWith("~") ? pin.url.replace("~", os.homedir()) : pin.url;
+              let containsPlaceholder = false;
+              let passesTests = true;
+              let ruleCount = 0;
+              for (const placeholder of PinsPlaceholders) {
+                if (targetRaw.match(placeholder.regex)) {
+                  containsPlaceholder = true;
+                  for (const rule of placeholder.rules || []) {
+                    ruleCount++;
+                    if (!(await rule(targetRaw, localData as unknown as { [key: string]: unknown }))) {
+                      passesTests = false;
+                    }
                   }
                 }
               }
+              if (containsPlaceholder && passesTests && ruleCount > 0) {
+                applicablePins.push(pin);
+              } else if (!passesTests) {
+                inapplicablePins.push(pin);
+              }
             }
-            if (containsPlaceholder && passesTests && ruleCount > 0) {
-              applicablePins.push(pin);
-            } else if (!passesTests) {
-              inapplicablePins.push(pin);
-            }
+            setRelevantPins(applicablePins);
+            setIrrelevantPins(inapplicablePins);
           }
-          setRelevantPins(applicablePins);
-          setIrrelevantPins(inapplicablePins);
-        }
-      });
-  }, []);
+        })(),
+      );
+    }
+  }, [loadingStores, preferences.showInapplicablePins, localData, loadingLocalData]);
 
   const selectedFiles = localData.selectedFiles.filter(
     (file) =>
@@ -112,7 +112,7 @@ export default function ShowPinsCommand() {
   );
 
   /**
-   * Recursively generates the subsections and subgroups of a group.
+   * Recursively generates menu items for a group and its children.
    * @param group The group to generate subsections for.
    * @param groups The list of all groups.
    * @returns A submenu containing the group's subsections and pins.
@@ -120,7 +120,7 @@ export default function ShowPinsCommand() {
   const getSubsections = (group: Group, groups: Group[]): JSX.Element | null => {
     const parent = groups.find((g) => g.id == group.parent);
     const allSubgroups = getSubgroups(group, groups, true);
-    const children = groups.filter((g) => g.parent == group.id);
+    const children = groups.filter((g) => g.parent == group.name);
     const memberPins = allPins.filter((pin) => pin.group == group.name);
     const subgroupPins = allPins.filter((pin) => children.some((g) => g.name == pin.group));
     if (memberPins.length == 0 && subgroupPins.length == 0) {
@@ -309,7 +309,7 @@ export default function ShowPinsCommand() {
           .filter((g) => g != null);
 
   return (
-    <MenuBarExtra icon={pinIcon} isLoading={pinStore.loading || groupStore.loading || loadingLocalData}>
+    <MenuBarExtra icon={pinIcon} isLoading={loadingStores || loadingLocalData}>
       {[
         [
           ungroupedPins.length > 0 ? (
@@ -344,11 +344,19 @@ export default function ShowPinsCommand() {
             <TextQuickPin />
             <TabQuickPin app={localData.currentApplication} tab={localData.currentTab} />
             <TabsQuickPin app={localData.currentApplication} tabs={localData.tabs} groups={groupStore.objects} />
-            <FilesQuickPin app={localData.currentApplication} selectedFiles={selectedFiles} groups={groupStore.objects} />
+            <FilesQuickPin
+              app={localData.currentApplication}
+              selectedFiles={selectedFiles}
+              groups={groupStore.objects}
+            />
             <DirectoryQuickPin app={localData.currentApplication} directory={localData.currentDirectory} />
             <DocumentQuickPin app={localData.currentApplication} document={localData.currentDocument} />
             <TrackQuickPin app={localData.currentApplication} track={localData.currentTrack} />
-            <NotesQuickPin app={localData.currentApplication} notes={localData.selectedNotes} groups={groupStore.objects} />
+            <NotesQuickPin
+              app={localData.currentApplication}
+              notes={localData.selectedNotes}
+              groups={groupStore.objects}
+            />
             <TargetGroupMenu groups={groupStore.objects} />
           </MenuBarExtra.Section>
         ) : null,

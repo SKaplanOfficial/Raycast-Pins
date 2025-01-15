@@ -1,10 +1,10 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
-import { Pin, openPin, validatePins } from "../../pin";
+import { Pin, getPins, openPin, validatePins } from "../../pin";
 import { storageMethods } from "../../storage";
 import { StorageKey } from "../../common";
 import { getPreferenceValues } from "@raycast/api";
 import { ExtensionPreferences } from "../../preferences";
-import { getStoredObjects, updateStoredObjects } from "../../../hooks/useLocalObjectStore";
+import { updateStoredObjects } from "../../../hooks/useLocalObjectStore";
 
 /**
  * Placeholder directive for opening/launching a target pin.
@@ -17,7 +17,7 @@ const LaunchPinDirective: Placeholder = {
     const matches = str.match(/{{(launchPin|openPin|runPin):(([^{]|{(?!{)|{{[\s\S]*?}})*?)}}/);
     const targetRep = matches?.[2] || "";
     if (!targetRep) return { result: "" };
-    const pins: Pin[] = await getStoredObjects<Pin>(StorageKey.PIN_STORE, storageMethods, validatePins);
+    const pins = await getPins();
     const target = pins.find((p) => p.name == targetRep || p.id.toString() == targetRep);
     if (!target) return { result: "" };
     const preferences = getPreferenceValues<ExtensionPreferences>();

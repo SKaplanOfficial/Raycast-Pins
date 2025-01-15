@@ -2,9 +2,18 @@
 
 ## 1.10.0 Release, TBA
 
+### 2025-01-15
+
+- Updated groups to use DataStorageContext for improved data management.
+- Adjusted various titles and descriptions for improved clarity and conciseness.
+- Improved performance of tag operations.
+- Further reduced code footprint.
+
 ### 2025-01-13
 
-- TBD
+- Improved validation of stored data to prevent data corruption.
+- Optimized data storage and retrieval for improved performance and reliability.
+- Removed extraneous comments.
 
 ## 1.9.1 Release, TBA
 

@@ -1,6 +1,6 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
 import { getStorage } from "../../storage";
-import { Group } from "../../Groups";
+import { Group } from "../../group";
 import { StorageKey } from "../../common";
 
 /**

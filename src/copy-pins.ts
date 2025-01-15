@@ -8,11 +8,8 @@ import { Clipboard, getPreferenceValues, open, showToast, Toast } from "@raycast
 
 import { getPinsJSON, PinKeys } from "./lib/pin";
 import { CopyPinsPreferences } from "./lib/preferences";
-import { GroupKeys } from "./lib/Groups";
+import { GroupKeys } from "./lib/group";
 
-/**
- * Raycast command for exporting Pins and Groups data to the clipboard or a file.
- */
 export default async function ExportPinsCommand() {
   const preferences = getPreferenceValues<CopyPinsPreferences>();
 
@@ -48,7 +45,7 @@ export default async function ExportPinsCommand() {
     (await fs.promises.access(preferences.exportLocation, fs.constants.W_OK)) == undefined
   ) {
     try {
-      // For CSVs, split the data into two files: one for pins, one for groups
+      // For CSVs, split pins and groups into two files
       // JSON and YAML files are fine to export all at once
       const exports = data.split("\n\n\n");
       const exportFiles: string[] = [];

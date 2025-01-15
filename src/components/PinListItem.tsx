@@ -1,8 +1,9 @@
 import { Action, ActionPanel, Icon, Keyboard, List, environment, getPreferenceValues, showToast } from "@raycast/api";
-import { LocalDataObject, getRecentApplications } from "../lib/LocalData";
-import { Pin, buildPin, getPinKeywords, getPins, openPin } from "../lib/pin";
+import { LocalDataObject } from "../lib/LocalData";
+import { getRecentApplications } from "../hooks/useRecentApps";
+import { Pin, buildPin, getPinKeywords, getPinStatistics, getPins, openPin } from "../lib/pin";
 import { PinForm } from "./PinForm";
-import { getPinIcon } from "../lib/icons";
+import { getPinIcon } from "../lib/utils";
 import { Direction, ItemType, PinAction, SORT_STRATEGY, Visibility } from "../lib/common";
 import { cutoff } from "../lib/utils";
 import { ExtensionPreferences, ViewPinsPreferences } from "../lib/preferences";
@@ -19,16 +20,16 @@ import {
   addTextFragmentAccessory,
   addVisibilityAccessory,
 } from "../lib/accessories";
-import { buildGroup, Group } from "../lib/Groups";
+import { buildGroup, Group } from "../lib/group";
 import { PinsInfoPlaceholders } from "../lib/placeholders";
 import { bulkApply } from "placeholders-toolkit/dist/lib/apply";
-import CopyPinActionsSubmenu from "./actions/CopyPinActionsSubmenu";
 import { useEffect, useState } from "react";
 import { InstallExamplesAction } from "./actions/InstallExamplesAction";
 import { LocalObjectStore } from "../hooks/useLocalObjectStore";
 import CreateNewItemAction from "./actions/CreateNewItemAction";
 import DeleteItemAction from "./actions/DeleteItemAction";
 import { useDataStorageContext } from "../contexts/DataStorageContext";
+import CopyActionsSubmenu from "./actions/CopyActionsSubmenu";
 
 /**
  * Moves a pin up or down in the list of pins. Pins stay within their groups unless grouping is disabled in preferences.
@@ -108,7 +109,7 @@ export default function PinListItem(props: {
     examplesInstalled,
     setExamplesInstalled,
   } = props;
-  const { pinStore, groupStore, tagStore } = useDataStorageContext();
+  const { pinStore, groupStore, tagStore, loadingStores } = useDataStorageContext();
   const [title, setTitle] = useState<string>(pin.name || cutoff(pin.url, 20));
 
   useEffect(() => {
@@ -120,8 +121,7 @@ export default function PinListItem(props: {
 
   // Add accessories based on the user's preferences
   const accessories: List.Item.Accessory[] = [];
-
-  if (!pinStore.loading && !tagStore.loading) {
+  if (!loadingStores) {
     if (preferences.showVisibility) addVisibilityAccessory(pin, accessories, showingHidden);
     if (preferences.showLastOpened) addLastOpenedAccessory(pin, accessories, lastOpenedPin?.id);
     if (preferences.showCreationDate) addCreationDateAccessory(pin, accessories);
@@ -273,7 +273,7 @@ export default function PinListItem(props: {
           </ActionPanel.Section>
           <CreateNewItemAction itemType={ItemType.PIN} formView={<PinForm />} />
           {!examplesInstalled ? (
-            <InstallExamplesAction setExamplesInstalled={setExamplesInstalled} kind="pins" />
+            <InstallExamplesAction setExamplesInstalled={setExamplesInstalled} kind={ItemType.PIN} />
           ) : null}
 
           <Action
@@ -310,7 +310,33 @@ export default function PinListItem(props: {
           />
 
           <PlaceholdersGuideAction />
-          <CopyPinActionsSubmenu pin={pin} />
+          <CopyActionsSubmenu item={pin}>
+            <Action.CopyToClipboard
+              title="Copy Pin Target"
+              content={pin.url}
+              shortcut={{ modifiers: ["cmd", "shift"], key: "u" }}
+            />
+            <Action.CopyToClipboard
+              title="Copy Deeplink"
+              content={`raycast://extensions/HelloImSteven/pins/view-pins?context=${encodeURIComponent(
+                JSON.stringify({
+                  pinID: pin.id,
+                  action: PinAction.OPEN,
+                }),
+              )}`}
+              shortcut={{ modifiers: ["cmd", "shift"], key: "l" }}
+            />
+            <Action.CopyToClipboard
+              title="Copy Formatted Pin Statistics"
+              content={getPinStatistics(pin, pinStore.objects) as string}
+              shortcut={{ modifiers: ["cmd", "shift"], key: "s" }}
+            />
+            <Action.CopyToClipboard
+              title="Copy Pin Statistics as JSON"
+              content={JSON.stringify(getPinStatistics(pin, pinStore.objects, "object"))}
+              shortcut={{ modifiers: ["cmd", "opt", "shift"], key: "j" }}
+            />
+          </CopyActionsSubmenu>
         </ActionPanel>
       }
     />

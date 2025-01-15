@@ -260,27 +260,6 @@ export async function clearStoredObjects<T>(...args: LocalObjectStoreArgs<T>) {
   await storageFunctions.setItem(key, JSON.stringify([]));
 }
 
-// enum StoreOperationStage {
-//   INIT,
-//   LOADING,
-//   LOADED,
-//   STANDBY,
-//   SAVING,
-//   SAVED,
-//   ADDING,
-//   ADDED,
-//   UPDATING,
-//   UPDATED,
-//   REMOVING,
-//   REMOVED,
-//   CLEARING,
-//   CLEARED,
-//   DEDUPLICATING,
-//   DEDUPLICATED,
-//   SORTING,
-//   SORTED,
-// }
-
 export default function useLocalObjectStore<T>(...args: LocalObjectStoreArgs<T>): LocalObjectStore<T> {
   const [key, storageFunctions, validationFn] = args;
 

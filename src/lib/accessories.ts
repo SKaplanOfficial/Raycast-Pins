@@ -1,19 +1,9 @@
-/**
- * @module lib/accessories.ts A collection of functions for managing accessories on list items.
- *
- * @summary List item accessory utilities.
- * @author Stephen Kaplan <skaplanofficial@gmail.com>
- *
- * Created at     : 2023-09-03 08:28:07
- * Last modified  : 2024-07-05 01:57:20
- */
-
 import path from "path";
 
 import { Color, Icon, List } from "@raycast/api";
 
 import { SORT_STRATEGY, Visibility } from "./common";
-import { Group, isGroup } from "./Groups";
+import { Group, isGroup } from "./group";
 import { getLinkedPins, Pin } from "./pin";
 import { pluralize } from "./utils";
 import PinsPlaceholders from "./placeholders";

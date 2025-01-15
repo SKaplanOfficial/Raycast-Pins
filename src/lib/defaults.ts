@@ -1,24 +1,14 @@
-/**
- * @module lib/defaults.ts Default pins and groups, along with logic for installing them.
- *
- * @summary Utilities and data for install default pins and groups into local storage.
- * @author Stephen Kaplan <skaplanofficial@gmail.com>
- *
- * Created at     : 2023-09-03 12:43:31
- * Last modified  : 2025-01-14 02:27:57
- */
-
 import { LocalStorage, showToast, Toast } from "@raycast/api";
 
 import { ItemType, StorageKey } from "./common";
-import { buildGroup, Group, validateGroups } from "./Groups";
-import { buildPin, Pin, validatePins } from "./pin";
+import { buildGroup, getGroups, Group, validateGroups } from "./group";
+import { buildPin, getPins, Pin, validatePins } from "./pin";
 import { storageMethods } from "./storage";
-import { saveObjects, getStoredObjects } from "../hooks/useLocalObjectStore";
-import { buildTag, Tag, validateTags } from "./tag";
+import { saveObjects } from "../hooks/useLocalObjectStore";
+import { buildTag, getTags, validateTags } from "./tag";
 
 /**
- * A set of example pins and groups to help users get started.
+ * Example pins and groups to help users get started.
  */
 const examplePins: Partial<Pin>[] = [
   {
@@ -197,15 +187,15 @@ const exampleGroups: Partial<Group>[] = [
 /**
  * Imports default pins and groups into local storage.
  */
-export const installExamples = async (kind: "pins" | "groups") => {
-  if (kind == "pins") {
-    const storedPins = await getStoredObjects<Pin>(StorageKey.PIN_STORE, storageMethods, validatePins);
+export const installExamples = async (kind: ItemType) => {
+  if (kind == ItemType.PIN) {
+    const storedPins = await getPins();
     const newPins = examplePins
       .filter((pin) => !storedPins.some((storedPin) => storedPin.name == pin.name))
       .map((pin) => buildPin(pin));
     await saveObjects(newPins, storedPins, StorageKey.PIN_STORE, storageMethods, validatePins);
 
-    const storedTags = await getStoredObjects<Tag>(StorageKey.TAG_STORE, storageMethods, validateTags);
+    const storedTags = await getTags();
     const newTags = examplePins
       .map((pin) => pin.tags)
       .flat()
@@ -216,7 +206,7 @@ export const installExamples = async (kind: "pins" | "groups") => {
     await LocalStorage.setItem(StorageKey.EXAMPLE_PINS_INSTALLED, true);
   }
 
-  const storedGroups: Group[] = await getStoredObjects<Group>(StorageKey.GROUP_STORE, storageMethods, validateGroups);
+  const storedGroups = await getGroups();
   const newGroups = exampleGroups
     .filter((group) => !storedGroups.some((storedGroup) => storedGroup.name == group.name))
     .map((group) => buildGroup(group));

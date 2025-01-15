@@ -1,7 +1,7 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
 import { getStorage } from "../../storage";
 import { StorageKey } from "../../common";
-import { Group } from "../../Groups";
+import { Group } from "../../group";
 
 /**
  * Placeholder for the JSON representation of all groups.

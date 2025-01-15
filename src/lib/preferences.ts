@@ -1,19 +1,8 @@
-/**
- * @module lib/preferences.ts Preference types and utilities for Pins commands.
- *
- * @summary Pin command preferences.
- * @author Stephen Kaplan <skaplanofficial@gmail.com>
- *
- * Created at     : 2023-09-04 17:37:42
- * Last modified  : 2024-07-05 01:57:20
- */
-
 import { Application } from "@raycast/api";
 
 /**
  * Preferences for the entire extension.
  */
-
 export interface ExtensionPreferences {
   /**
    * The user's preferred browser. This is used to open URL pins.
@@ -116,7 +105,7 @@ export interface PinsMenubarPreferences {
   iconColor: string;
 
   /**
-   * Whether to show category labels (e.g. "Pins", "Groups", "Quick Pins") in the menu bar dropdown.
+   * Whether to show category labels in the menu bar dropdown.
    */
   showCategories: boolean;
 
