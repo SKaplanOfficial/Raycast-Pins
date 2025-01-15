@@ -12,9 +12,9 @@ import path from "path";
 
 import { Color, Icon, List } from "@raycast/api";
 
-import { SORT_STRATEGY, Visibility } from "./constants";
+import { SORT_STRATEGY, Visibility } from "./common";
 import { Group, isGroup } from "./Groups";
-import { getLinkedPins, Pin } from "./Pins";
+import { getLinkedPins, Pin } from "./pin";
 import { pluralize } from "./utils";
 import PinsPlaceholders from "./placeholders";
 import { Tag } from "./tag";
@@ -38,10 +38,13 @@ export const mapAmountToColor = (amount: number, maxAmount: number) => {
  * @param accessories The list of accessories to add the tag accessories to.
  */
 export const addTagAccessories = (pin: Pin, tagMap: LocalObjectMap<Tag>, accessories: List.Item.Accessory[]) => {
-  const tagAccessories = pin.tags?.map((tagName) => {
+  const tagAccessories = pin.tags?.reduce((acc, tagName) => {
     const tag = tagMap.get(tagName);
-    return { tag: { value: tag?.name, color: tag?.color }, tooltip: `Tagged '${tag?.name}'` };
-  });
+    if (tag) {
+      acc.push({ tag: { value: tag.name, color: tag.color }, tooltip: `Tagged '${tag.name}'` });
+    }
+    return acc;
+  }, [] as List.Item.Accessory[]);
   accessories.push(...(tagAccessories || []));
 };
 
@@ -85,7 +88,7 @@ export const addLinksAccessory = (pin: Pin, accessories: List.Item.Accessory[], 
  * @param accessories The list of accessories to add the recency accessory to.
  * @param mostRecentPinID The ID of the most recently opened pin.
  */
-export const addLastOpenedAccessory = (pin: Pin, accessories: List.Item.Accessory[], mostRecentPinID?: number) => {
+export const addLastOpenedAccessory = (pin: Pin, accessories: List.Item.Accessory[], mostRecentPinID?: string) => {
   if (pin.lastOpened && pin.id == mostRecentPinID) {
     accessories.push({ icon: Icon.Clock, tooltip: `Last Opened ${new Date(pin.lastOpened).toLocaleString()}` });
   }
@@ -212,10 +215,10 @@ export const addTextFragmentAccessory = (pin: Pin, accessories: List.Item.Access
  * @param accessories The list of accessories to add the sorting strategy accessory to.
  */
 export const addSortingStrategyAccessory = (group: Group, accessories: List.Item.Accessory[]) => {
-  if (group.sortStrategy !== undefined && group.sortStrategy !== SORT_STRATEGY.manual) {
+  if (group.sortStrategy !== undefined && group.sortStrategy !== SORT_STRATEGY.MANUAL) {
     accessories.push({
       tag: {
-        value: SORT_STRATEGY[group.sortStrategy],
+        value: group.sortStrategy,
         color: Color.SecondaryText,
       },
     });
@@ -226,10 +229,13 @@ export const addSortingStrategyAccessory = (group: Group, accessories: List.Item
  * Adds an ID accessory tag to the given list of accessories.
  * @param group The group to add the accessory for.
  * @param accessories The list of accessories to add the ID accessory to.
- * @param maxID The maximum ID of any group.
+ * @param groups The list of all groups.
  */
-export const addIDAccessory = (group: Group, accessories: List.Item.Accessory[], maxID: number) => {
-  accessories.push({ tag: { value: `ID: ${group.id.toString()}`, color: mapAmountToColor(group.id, maxID) } });
+export const addIDAccessory = (group: Group, accessories: List.Item.Accessory[], groups: Group[]) => {
+  const groupIndex = groups.findIndex((g) => g.id == group.id);
+  accessories.push({
+    tag: { value: `ID: ${group.id.toString()}`, color: mapAmountToColor(groupIndex, groups.length) },
+  });
 };
 
 /**

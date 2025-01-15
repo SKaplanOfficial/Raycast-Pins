@@ -1,8 +1,8 @@
 import { Color } from "@raycast/api";
 import { LocalObjectStore, LocalObjectType } from "../hooks/useLocalObjectStore";
-import { ItemType } from "./constants";
+import { BaseItem, ItemType } from "./common";
 
-export type Tag = {
+export type Tag = BaseItem & {
   /**
    * The name of the tag. Items will retain this tag even if the name is changed.
    */
@@ -23,6 +23,8 @@ export type Tag = {
    */
   notes: string;
 
+  dateCreated: string;
+
   itemType: ItemType.TAG;
 };
 
@@ -31,13 +33,20 @@ export function isTag(object: unknown): object is Tag {
   return typeof object === "object" && object !== null && "itemType" in object && object["itemType"] === ItemType.TAG;
 }
 
+export function validateTags(tags: Partial<Tag>[]): Tag[] {
+  return tags.map(buildTag);
+}
+
 // TODO: Comment
-export function buildTag(properties: Partial<Tag>): Tag {
+export function buildTag(properties?: Partial<Tag>): Tag {
+  const data = properties || {};
   return {
-    name: properties.name || "New Tag",
-    aliases: properties.aliases || [],
-    color: properties.color || Color.PrimaryText,
-    notes: properties.notes || "",
+    name: data.name || "New Tag",
+    aliases: data.aliases || [],
+    color: data.color || Color.PrimaryText,
+    notes: data.notes || "",
+    dateCreated: data.dateCreated || new Date().toISOString(),
+    id: data.id || "",
     itemType: ItemType.TAG,
   };
 }

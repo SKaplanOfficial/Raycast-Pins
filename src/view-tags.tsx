@@ -2,18 +2,15 @@ import { Action, ActionPanel, Alert, confirmAlert, getPreferenceValues, Icon, Ke
 import { Tag } from "./lib/tag";
 import TagForm from "./components/TagForm";
 import { useEffect, useMemo, useState } from "react";
-import { getPins, openPin, Pin } from "./lib/Pins";
-import { ItemType, SORT_FN, StorageKey } from "./lib/constants";
+import { getPins, openPin, Pin } from "./lib/pin";
+import { ItemType, SORT_FN } from "./lib/common";
 import { pluralize } from "./lib/utils";
 import DeleteItemAction from "./components/actions/DeleteItemAction";
-import TagStoreProvider, { useTagStoreContext } from "./contexts/TagStoreContext";
 import CreateNewItemAction from "./components/actions/CreateNewItemAction";
-import { setStorage } from "./lib/storage";
-import PinStoreProvider, { usePinStoreContext } from "./contexts/PinStoreContext";
+import DataStorageProvider, { useDataStorageContext } from "./contexts/DataStorageContext";
 
-export function TagsList() {
-  const tagStore = useTagStoreContext();
-  const pinStore = usePinStoreContext();
+export function TagList() {
+  const { pinStore, tagStore } = useDataStorageContext();
   const [associations, setAssociations] = useState<{ [key: string]: { tag: Tag; pins: Pin[] } }>({});
   const preferences = getPreferenceValues<ExtensionPreferences>();
 
@@ -44,7 +41,7 @@ export function TagsList() {
       searchBarPlaceholder="Filter tags..."
       actions={
         <ActionPanel>
-          <CreateNewItemAction itemType={ItemType.TAG} formView={<TagForm tagStore={tagStore} />} />
+          <CreateNewItemAction itemType={ItemType.TAG} formView={<TagForm />} />
         </ActionPanel>
       }
     >
@@ -73,7 +70,7 @@ export function TagsList() {
                   <Action.Push
                     title="Edit Tag"
                     icon={Icon.Pencil}
-                    target={<TagForm tag={tag} tagStore={tagStore} />}
+                    target={<TagForm tag={tag} />}
                     shortcut={Keyboard.Shortcut.Common.Edit}
                   />
 
@@ -88,10 +85,7 @@ export function TagsList() {
                               pin,
                               preferences,
                               async (pin: Pin) => {
-                                await pinStore.add([pin]);
-                              },
-                              async (pin: Pin) => {
-                                await pinStore.update(pin);
+                                await pinStore.update([pin]);
                               },
                             );
                           }),
@@ -102,13 +96,13 @@ export function TagsList() {
                   <DeleteItemAction
                     item={tag}
                     onDelete={async (tag) => {
-                      await tagStore.remove(tag);
+                      await tagStore.remove([tag]);
                       const pins = await getPins();
                       const updatedPins = pins.map((pin) => ({
                         ...pin,
                         tags: pin.tags?.filter((pinTag) => pinTag !== tag.name),
                       }));
-                      await setStorage(StorageKey.LOCAL_PINS, updatedPins);
+                      await pinStore.update(updatedPins);
                     }}
                   />
                   <Action
@@ -129,7 +123,7 @@ export function TagsList() {
                     shortcut={Keyboard.Shortcut.Common.RemoveAll}
                   />
                 </ActionPanel.Section>
-                <CreateNewItemAction itemType={ItemType.TAG} formView={<TagForm tagStore={tagStore} />} />
+                <CreateNewItemAction itemType={ItemType.TAG} formView={<TagForm />} />
                 <ActionPanel.Submenu
                   title="Clipboard Actions"
                   icon={Icon.Clipboard}
@@ -168,22 +162,10 @@ export function TagsList() {
 /**
  * Raycast command to view all currently used tags.
  */
-export default function ViewTagsCommands() {
-  useEffect(() => {
-    const logMemUsage = () => {
-      const used = process.memoryUsage().heapUsed / 1024 / 1024;
-      console.log(`Memory usage: ${Math.round(used * 100) / 100} MB`);
-    };
-
-    const interval = setInterval(logMemUsage, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
+export default function ViewTagsCommand() {
   return (
-    <PinStoreProvider>
-      <TagStoreProvider>
-        <TagsList />
-      </TagStoreProvider>
-    </PinStoreProvider>
+    <DataStorageProvider>
+      <TagList />
+    </DataStorageProvider>
   );
 }

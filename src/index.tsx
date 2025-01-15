@@ -20,11 +20,11 @@ import { useCachedState } from "@raycast/utils";
 import OpenAllMenuItem from "./components/menu-items/OpenAllMenuItem";
 import PinMenuItem from "./components/menu-items/PinMenuItem";
 import RecentApplicationsList from "./components/RecentApplicationsList";
-import { KEYBOARD_SHORTCUT, Visibility } from "./lib/constants";
+import { KEYBOARD_SHORTCUT, Visibility } from "./lib/common";
 import { getSubgroups, Group, useGroups } from "./lib/Groups";
 import { getGroupIcon } from "./lib/icons";
 import { useLocalData } from "./lib/LocalData";
-import { copyPinData, openPin, Pin, sortPins } from "./lib/Pins";
+import { copyPinData, openPin, Pin, sortPins } from "./lib/pin";
 import { ExtensionPreferences, GroupDisplaySetting } from "./lib/preferences";
 import { PinsMenubarPreferences } from "./lib/preferences";
 import PinsPlaceholders from "./lib/placeholders";
@@ -38,15 +38,15 @@ import DirectoryQuickPin from "./components/menu-items/quick-pins/DirectoryQuick
 import DocumentQuickPin from "./components/menu-items/quick-pins/DocumentQuickPin";
 import TrackQuickPin from "./components/menu-items/quick-pins/TrackQuickPin";
 import TargetGroupMenu from "./components/TargetGroupMenu";
-import { usePinStoreContext } from "./contexts/PinStoreContext";
+import { useDataStorageContext } from "./contexts/DataStorageContext";
 
 // TODO: need to wrap this in providers
 /**
  * Raycast menu bar command providing quick access to pins.
  */
 export default function ShowPinsCommand() {
-  const { groups, loadingGroups, revalidateGroups, getAncestorsOfGroup, shouldDisplayGroup } = useGroups();
-  const pinStore = usePinStoreContext();
+  const { getAncestorsOfGroup, shouldDisplayGroup } = useGroups(); // TODO: This
+  const { pinStore, groupStore } = useDataStorageContext();
   const [relevantPins, setRelevantPins] = useCachedState<Pin[]>("relevant-pins", []);
   const [irrelevantPins, setIrrelevantPins] = useCachedState<Pin[]>("irrelevant-pins", []);
   const { localData, loadingLocalData } = useLocalData();
@@ -59,7 +59,7 @@ export default function ShowPinsCommand() {
   const pinIcon = { source: { light: "pin-icon.svg", dark: "pin-icon@dark.svg" }, tintColor: iconColor };
 
   useEffect(() => {
-    Promise.resolve(revalidateGroups())
+    Promise.resolve(groupStore.load())
       .then(() => Promise.resolve(pinStore.load()))
       .then(async () => {
         if (!preferences.showInapplicablePins) {
@@ -108,7 +108,7 @@ export default function ShowPinsCommand() {
           pin.visibility === Visibility.VISIBLE ||
           pin.visibility === Visibility.MENUBAR_ONLY,
       ),
-    groups,
+    groupStore.objects,
   );
 
   /**
@@ -183,10 +183,7 @@ export default function ShowPinsCommand() {
                   pin,
                   preferences,
                   async (pin: Pin) => {
-                    await pinStore.add([pin]);
-                  },
-                  async (pin: Pin) => {
-                    await pinStore.update(pin);
+                    await pinStore.update([pin]);
                   },
                   localData as unknown as { [key: string]: string },
                 );
@@ -202,10 +199,7 @@ export default function ShowPinsCommand() {
                       pin,
                       preferences,
                       async (pin: Pin) => {
-                        await pinStore.add([pin]);
-                      },
-                      async (pin: Pin) => {
-                        await pinStore.update(pin);
+                        await pinStore.update([pin]);
                       },
                       localData as unknown as { [key: string]: string },
                     );
@@ -299,7 +293,7 @@ export default function ShowPinsCommand() {
       return p.group == "None";
     } else {
       if (p.visibility === Visibility.USE_PARENT || p.visibility === undefined) {
-        return groups.some(
+        return groupStore.objects.some(
           (g) => g.name == p.group && g.visibility !== Visibility.HIDDEN && g.visibility !== Visibility.VIEW_PINS_ONLY,
         );
       }
@@ -309,18 +303,13 @@ export default function ShowPinsCommand() {
   const groupSubmenus =
     preferences.groupDisplaySetting === GroupDisplaySetting.NONE
       ? []
-      : groups
+      : groupStore.objects
           .filter((g) => g.parent == undefined)
-          .map((group) => getSubsections(group, groups))
+          .map((group) => getSubsections(group, groupStore.objects))
           .filter((g) => g != null);
 
-  console.log(pinStore.loading, loadingGroups, loadingLocalData);
-
-  return <MenuBarExtra icon={pinIcon} isLoading={pinStore.loading || loadingGroups || loadingLocalData} />;
-
-  // Display the menu
   return (
-    <MenuBarExtra icon={pinIcon} isLoading={pinStore.loading || loadingGroups || loadingLocalData}>
+    <MenuBarExtra icon={pinIcon} isLoading={pinStore.loading || groupStore.loading || loadingLocalData}>
       {[
         [
           ungroupedPins.length > 0 ? (
@@ -354,13 +343,13 @@ export default function ShowPinsCommand() {
             <AppQuickPin app={localData.currentApplication} />
             <TextQuickPin />
             <TabQuickPin app={localData.currentApplication} tab={localData.currentTab} />
-            <TabsQuickPin app={localData.currentApplication} tabs={localData.tabs} groups={groups} />
-            <FilesQuickPin app={localData.currentApplication} selectedFiles={selectedFiles} groups={groups} />
+            <TabsQuickPin app={localData.currentApplication} tabs={localData.tabs} groups={groupStore.objects} />
+            <FilesQuickPin app={localData.currentApplication} selectedFiles={selectedFiles} groups={groupStore.objects} />
             <DirectoryQuickPin app={localData.currentApplication} directory={localData.currentDirectory} />
             <DocumentQuickPin app={localData.currentApplication} document={localData.currentDocument} />
             <TrackQuickPin app={localData.currentApplication} track={localData.currentTrack} />
-            <NotesQuickPin app={localData.currentApplication} notes={localData.selectedNotes} groups={groups} />
-            <TargetGroupMenu groups={groups} />
+            <NotesQuickPin app={localData.currentApplication} notes={localData.selectedNotes} groups={groupStore.objects} />
+            <TargetGroupMenu groups={groupStore.objects} />
           </MenuBarExtra.Section>
         ) : null,
       ].sort(() => (preferences.topSection == "quickPins" ? -1 : 1))}

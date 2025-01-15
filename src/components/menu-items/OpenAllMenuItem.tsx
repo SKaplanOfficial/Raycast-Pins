@@ -1,8 +1,8 @@
 import { getPreferenceValues, MenuBarExtra } from "@raycast/api";
 
-import { openPin, Pin } from "../../lib/Pins";
+import { openPin, Pin } from "../../lib/pin";
 import { ExtensionPreferences } from "../../lib/preferences";
-import { usePinStoreContext } from "../../contexts/PinStoreContext";
+import { useDataStorageContext } from "../../contexts/DataStorageContext";
 
 /**
  * A menu item to open all pins in a submenu.
@@ -12,7 +12,7 @@ import { usePinStoreContext } from "../../contexts/PinStoreContext";
  */
 export default function OpenAllMenuItem(props: { pins: Pin[]; submenuName: string }) {
   const { pins, submenuName } = props;
-  const pinStore = usePinStoreContext();
+  const { pinStore } = useDataStorageContext();
   const preferences = getPreferenceValues<ExtensionPreferences & { showOpenAll: boolean }>();
 
   return (
@@ -27,10 +27,7 @@ export default function OpenAllMenuItem(props: { pins: Pin[]; submenuName: strin
                 pin,
                 preferences,
                 async (pin: Pin) => {
-                  await pinStore.add([pin]);
-                },
-                async (pin: Pin) => {
-                  await pinStore.update(pin);
+                  await pinStore.update([pin]);
                 },
               );
             }

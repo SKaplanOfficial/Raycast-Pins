@@ -1,32 +1,32 @@
 import { Application, Icon, MenuBarExtra } from "@raycast/api";
 import { cutoff } from "../../../lib/utils";
-import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
+import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/common";
 import { utils } from "placeholders-toolkit";
 import { TabRef } from "../../../lib/LocalData";
 import { useCachedState } from "@raycast/utils";
 import { Group } from "../../../lib/Groups";
-import { buildPin } from "../../../lib/Pins";
-import { usePinStoreContext } from "../../../contexts/PinStoreContext";
+import { buildPin } from "../../../lib/pin";
+import { useDataStorageContext } from "../../../contexts/DataStorageContext";
 
 type TabQuickPinProps = {
   /**
-   * The application that is currently open.
+   * The current application.
    */
   app: Application;
 
   /**
-   * The tab that is currently open in the frontmost application.
+   * The current tab of a browser.
    */
   tab: TabRef;
 };
 
 /**
- * A menu bar extra item that creates a new pin whose target URL is the URL of the current browser tab.
- * @returns A menu bar extra item, or null if the current application is not a supported browser.
+ * A menu item that creates a new pin whose target URL is the URL of the current browser tab.
+ * @returns A menu item, or null if the current application is not a supported browser.
  */
 export default function TabQuickPin(props: TabQuickPinProps) {
   const { app, tab } = props;
-  const { add: addPin } = usePinStoreContext();
+  const { pinStore } = useDataStorageContext();
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
 
   if (!utils.SupportedBrowsers.find((b) => b.name == app.name)) {
@@ -42,7 +42,7 @@ export default function TabQuickPin(props: TabQuickPinProps) {
     <MenuBarExtra.Item
       title={title}
       icon={Icon.AppWindow}
-      tooltip="Add a pin whose target URL is the URL of the current browser tab"
+      tooltip="Pin the URL of the current tab"
       shortcut={KEYBOARD_SHORTCUT.PIN_CURRENT_TAB}
       onAction={async () => {
         const newPin = buildPin({
@@ -51,7 +51,7 @@ export default function TabQuickPin(props: TabQuickPinProps) {
           application: app.name,
           group: targetGroup?.name,
         });
-        await addPin([newPin]);
+        await pinStore.add([newPin]);
       }}
     />
   );

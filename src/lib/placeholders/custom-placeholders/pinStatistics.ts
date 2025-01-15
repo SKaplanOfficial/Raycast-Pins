@@ -1,8 +1,9 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
-import { Pin, getPinStatistics, sortPins } from "../../Pins";
-import { SORT_STRATEGY, StorageKey } from "../../constants";
-import { getStorage } from "../../storage";
+import { Pin, getPinStatistics, sortPins } from "../../pin";
+import { SORT_STRATEGY, StorageKey } from "../../common";
+import { storageMethods } from "../../storage";
 import { Group } from "../../Groups";
+import { getStoredObjects } from "../../../hooks/useLocalObjectStore";
 
 /**
  * Placeholder for the JSON representation of all pins.
@@ -20,8 +21,8 @@ const PinStatisticsPlaceholder: Placeholder = {
     let numToSelect = parseInt(str.match(/(?<=amount=)[0-9]+/)?.[0] || "-1");
 
     try {
-      const pins: Pin[] = (await getStorage(StorageKey.LOCAL_PINS)) || [];
-      const groups: Group[] = (await getStorage(StorageKey.LOCAL_GROUPS)) || [];
+      const pins = await getStoredObjects<Pin>(StorageKey.PIN_STORE, storageMethods);
+      const groups = await getStoredObjects<Group>(StorageKey.GROUP_STORE, storageMethods);
 
       if (numToSelect >= 0) {
         numToSelect = Math.min(numToSelect, pins.length);

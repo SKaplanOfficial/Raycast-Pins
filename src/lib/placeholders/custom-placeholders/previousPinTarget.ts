@@ -1,7 +1,7 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
-import { getPreviousPin } from "../../Pins";
+import { getPreviousPin } from "../../pin";
 import { getStorage } from "../../storage";
-import { StorageKey } from "../../constants";
+import { StorageKey } from "../../common";
 
 /**
  * Placeholder for the target of the most recently opened pin before the current one. The substitution will be URL-encoded.

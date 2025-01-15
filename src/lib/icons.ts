@@ -10,7 +10,7 @@
 
 import { Icon } from "@raycast/api";
 import { getFavicon } from "@raycast/utils";
-import { Pin } from "./Pins";
+import { Pin } from "./pin";
 import { Group } from "./Groups";
 
 /**

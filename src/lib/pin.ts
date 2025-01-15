@@ -21,7 +21,7 @@ import {
   showHUD,
   showToast,
 } from "@raycast/api";
-import { SORT_FN, StorageKey, SORT_STRATEGY, Visibility, PinAction, ItemType } from "./constants";
+import { SORT_FN, StorageKey, SORT_STRATEGY, Visibility, PinAction, ItemType, BaseItem } from "./common";
 import { objectFromNonNullableEntriesOfObject, runCommand, runCommandInTerminal } from "./utils";
 import { ExtensionPreferences } from "./preferences";
 import * as fs from "fs";
@@ -32,17 +32,11 @@ import { PLApplicator } from "placeholders-toolkit";
 import PinsPlaceholders from "./placeholders";
 import { getStorage, setStorage } from "./storage";
 import { FileRef, TrackRef } from "./LocalData";
-import { LocalObjectStore } from "../hooks/useLocalObjectStore";
 
 /**
  * A pin object.
  */
-export type Pin = {
-  /**
-   * The name of the pin. This should generally be unique.
-   */
-  name: string;
-
+export type Pin = BaseItem & {
   /**
    * The target URL or Terminal command to run when the pin is opened.
    */
@@ -57,11 +51,6 @@ export type Pin = {
    * The name of the group that the pin belongs to, or "None" if the pin is not in a group.
    */
   group: string;
-
-  /**
-   * The unique ID of the pin.
-   */
-  id: number;
 
   /**
    * The application to open the pin in.
@@ -178,6 +167,10 @@ export function isPin(obj: unknown): obj is Pin {
   return typeof obj === "object" && obj != null && (obj as Pin).itemType === ItemType.PIN;
 }
 
+export function validatePins(pins: Partial<Pin>[]): Pin[] {
+  return pins.map(buildPin);
+}
+
 /**
  * Gets the stored pins.
  * @returns The list of pin objects.
@@ -273,6 +266,7 @@ export const checkExpirations = async () => {
     }
   }
 
+  // TODO: Use context
   await setStorage(StorageKey.LOCAL_PINS, newPins);
 
   for (const pin of customActionPins) {
@@ -288,30 +282,31 @@ export const checkExpirations = async () => {
   }
 };
 
-/**
- * Validates a list of pins, ensuring that they all have valid IDs and group names.
- * @param pins The list of pins to validate.
- * @returns The list of validated pins.
- */
-export const validatePins = async (pins: Pin[]) => {
-  const checkedPins: Pin[] = [];
-  for (const [index, pin] of pins.entries()) {
-    // Ensure all pins have unique IDs
-    for (const [index2, pin2] of pins.entries()) {
-      if (index != index2 && pin.id == pin2.id) {
-        pin.id = await getNextPinID();
-      }
-    }
+// TODO: Remove?
+// /**
+//  * Validates a list of pins, ensuring that they all have valid IDs and group names.
+//  * @param pins The list of pins to validate.
+//  * @returns The list of validated pins.
+//  */
+// export const validatePins = async (pins: Pin[]) => {
+//   const checkedPins: Pin[] = [];
+//   for (const [index, pin] of pins.entries()) {
+//     // Ensure all pins have unique IDs
+//     for (const [index2, pin2] of pins.entries()) {
+//       if (index != index2 && pin.id == pin2.id) {
+//         pin.id = await getNextPinID();
+//       }
+//     }
 
-    checkedPins.push({
-      ...pin,
-      group: pin.group == undefined ? "None" : pin.group,
-      id: pin.id == undefined ? await getNextPinID() : pin.id,
-      itemType: ItemType.PIN,
-    });
-  }
-  return checkedPins;
-};
+//     checkedPins.push({
+//       ...pin,
+//       group: pin.group == undefined ? "None" : pin.group,
+//       id: pin.id == undefined ? await getNextPinID() : pin.id,
+//       itemType: ItemType.PIN,
+//     });
+//   }
+//   return checkedPins;
+// };
 
 /**
  * Opens a pin.
@@ -321,7 +316,6 @@ export const validatePins = async (pins: Pin[]) => {
 export const openPin = async (
   pin: Pin,
   preferences: { preferredBrowser?: Application },
-  addPin: (pin: Pin) => Promise<void>,
   updatePin: (pin: Pin) => Promise<void>,
   context?: { [key: string]: unknown },
 ) => {
@@ -414,55 +408,53 @@ export const openPin = async (
         ? Math.round((pin.averageExecutionTime * (pin.timesOpened || 0) + timeElapsed) / ((pin.timesOpened || 0) + 1))
         : timeElapsed,
     },
-    addPin,
     updatePin,
-    () => {
-      null;
-    },
     false,
   );
 };
 
-/**
- * Gets the next available pin ID.
- */
-export const getNextPinID = async () => {
-  // Get the stored pins
-  const storedPins = await getPins();
+// TODO: Remove?
+// /**
+//  * Gets the next available pin ID.
+//  */
+// export const getNextPinID = async () => {
+//   // Get the stored pins
+//   const storedPins = await getPins();
 
-  // Get the next available pin ID
-  let newID = ((await getStorage(StorageKey.NEXT_PIN_ID))[0] as number) || 1;
-  while (storedPins.some((pin: Pin) => pin.id == newID)) {
-    newID++;
-  }
-  setStorage(StorageKey.NEXT_PIN_ID, [newID + 1]);
-  return newID;
-};
+//   // Get the next available pin ID
+//   let newID = ((await getStorage(StorageKey.NEXT_PIN_ID))[0] as number) || 1;
+//   while (storedPins.some((pin: Pin) => pin.id == newID)) {
+//     newID++;
+//   }
+//   setStorage(StorageKey.NEXT_PIN_ID, [newID + 1]);
+//   return newID;
+// };
 
 // TODO: Comment
-export function buildPin(properties: Partial<Pin>): Pin {
+export function buildPin(properties?: Partial<Pin>): Pin {
+  const data = properties || {};
   return {
-    name: properties.name || "New Pin",
-    url: properties.url || "",
-    icon: properties.icon || "Favicon / File Icon",
-    group: properties.group || "None",
-    application: properties.application || "None",
-    id: properties.id || -1,
-    expireDate: properties.expireDate ? new Date(properties.expireDate as string).toISOString() : undefined,
-    fragment: properties.fragment || false,
-    execInBackground: properties.execInBackground || false,
-    shortcut: properties.shortcut,
-    lastOpened: properties.lastOpened ? new Date(properties.lastOpened as string).toISOString() : undefined,
-    timesOpened: properties.timesOpened || 0,
-    iconColor: properties.iconColor || Color.PrimaryText,
-    averageExecutionTime: properties.averageExecutionTime || 0,
-    tags: properties.tags || [],
-    notes: properties.notes || "",
-    tooltip: properties.tooltip || "",
-    dateCreated: new Date().toISOString(),
-    visibility: properties.visibility || Visibility.VISIBLE,
-    expirationAction: properties.expirationAction || PinAction.DELETE,
-    aliases: properties.aliases || [],
+    name: data.name || "New Pin",
+    url: data.url || "",
+    icon: data.icon || "Favicon / File Icon",
+    group: data.group || "None",
+    application: data.application || "None",
+    id: data.id || "",
+    expireDate: data.expireDate ? new Date(data.expireDate as string).toISOString() : undefined,
+    fragment: data.fragment || false,
+    execInBackground: data.execInBackground || false,
+    shortcut: data.shortcut,
+    lastOpened: data.lastOpened ? new Date(data.lastOpened as string).toISOString() : undefined,
+    timesOpened: data.timesOpened || 0,
+    iconColor: data.iconColor || Color.PrimaryText,
+    averageExecutionTime: data.averageExecutionTime || 0,
+    tags: data.tags || [],
+    notes: data.notes || "",
+    tooltip: data.tooltip || "",
+    dateCreated: data.dateCreated || new Date().toISOString(),
+    visibility: data.visibility || Visibility.VISIBLE,
+    expirationAction: data.expirationAction || PinAction.DELETE,
+    aliases: data.aliases || [],
     itemType: ItemType.PIN,
   };
 }
@@ -471,70 +463,23 @@ export function buildPin(properties: Partial<Pin>): Pin {
  * Updates a pin; updates local storage.
  * @param pin The pin to update.
  * @param attributes The attributes to update, along with their new values.
- * @param pinStore The local pin store.
- * @param pop The function to close the modal.
+ * @param updatePin The function to update the pin in local storage.
  * @param notify Whether to display a notification.
  */
 export const modifyPin = async (
   pin: Pin,
   attributes: Partial<Pin>,
-  addPin: (pin: Pin) => Promise<void>,
   updatePin: (pin: Pin) => Promise<void>,
-  pop: () => void,
   notify = true,
 ) => {
-  const updatedPin = {
+  await updatePin({
     ...pin,
     ...attributes,
-    expireDate: attributes.expireDate ? new Date(attributes.expireDate as string).toUTCString() : undefined,
-    dateCreated: new Date().toUTCString(),
-  } as Pin;
-
-  // Add new pin if it doesn't exist
-  if (pin.id == -1) {
-    const newPin = buildPin(attributes);
-    addPin(newPin);
-  } else {
-    await updatePin(updatedPin);
-  }
-
+  });
   if (notify) {
     await showToast({ title: `Updated pin!` });
   }
-  pop();
 };
-
-/**
- * Hides a pin; updates local storage.
- * @param pin The pin to hide.
- * @param setPins The function to update the list of pins.
- */
-export const hidePin = async (pin: Pin, updatePin: LocalObjectStore<Pin>["update"]) =>
-  await updatePin({ ...pin, visibility: Visibility.HIDDEN });
-
-/**
- * Unhides a pin; updates local storage.
- * @param pin The pin to unhide.
- * @param setPins The function to update the list of pins.
- */
-export const unhidePin = async (pin: Pin, updatePin: LocalObjectStore<Pin>["update"]) =>
-  await updatePin({ ...pin, visibility: Visibility.VISIBLE });
-
-/**
- * Disables a pin; updates local storage.
- * @param pin The pin to disable.
- * @param setPins The function to update the list of pins.
- */
-export const disablePin = async (pin: Pin, updatePin: LocalObjectStore<Pin>["update"]) =>
-  await updatePin({ ...pin, visibility: Visibility.DISABLED });
-
-/**
- * Moves a pin to the specified group; updates local storage.
- * @param pin The pin to enable.
- * @param setPins The function to update the list of pins.
- */
-export const movePin = async (pin: Pin, group: string, updatePin: LocalObjectStore<Pin>["update"]) =>
-  await updatePin({ ...pin, group: group });
 
 /**
  * Gets the last opened pin.
@@ -563,7 +508,6 @@ export const sortPins = (
   return [...pins].sort((p1, p2) => {
     const group = groups?.find((group) => group.name == p1.group);
     if (sortFn) {
-      // Use custom sort function if provided
       return sortFn(p1, p2);
     }
 

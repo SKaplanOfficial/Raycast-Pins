@@ -1,4 +1,4 @@
-import { exec, execSync } from "child_process";
+import { exec } from "child_process";
 import { runAppleScript } from "@raycast/utils";
 
 /**
@@ -20,16 +20,6 @@ export const runCommand = async (command: string, callback?: (arg0: string) => u
   }
 
   return result;
-};
-
-/**
- * Runs a terminal command synchronously.
- * @param command The command to run.
- * @returns The result of the command as a string.
- */
-export const runCommandSync = (command: string) => {
-  const result = execSync(command);
-  return result.toString();
 };
 
 /**

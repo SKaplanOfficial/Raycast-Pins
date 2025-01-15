@@ -1,7 +1,7 @@
 import { Action, ActionPanel, Icon, Keyboard } from "@raycast/api";
-import { Pin, getPinStatistics } from "../../lib/Pins";
-import { PinAction } from "../../lib/constants";
-import { usePinStoreContext } from "../../contexts/PinStoreContext";
+import { Pin, getPinStatistics } from "../../lib/pin";
+import { PinAction } from "../../lib/common";
+import { useDataStorageContext } from "../../contexts/DataStorageContext";
 
 /**
  * Submenu for actions that copy information about a pin to the clipboard.
@@ -10,7 +10,7 @@ import { usePinStoreContext } from "../../contexts/PinStoreContext";
  */
 export default function CopyPinActionsSubmenu(props: { pin: Pin }) {
   const { pin } = props;
-  const { objects: pins } = usePinStoreContext();
+  const { pinStore } = useDataStorageContext();
 
   return (
     <ActionPanel.Submenu title="Clipboard Actions" icon={Icon.Clipboard} shortcut={Keyboard.Shortcut.Common.Copy}>
@@ -46,12 +46,12 @@ export default function CopyPinActionsSubmenu(props: { pin: Pin }) {
       />
       <Action.CopyToClipboard
         title="Copy Formatted Pin Statistics"
-        content={getPinStatistics(pin, pins) as string}
+        content={getPinStatistics(pin, pinStore.objects) as string}
         shortcut={{ modifiers: ["cmd", "shift"], key: "s" }}
       />
       <Action.CopyToClipboard
         title="Copy Pin Statistics as JSON"
-        content={JSON.stringify(getPinStatistics(pin, pins, "object"))}
+        content={JSON.stringify(getPinStatistics(pin, pinStore.objects, "object"))}
         shortcut={{ modifiers: ["cmd", "opt", "shift"], key: "j" }}
       />
     </ActionPanel.Submenu>

@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 import { runAppleScript, useCachedState } from "@raycast/utils";
 import { getStorage, setStorage } from "./storage";
 import { ExtensionPreferences } from "./preferences";
-import { StorageKey } from "./constants";
+import { StorageKey } from "./common";
 import { utils } from "placeholders-toolkit";
 
 /**

@@ -1,20 +1,20 @@
 import { Application, MenuBarExtra } from "@raycast/api";
 import { FileRef } from "../../../lib/LocalData";
 import { Group, createNewGroup } from "../../../lib/Groups";
-import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
+import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/common";
 import { cutoff } from "../../../lib/utils";
 import { useCachedState } from "@raycast/utils";
-import { buildPin } from "../../../lib/Pins";
-import { usePinStoreContext } from "../../../contexts/PinStoreContext";
+import { buildPin } from "../../../lib/pin";
+import { useDataStorageContext } from "../../../contexts/DataStorageContext";
 
 type FilesQuickPinProps = {
   /**
-   * The application that is currently open.
+   * The current application.
    */
   app: Application;
 
   /**
-   * The files that are currently selected in Finder.
+   * The files currently selected in the file manager.
    */
   selectedFiles: FileRef[];
 
@@ -25,14 +25,15 @@ type FilesQuickPinProps = {
 };
 
 /**
- * A menu bar extra item that creates a new pin for each selected file in Finder.
- * @returns A menu bar extra item, or null if the current app is not Finder or no files are selected.
+ * A menu item that creates a new pin for each selected file.
+ * @returns A menu item, or null if the current app is not a file manager.
  */
 export default function FilesQuickPin(props: FilesQuickPinProps) {
   const { app, selectedFiles, groups } = props;
-  const { add: addPin } = usePinStoreContext();
+  const { pinStore } = useDataStorageContext();
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
 
+  // TODO: PathFinder
   if (app.name != "Finder" || selectedFiles.length == 0) {
     return null;
   }
@@ -50,7 +51,7 @@ export default function FilesQuickPin(props: FilesQuickPinProps) {
     <MenuBarExtra.Item
       title={title}
       icon={{ fileIcon: selectedFiles[0].path }}
-      tooltip="Create a pin for each selected file, pinned to a new group"
+      tooltip="Pin the selected files"
       shortcut={KEYBOARD_SHORTCUT.PIN_SELECTED_FILES}
       onAction={async () => {
         if (selectedFiles.length == 1) {
@@ -59,7 +60,7 @@ export default function FilesQuickPin(props: FilesQuickPinProps) {
             url: selectedFiles[0].path,
             group: targetGroup?.name,
           });
-          await addPin([newPin]);
+          await pinStore.add([newPin]);
         } else {
           let newGroupName = "New File Group";
           if (targetGroup) {
@@ -81,7 +82,7 @@ export default function FilesQuickPin(props: FilesQuickPinProps) {
               url: file.path,
               group: newGroupName,
             });
-            await addPin([newPin]);
+            await pinStore.add([newPin]);
           }
         }
       }}

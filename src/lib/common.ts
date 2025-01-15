@@ -16,6 +16,12 @@ export enum ItemType {
   TAG = "Tag",
 }
 
+export type BaseItem = {
+  id: string;
+  name: string;
+  itemType: ItemType;
+}
+
 /**
  * Storage keys used throughout the extension.
  */
@@ -112,12 +118,12 @@ export const KEYBOARD_SHORTCUT: { [key: string]: Keyboard.Shortcut } = {
  * Sorting strategies and their display names.
  */
 export const SORT_STRATEGY = {
-  alphabetical: "Alphabetical",
-  dateCreated: "Creation Date",
-  frequency: "Frequency",
-  manual: "Manual",
-  recency: "Recency",
-};
+  ALPHABETICAL: "Alphabetical",
+  DATE_CREATED: "Creation Date",
+  FREQUENCY: "Frequency",
+  MANUAL: "Manual",
+  RECENCY: "Recency",
+} as const;
 
 /**
  * Basic sorting functions.

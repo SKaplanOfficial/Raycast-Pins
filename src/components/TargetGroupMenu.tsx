@@ -1,7 +1,7 @@
 import { Icon, MenuBarExtra, showHUD } from "@raycast/api";
 import { Group } from "../lib/Groups";
 import { useCachedState } from "@raycast/utils";
-import { StorageKey } from "../lib/constants";
+import { StorageKey } from "../lib/common";
 
 type TargetGroupMenuProps = {
   groups: Group[];

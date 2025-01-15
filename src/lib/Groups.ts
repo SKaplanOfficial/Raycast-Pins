@@ -11,59 +11,52 @@
 import { useEffect, useState } from "react";
 import { getStorage, setStorage } from "./storage";
 import { useCachedState } from "@raycast/utils";
-import { ItemType, SORT_FN, SORT_STRATEGY, StorageKey, Visibility } from "./constants";
+import { BaseItem, ItemType, SORT_FN, SORT_STRATEGY, StorageKey, Visibility } from "./common";
 import { Color, environment, showToast } from "@raycast/api";
-import { Pin, getPins, sortPins } from "./Pins";
+import { Pin, sortPins } from "./pin";
 import { GroupDisplaySetting } from "./preferences";
+import { LocalObjectStore } from "../hooks/useLocalObjectStore";
 
 /**
  * A group of pins.
  */
-export type Group = {
-  /**
-   * The name of the group.
-   */
-  name: string;
-
+export type Group = BaseItem & {
   /**
    * A reference to the icon for the group, either a valid Raycast icon, a URL, a file path, or an empty icon placeholder.
    */
   icon: string;
 
   /**
-   * The unique ID of the group.
-   */
-  id: number;
-
-  /**
    * The ID of the parent group.
    */
-  parent?: number;
+  parent?: string;
 
   /**
    * The method used to sort the group's pins.
    */
-  sortStrategy?: keyof typeof SORT_STRATEGY;
+  sortStrategy: typeof SORT_STRATEGY[keyof typeof SORT_STRATEGY];
 
   /**
    * The color to tint the icon.
    */
-  iconColor?: string;
+  iconColor: string;
 
   /**
    * The date the group was created.
    */
-  dateCreated?: string;
+  dateCreated: string;
 
   /**
    * Where the group is visible, if at all.
    */
-  visibility?: Visibility;
+  visibility: Visibility;
 
   /**
    * How the group should be displayed in the menubar.
    */
-  menubarDisplay?: GroupDisplaySetting;
+  menubarDisplay: GroupDisplaySetting;
+
+  tags: string[];
 
   itemType: ItemType.GROUP;
 };
@@ -81,6 +74,7 @@ export const GroupKeys = [
   "dateCreated",
   "visibility",
   "menubarDisplay",
+  "tags",
   "itemType",
 ] as const;
 
@@ -166,20 +160,8 @@ export const shouldDisplayGroup = (group: Group, allGroups: Group[]): boolean =>
  * @param groups The list of groups to validate.
  * @returns The list of validated groups.
  */
-export const validateGroups = async (groups: Group[]) => {
-  const checkedGroups: Group[] = [];
-  const seenIDs = new Set<number>();
-
-  for (const group of groups) {
-    if (seenIDs.has(group.id) || group.id == undefined) {
-      group.id = await getNextGroupID();
-    }
-    seenIDs.add(group.id);
-    group.itemType = ItemType.GROUP;
-    checkedGroups.push(group);
-  }
-
-  return checkedGroups;
+export const validateGroups = (groups: Group[]) => {
+  return groups.map(buildGroup);
 };
 
 /**
@@ -254,19 +236,21 @@ export const createNewGroup = async (attributes: Partial<Group>) => {
 // TODO: This comment
 /**
  * Creates a dummy group object.
- * @returns The group object with placeholder values and an ID of -1.
+ * @returns The group object with placeholder values.
  */
-export const buildGroup = (properties: Partial<Group>): Group => {
+export const buildGroup = (properties?: Partial<Group>): Group => {
+  const data = properties || {};
   return {
-    name: properties.name || "New Group",
-    icon: properties.icon || "Minus",
-    id: -1,
-    parent: properties.parent,
-    sortStrategy: properties.sortStrategy,
-    iconColor: properties.iconColor || Color.PrimaryText,
-    dateCreated: properties.dateCreated || new Date().toISOString(),
-    visibility: properties.visibility || Visibility.USE_PARENT,
-    menubarDisplay: properties.menubarDisplay || GroupDisplaySetting.SUBMENUS,
+    name: data.name || "New Group",
+    icon: data.icon || "Minus",
+    id: data.id || "",
+    parent: data.parent,
+    sortStrategy: data.sortStrategy ? data.sortStrategy in SORT_STRATEGY ? SORT_STRATEGY[data.sortStrategy as keyof typeof SORT_STRATEGY] : data.sortStrategy : SORT_STRATEGY.MANUAL,
+    iconColor: data.iconColor || Color.PrimaryText,
+    dateCreated: data.dateCreated || new Date().toISOString(),
+    visibility: data.visibility || Visibility.USE_PARENT,
+    menubarDisplay: data.menubarDisplay || GroupDisplaySetting.SUBMENUS,
+    tags: data.tags || [],
     itemType: ItemType.GROUP,
   };
 };
@@ -281,53 +265,24 @@ export const buildGroup = (properties: Partial<Group>): Group => {
 export const modifyGroup = async (
   group: Group,
   attributes: Partial<Group>,
-  setGroups: (groups: Group[]) => void,
-  pop: () => void,
+  updateGroup: (group: Group) => Promise<void>,
+  pinStore: LocalObjectStore<Pin>,
 ) => {
-  const storedGroups = await getGroups();
-  const newGroups: Group[] = storedGroups.map((oldGroup: Group) => {
-    // Update group if it exists
-    if (group.id != -1 && oldGroup.id == group.id) {
-      return {
-        ...oldGroup,
-        ...attributes,
-        dateCreated: group.dateCreated || new Date().toUTCString(),
-        visibility: attributes.visibility || Visibility.USE_PARENT,
-        menubarDisplay: attributes.menubarDisplay || GroupDisplaySetting.SUBMENUS,
-      };
-    } else {
-      return oldGroup;
-    }
+  await updateGroup({
+    ...group,
+    ...attributes,
   });
-
-  // Create a new group if it doesn't exist
-  if (group.id == -1) {
-    const newGroup = await createNewGroup(attributes);
-    newGroups.push(newGroup);
-  }
 
   // Propagate changes to pins
-  const storedPins = await getPins();
+  const storedPins = pinStore.objects;
   const newPins = storedPins.map((pin: Pin) => {
-    if (pin.group == group.name) {
-      return {
-        ...pin,
-        name: pin.name,
-        url: pin.url,
-        icon: pin.icon,
-        group: attributes.name || group.name,
-        id: pin.id,
-      };
-    } else {
-      return pin;
-    }
+    return {
+      ...pin,
+      group: pin.group == group.name ? attributes.name || group.name : pin.group,
+    };
   });
-
-  setGroups(newGroups);
-  await setStorage(StorageKey.LOCAL_GROUPS, newGroups);
-  await setStorage(StorageKey.LOCAL_PINS, newPins);
+  await pinStore.update(newPins);
   await showToast({ title: `Updated pin group!` });
-  pop();
 };
 
 /**
@@ -335,44 +290,41 @@ export const modifyGroup = async (
  * @param group The group to delete.
  * @param setGroups The function to update the active list of groups.
  */
-export const deleteGroup = async (group: Group, setGroups: (groups: Group[]) => void, displayToast = true) => {
-  const storedGroups = await getGroups();
-
-  const filteredGroups = storedGroups
-    .filter((oldGroup: Group) => {
-      return oldGroup.id != group.id;
-    })
-    .map((g) => {
-      if (g.parent == group.id) {
-        if (group.parent != undefined && storedGroups.some((g) => g.id == group.parent)) {
-          g.parent = group.parent;
-        } else {
-          g.parent = undefined;
-        }
+export const deleteGroup = async (
+  group: Group,
+  groupStore: LocalObjectStore<Group>,
+  pinStore: LocalObjectStore<Pin>,
+  displayToast = true,
+) => {
+  const updatedGroups = groupStore.objects.map((g) => {
+    if (g.parent == group.id) {
+      if (group.parent != undefined && groupStore.objects.some((g) => g.id == group.parent)) {
+        g.parent = group.parent;
+      } else {
+        g.parent = undefined;
       }
-      return g;
-    });
+    }
+    return g;
+  });
+  await groupStore.remove([group]);
+  await groupStore.update(updatedGroups);
 
   const isDuplicate =
-    filteredGroups.filter((oldGroup: Group) => {
+    updatedGroups.filter((oldGroup: Group) => {
       return oldGroup.name == group.name;
     }).length != 0;
 
-  const storedPins = await getPins();
-  const updatedPins = storedPins.map((pin: Pin) => {
+  const updatedPins = pinStore.objects.map((pin: Pin) => {
     if (pin.group == group.name && !isDuplicate) {
-      if (group.parent != undefined && storedGroups.some((g) => g.id == group.parent)) {
-        pin.group = storedGroups.filter((g) => g.id == group.parent)[0].name;
+      if (group.parent != undefined && groupStore.objects.some((g) => g.id == group.parent)) {
+        pin.group = groupStore.objects.filter((g) => g.id == group.parent)[0].name;
       } else {
         pin.group = "None";
       }
     }
     return pin;
   });
-
-  setGroups(filteredGroups);
-  await setStorage(StorageKey.LOCAL_GROUPS, filteredGroups);
-  await setStorage(StorageKey.LOCAL_PINS, updatedPins);
+  await pinStore.update(updatedPins);
   if (displayToast) await showToast({ title: `Removed pin group!` });
 };
 
@@ -411,7 +363,7 @@ export const checkGroupParentField = async (
   if (suggestedID.trim().length == 0) {
     setParentError(undefined);
     return true;
-  } else if (!groups.map((g) => g.id).includes(parseInt(suggestedID))) {
+  } else if (!groups.map((g) => g.id).includes(suggestedID)) {
     setParentError("No group with this ID exists!");
     return false;
   } else if (parseInt(suggestedID) == nextID) {

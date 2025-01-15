@@ -1,7 +1,6 @@
 import { Action, Icon, confirmAlert, showToast } from "@raycast/api";
 import { installExamples } from "../../lib/defaults";
-import { usePinStoreContext } from "../../contexts/PinStoreContext";
-import { useTagStoreContext } from "../../contexts/TagStoreContext";
+import { useDataStorageContext } from "../../contexts/DataStorageContext";
 
 /**
  * Action to install example pins. Only shows if examples are not installed and no pins have been created.
@@ -12,12 +11,10 @@ import { useTagStoreContext } from "../../contexts/TagStoreContext";
  */
 export const InstallExamplesAction = (props: {
   setExamplesInstalled: React.Dispatch<React.SetStateAction<boolean>>;
-  revalidateGroups: () => Promise<void>;
   kind: "pins" | "groups";
 }) => {
-  const { setExamplesInstalled, revalidateGroups, kind } = props;
-  const { load: revalidatePins } = usePinStoreContext();
-  const { load: revalidateTags } = useTagStoreContext();
+  const { setExamplesInstalled, kind } = props;
+  const { pinStore, groupStore, tagStore } = useDataStorageContext();
   const kindLabel = kind == "pins" ? "Pins" : "Groups";
   return (
     <Action
@@ -37,9 +34,9 @@ export const InstallExamplesAction = (props: {
         ) {
           await installExamples(kind);
           setExamplesInstalled(true);
-          await revalidatePins();
-          await revalidateTags();
-          await revalidateGroups();
+          await pinStore.load();
+          await groupStore.load();
+          await tagStore.load();
           await showToast({ title: `Installed Example ${kindLabel}` });
         }
       }}

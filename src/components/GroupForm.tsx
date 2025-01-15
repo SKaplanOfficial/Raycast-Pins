@@ -11,19 +11,18 @@ import {
 } from "@raycast/api";
 import {
   Group,
+  buildGroup,
   checkGroupNameField,
   checkGroupParentField,
   createNewGroup,
   getGroupStatistics,
   modifyGroup,
-  useGroups,
 } from "../lib/Groups";
 import { useState } from "react";
 import { getIcon } from "../lib/icons";
-import { ItemType, SORT_STRATEGY, Visibility } from "../lib/constants";
+import { SORT_STRATEGY, Visibility } from "../lib/common";
 import { GroupDisplaySetting } from "../lib/preferences";
-import { usePinStoreContext } from "../contexts/PinStoreContext";
-
+import { useDataStorageContext } from "../contexts/DataStorageContext";
 export interface GroupFormValues {
   nameField: string;
   iconField: string;
@@ -37,43 +36,36 @@ export interface GroupFormValues {
 /**
  * Form for editing a group.
  * @param props.group The group to edit.
- * @param props.setGroups The function to call to update the list of groups.
  * @returns A form view.
  */
-export default function GroupForm(props: {
-  group?: Group;
-  groups?: Group[];
-  setGroups?: (groups: Group[]) => void;
-  draftValues?: GroupFormValues;
-}) {
-  const { group, setGroups, draftValues } = props;
-  const { objects: pins } = usePinStoreContext();
+export default function GroupForm(props: { group?: Group; draftValues?: GroupFormValues }) {
+  const { group, draftValues } = props;
+  const { pinStore, groupStore } = useDataStorageContext();
   const [visibility, setVisibility] = useState<Visibility>(
     draftValues?.visibilityField || (group?.visibility ?? Visibility.USE_PARENT),
   );
   const [iconColor, setIconColor] = useState<string | undefined>(draftValues?.iconColorField || group?.iconColor);
   const [nameError, setNameError] = useState<string | undefined>();
-  const [parentID, setParentID] = useState<number | undefined>(
-    draftValues?.parentField ? parseInt(draftValues.parentField) : group?.parent,
+  const [parentID, setParentID] = useState<string | undefined>(
+    draftValues?.parentField ? draftValues.parentField : group?.parent,
   );
   const [parentError, setParentError] = useState<string | undefined>();
-  const { groups } = useGroups();
   const { pop } = useNavigation();
 
   // No group data provided -> we're creating a new group.
   const targetGroup =
     group == undefined
-      ? ({
+      ? buildGroup({
           name: draftValues?.nameField || "",
           icon: draftValues?.iconField || "BulletPoints",
-          id: -1,
-          parent: draftValues?.parentField ? parseInt(draftValues.parentField) : undefined,
-          sortStrategy: (draftValues?.sortStrategyField || SORT_STRATEGY.manual) as keyof typeof SORT_STRATEGY,
-          itemType: ItemType.GROUP,
-        } as Group)
+          parent: draftValues?.parentField ? draftValues.parentField : undefined,
+          sortStrategy: (draftValues?.sortStrategyField ||
+            SORT_STRATEGY.MANUAL) as (typeof SORT_STRATEGY)[keyof typeof SORT_STRATEGY],
+        })
       : group;
 
-  const parent = group?.parent ? groups.find((g) => g.id == group.parent) : undefined;
+  const parent = group?.parent ? groupStore.objects.find((g) => g.id == group.parent) : undefined;
+  const timeSinceCreation = group?.dateCreated ? Date.now() - new Date(group.dateCreated).getTime() : 0;
 
   return (
     <Form
@@ -92,7 +84,7 @@ export default function GroupForm(props: {
                 await createNewGroup({
                   name: values.nameField,
                   icon: values.iconField,
-                  parent: values.parentField ? parseInt(values.parentField) : undefined,
+                  parent: values.parentField ? values.parentField : undefined,
                   sortStrategy:
                     values.sortStrategyField && values.sortStrategyField != "none"
                       ? values.sortStrategyField
@@ -111,7 +103,7 @@ export default function GroupForm(props: {
                   {
                     name: values.nameField,
                     icon: values.iconField,
-                    parent: values.parentField ? parseInt(values.parentField) : undefined,
+                    parent: values.parentField ? values.parentField : undefined,
                     sortStrategy:
                       values.sortStrategyField && values.sortStrategyField != "none"
                         ? values.sortStrategyField
@@ -120,9 +112,10 @@ export default function GroupForm(props: {
                     visibility: values.visibilityField,
                     menubarDisplay: values.menubarDisplayField,
                   },
-                  setGroups as (groups: Group[]) => void,
-                  pop,
+                  (group) => groupStore.update([group]),
+                  pinStore,
                 );
+                pop();
               }
             }}
           />
@@ -138,14 +131,14 @@ export default function GroupForm(props: {
           checkGroupNameField(
             value,
             setNameError,
-            groups.filter((g) => g.id != targetGroup.id).map((group) => group.name),
+            groupStore.objects.filter((g) => g.id != targetGroup.id).map((group) => group.name),
           )
         }
         onBlur={(event) =>
           checkGroupNameField(
             event.target.value as string,
             setNameError,
-            groups.filter((g) => g.id != targetGroup.id).map((group) => group.name),
+            groupStore.objects.filter((g) => g.id != targetGroup.id).map((group) => group.name),
           )
         }
         defaultValue={targetGroup.name}
@@ -251,7 +244,7 @@ export default function GroupForm(props: {
           <Form.Dropdown.Item key="none" title="Not Set (Global Preference)" value="none" />
         )}
         {Object.entries(SORT_STRATEGY).map(([key, value]) => {
-          return <Form.Dropdown.Item key={key} title={value} value={key} />;
+          return <Form.Dropdown.Item key={key} title={value} value={value} />;
         })}
       </Form.Dropdown>
 
@@ -259,32 +252,33 @@ export default function GroupForm(props: {
         id="parentField"
         title="Parent Group"
         placeholder="Parent Group ID"
-        value={(parentID || "").toString()}
+        value={parentID || ""}
         info="The ID of this group's parent. You can use this to create multi-layer groupings within the menu bar dropdown menu."
         error={parentError}
         onChange={async (value) => {
-          const isValid = await checkGroupParentField(value, setParentError, groups);
+          const isValid = await checkGroupParentField(value, setParentError, groupStore.objects);
           if (isValid) {
-            setParentID(parseInt(value));
+            setParentID(value);
           }
         }}
-        onBlur={(event) => checkGroupParentField(event.target.value as string, setParentError, groups)}
+        onBlur={(event) => checkGroupParentField(event.target.value as string, setParentError, groupStore.objects)}
       />
 
-      {targetGroup.id > -1 ? (
-        <Form.TextField
-          id="idField"
-          title="Group ID"
-          value={targetGroup.id.toString()}
-          info="The ID of this group. You can use this to specify this group as a parent of other groups."
-          onChange={() => null}
-        />
-      ) : null}
+      <Form.TextField
+        id="idField"
+        title="Group ID"
+        value={targetGroup.id.toString()}
+        info="The ID of this group. You can use this to specify this group as a parent of other groups."
+        onChange={() => null}
+      />
 
-      {group?.id != undefined && group.id > -1 ? (
+      {group && timeSinceCreation > 5000 ? (
         <>
           <Form.Separator />
-          <Form.Description title="Statistics" text={getGroupStatistics(group, groups, pins) as string} />
+          <Form.Description
+            title="Statistics"
+            text={getGroupStatistics(group, groupStore.objects, pinStore.objects) as string}
+          />
         </>
       ) : null}
     </Form>

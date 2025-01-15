@@ -1,11 +1,11 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
-import { Pin, openPin } from "../../Pins";
+import { Pin, openPin, validatePins } from "../../pin";
 import { getStorage, storageMethods } from "../../storage";
-import { StorageKey } from "../../constants";
+import { StorageKey } from "../../common";
 import { getPreferenceValues } from "@raycast/api";
 import { ExtensionPreferences } from "../../preferences";
 import { Group } from "../../Groups";
-import { addObjectsToStore, getObjectsFromStore, updateObjectInStore } from "../../../hooks/useLocalObjectStore";
+import { getStoredObjects, updateStoredObjects } from "../../../hooks/useLocalObjectStore";
 
 /**
  * Placeholder directive for opening/launching all pins in a target group.
@@ -18,7 +18,7 @@ const LaunchGroupDirective: Placeholder = {
     const matches = str.match(/{{(launchGroup|openGroup):(([^{]|{(?!{)|{{[\s\S]*?}})*?)}}/);
     const targetRep = matches?.[2] || "";
     if (!targetRep) return { result: "" };
-    const pins: Pin[] = await getObjectsFromStore<Pin>(StorageKey.PIN_STORE, storageMethods);
+    const pins: Pin[] = await getStoredObjects<Pin>(StorageKey.PIN_STORE, storageMethods);
 
     const groups: Group[] = (await getStorage(StorageKey.LOCAL_GROUPS)) || [];
     const target = groups.find((g) => g.name == targetRep || g.id.toString() == targetRep);
@@ -31,10 +31,7 @@ const LaunchGroupDirective: Placeholder = {
           p,
           preferences,
           async (pin: Pin) => {
-            await addObjectsToStore(StorageKey.PIN_STORE, pins, [pin], storageMethods);
-          },
-          async (pin: Pin) => {
-            await updateObjectInStore(pins, pin, true, StorageKey.PIN_STORE, storageMethods);
+            await updateStoredObjects([pin], pins, StorageKey.PIN_STORE, storageMethods, validatePins);
           },
         ),
       ),

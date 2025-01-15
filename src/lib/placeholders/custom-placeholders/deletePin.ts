@@ -1,9 +1,9 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
-import { Pin } from "../../Pins";
-import { StorageKey } from "../../constants";
+import { Pin } from "../../pin";
+import { StorageKey } from "../../common";
 import { storageMethods } from "../../storage";
 import { deleteItem } from "../../../components/actions/DeleteItemAction";
-import { getObjectsFromStore, removeObjectsFromStore } from "../../../hooks/useLocalObjectStore";
+import { getStoredObjects, removeStoredObjects } from "../../../hooks/useLocalObjectStore";
 
 /**
  * Placeholder directive for deleting a pin.
@@ -18,13 +18,13 @@ const DeletePinDirective: Placeholder = {
     const pinRef = matches ? matches[3] : "";
     if (!pinRef) return { result: "" };
 
-    const allPins: Pin[] = await getObjectsFromStore(StorageKey.PIN_STORE, storageMethods);
+    const allPins: Pin[] = await getStoredObjects(StorageKey.PIN_STORE, storageMethods);
     const pin = allPins.find((p) => p.name == pinRef || p.id.toString() == pinRef);
     if (!pin) return { result: "" };
 
     await deleteItem(
       pin,
-      (item) => removeObjectsFromStore([item], allPins, true, StorageKey.PIN_STORE, storageMethods),
+      (item) => removeStoredObjects([item], allPins, StorageKey.PIN_STORE, storageMethods),
       { requireConfirmation: !silent },
     );
     return { result: "" };

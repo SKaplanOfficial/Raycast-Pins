@@ -1,11 +1,10 @@
 import { Action, ActionPanel, Color, Form, Icon, showToast, useNavigation } from "@raycast/api";
 import { useForm } from "@raycast/utils";
 
-import { LocalObjectStore, LocalObjectType } from "../hooks/useLocalObjectStore";
-import { ItemType, StorageKey } from "../lib/constants";
-import { getPins } from "../lib/Pins";
-import { setStorage } from "../lib/storage";
-import { Tag } from "../lib/tag";
+import { LocalObjectType } from "../hooks/useLocalObjectStore";
+import { getPins } from "../lib/pin";
+import { buildTag, Tag } from "../lib/tag";
+import { useDataStorageContext } from "../contexts/DataStorageContext";
 
 type TagFormValues = {
   name: string;
@@ -16,21 +15,15 @@ type TagFormValues = {
 
 type TagFormProps = {
   tag?: LocalObjectType<Tag>;
-  tagStore: LocalObjectStore<Tag>;
   onSubmit?: (tag: LocalObjectType<Tag>) => void;
 };
 
 export default function TagForm(props: TagFormProps) {
-  const { tag, tagStore, onSubmit } = props;
+  const { tag, onSubmit } = props;
+  const { pinStore, tagStore } = useDataStorageContext();
   const { pop } = useNavigation();
 
-  const targetTag = tag ?? {
-    name: "",
-    color: Color.PrimaryText,
-    aliases: [],
-    notes: "",
-    itemType: ItemType.TAG,
-  };
+  const targetTag = tag ?? buildTag();
 
   const validateName = (name: string | undefined) => {
     if (tagStore.objects.some((tag) => tag.name === name && ("id" in targetTag ? targetTag.id !== tag.id : true))) {
@@ -48,7 +41,7 @@ export default function TagForm(props: TagFormProps) {
         color: values.color,
         aliases: values.aliases.split(",").map((alias) => alias.trim()),
         notes: values.notes,
-      };
+      } as LocalObjectType<Tag>;
 
       if (tag) {
         if (tag.name !== updatedTag.name) {
@@ -57,11 +50,11 @@ export default function TagForm(props: TagFormProps) {
             ...pin,
             tags: pin.tags?.map((tag) => (tag === targetTag.name ? updatedTag.name : tag)),
           }));
-          await setStorage(StorageKey.LOCAL_PINS, updatedPins);
+          await pinStore.update(updatedPins);
         }
-        await tagStore.update(updatedTag as LocalObjectType<Tag>);
+        await tagStore.update([updatedTag]);
         await showToast({ title: "Tag Updated" });
-        onSubmit?.(updatedTag as LocalObjectType<Tag>);
+        onSubmit?.(updatedTag);
       } else {
         const newTag = await tagStore.add([updatedTag]);
         await showToast({ title: "Tag Created" });

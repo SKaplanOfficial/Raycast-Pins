@@ -18,18 +18,17 @@ import {
 } from "@raycast/api";
 import { getFavicon } from "@raycast/utils";
 
-import { KEYBOARD_SHORTCUT, PinAction, Visibility } from "../lib/constants";
-import { Group, useGroups } from "../lib/Groups";
+import { KEYBOARD_SHORTCUT, PinAction, Visibility } from "../lib/common";
+import { buildGroup, Group } from "../lib/Groups";
 import { iconMap } from "../lib/icons";
-import { buildPin, getPinStatistics, modifyPin, Pin } from "../lib/Pins";
+import { buildPin, getPinStatistics, modifyPin, Pin } from "../lib/pin";
 import { ExtensionPreferences } from "../lib/preferences";
 import CopyPinActionsSubmenu from "./actions/CopyPinActionsSubmenu";
 import { PLChecker } from "placeholders-toolkit";
 import PinsPlaceholders from "../lib/placeholders";
 import TagForm from "./TagForm";
 import DeleteItemAction from "./actions/DeleteItemAction";
-import { LocalObjectStore } from "../hooks/useLocalObjectStore";
-import { Tag } from "../lib/tag";
+import { useDataStorageContext } from "../contexts/DataStorageContext";
 
 export interface PinFormValues {
   nameField: string;
@@ -60,14 +59,9 @@ export interface PinFormValues {
  * @param props.pins The list of all pins.
  * @returns A form view component.
  */
-export const PinForm = (props: {
-  pin?: Pin;
-  pinStore: LocalObjectStore<Pin>;
-  tagStore: LocalObjectStore<Tag>;
-  draftValues?: PinFormValues;
-}) => {
-  const { pin, pinStore, tagStore, draftValues } = props;
-  const { groups } = useGroups();
+export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
+  const { pin, draftValues } = props;
+  const { pinStore, groupStore, tagStore } = useDataStorageContext();
   const { push, pop } = useNavigation();
   const [applications, setApplications] = useState<Application[]>([]);
   const [placeholderTooltip, setPlaceholderTooltip] = useState<string>("");
@@ -235,13 +229,10 @@ export const PinForm = (props: {
                       .filter((alias) => alias.length > 0),
                   },
                   async (pin: Pin) => {
-                    await pinStore.add([pin]);
+                    await pinStore.update([pin]);
                   },
-                  async (pin: Pin) => {
-                    await pinStore.update(pin);
-                  },
-                  pop,
                 );
+                pop();
               } else {
                 const newPin = buildPin({
                   name: values.nameField || values.urlField.substring(0, 50),
@@ -284,7 +275,7 @@ export const PinForm = (props: {
           {pin ? (
             <DeleteItemAction
               item={pin}
-              onDelete={async () => await pinStore.remove(pin)}
+              onDelete={async () => await pinStore.remove([pin])}
               options={{ onCompletion: pop }}
             />
           ) : null}
@@ -468,14 +459,14 @@ export const PinForm = (props: {
         <Form.Dropdown.Item key="disabled" title="Disabled" value={Visibility.DISABLED} icon={Icon.XMarkCircle} />
       </Form.Dropdown>
 
-      {groups?.length ? (
+      {groupStore.objects?.length ? (
         <Form.Dropdown
           id="groupField"
           title="Group"
           defaultValue={draftValues?.groupField || (pin ? pin.group : "None")}
           info="The group that this Pin is associated with in the 'View Pins' command and in the menu bar dropdown."
         >
-          {[{ name: "None", icon: "Minus", id: -1 }].concat(groups).map((group) => {
+          {[buildGroup({ name: "None" })].concat(groupStore.objects).map((group) => {
             return (
               <Form.Dropdown.Item key={group.name} title={group.name} value={group.name} icon={iconMap[group.icon]} />
             );
@@ -494,7 +485,6 @@ export const PinForm = (props: {
           if (newValue.includes("new-tag")) {
             push(
               <TagForm
-                tagStore={tagStore}
                 onSubmit={(tag) => {
                   setValues({
                     ...values,
@@ -594,7 +584,7 @@ export const PinForm = (props: {
               : "Expired Pins")
           }
         >
-          {[{ name: "Expired Pins", icon: "BellDisabled", id: -1 } as Group].concat(groups).map((group) => {
+          {[{ name: "Expired Pins", icon: "BellDisabled", id: "" } as Group].concat(groupStore.objects).map((group) => {
             return (
               <Form.Dropdown.Item
                 key={group.name}

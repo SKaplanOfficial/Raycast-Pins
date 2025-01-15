@@ -8,9 +8,9 @@ import YAML from "yaml";
 import * as TOML from "@iarna/toml";
 import { Action, ActionPanel, Form, Icon, popToRoot, showToast, Toast } from "@raycast/api";
 
-import { StorageKey, SORT_STRATEGY, Visibility, ItemType } from "./lib/constants";
-import { getGroups, Group, isGroup, validateGroups } from "./lib/Groups";
-import { getPins, Pin, validatePins } from "./lib/Pins";
+import { StorageKey, SORT_STRATEGY, Visibility } from "./lib/common";
+import { buildGroup, getGroups, Group, validateGroups } from "./lib/Groups";
+import { buildPin, getPins, Pin } from "./lib/pin";
 import { setStorage } from "./lib/storage";
 import { GroupDisplaySetting } from "./lib/preferences";
 
@@ -21,14 +21,13 @@ import { GroupDisplaySetting } from "./lib/preferences";
  * @returns The merged list of pins/groups.
  */
 const mergeRemovingDuplicates = async (
-  dataItems: { name: string; id: number }[],
-  oldItems: { name: string; id: number }[],
+  dataItems: { name: string; id: string }[],
+  oldItems: { name: string; id: string }[],
 ) => {
-  // Merges lists of items, removing repeat entries
   const newItems = [...oldItems];
-  dataItems.forEach((dataItem: { name: string; id: number }) => {
+  dataItems.forEach((dataItem) => {
     let found = false;
-    oldItems.forEach((oldItem: { name: string; id: number }) => {
+    oldItems.forEach((oldItem) => {
       if (dataItem.name == oldItem.name) {
         found = true;
       }
@@ -38,11 +37,6 @@ const mergeRemovingDuplicates = async (
       newItems.push(dataItem);
     }
   });
-
-  if (newItems.length > 0 && isGroup(newItems[0])) {
-    return validateGroups(newItems as Group[]);
-  }
-  return validatePins(newItems as Pin[]);
 };
 
 /**
@@ -57,12 +51,12 @@ const importJSONData = async (data: { groups?: Group[]; pins?: Pin[] }, importMe
     const oldGroups = await getGroups();
     const newGroups = oldGroups.concat(data.groups || []);
     await validateGroups(newGroups);
+    // TODO: use context
     await setStorage(StorageKey.LOCAL_GROUPS, newGroups);
 
     // Update pins
     const oldPins = await getPins();
     const newPins = oldPins.concat(data.pins || []);
-    await validatePins(newPins);
     await setStorage(StorageKey.LOCAL_PINS, newPins);
     showToast({ title: "Merged Pin data!" });
   } else if (importMethod == "Merge2") {
@@ -71,14 +65,12 @@ const importJSONData = async (data: { groups?: Group[]; pins?: Pin[] }, importMe
     const dataGroups = data.groups;
     const oldGroups = await getGroups();
     const newGroups = await mergeRemovingDuplicates(dataGroups || [], oldGroups);
-    await validateGroups(newGroups as Group[]);
     await setStorage(StorageKey.LOCAL_GROUPS, newGroups);
 
     // Remove pin duplicates
     const dataPins = data.pins || [];
     const oldPins = await getPins();
     const newPins = await mergeRemovingDuplicates(dataPins, oldPins);
-    await validatePins(newPins as Pin[]);
     await setStorage(StorageKey.LOCAL_PINS, newPins);
 
     showToast({ title: "Updated Pin data!" });
@@ -86,14 +78,10 @@ const importJSONData = async (data: { groups?: Group[]; pins?: Pin[] }, importMe
     // Replace all groups and pins
     if (data.pins) {
       await setStorage(StorageKey.LOCAL_PINS, data.pins);
-      const maxPinID = Math.max(...data.pins.map((pin) => pin.id));
-      await setStorage(StorageKey.NEXT_PIN_ID, [maxPinID + 1]);
     }
 
     if (data.groups) {
       await setStorage(StorageKey.LOCAL_GROUPS, data.groups);
-      const maxGroupID = Math.max(...data.groups.map((group) => group.id));
-      await setStorage(StorageKey.NEXT_GROUP_ID, [maxGroupID + 1]);
     }
 
     showToast({ title: "Replaced Pin data!" });
@@ -112,17 +100,11 @@ const importCSVData = async (data: string[][], importMethod: string) => {
     // The file contains Pin data
     const newPins: Pin[] = data.slice(1).map((row) => {
       const indices = Object.fromEntries(fieldNames.map((name, index) => [name, index]));
-      return {
-        ...Object.fromEntries(
-          Object.entries(indices).map(([key, value]) => {
-            return [key, row[value] || undefined];
-          }),
-        ),
+      return buildPin({
         name: row[indices.name],
         url: row[indices.url],
-        group: indices.group == -1 ? "None" : row[indices.group],
-        icon: indices.icon == -1 ? "None" : row[indices.icon],
-        id: parseInt(row[indices.id]),
+        group: indices.group == -1 ? undefined : row[indices.group],
+        icon: indices.icon == -1 ? undefined : row[indices.icon],
         application: indices.application == -1 ? "None" : row[indices.application],
         expireDate: indices.expireDate == -1 ? undefined : row[indices.expireDate],
         fragment: indices.fragment == -1 ? undefined : row[indices.fragment] == "true",
@@ -151,37 +133,52 @@ const importCSVData = async (data: string[][], importMethod: string) => {
                 .split(",")
                 .map((alias) => alias.trim())
                 .filter((alias) => alias.length > 0),
-        itemType: ItemType.PIN,
-      };
+      });
     });
     await importJSONData({ pins: newPins }, importMethod);
   } else {
     // The file contains Group data
-    const newGroups: Group[] = data.slice(1).map((row) => {
-      const indices = Object.fromEntries(
-        fieldNames.map((name, index) => {
-          return [name, index];
-        }),
-      );
+    const indices = Object.fromEntries(
+      fieldNames.map((name, index) => {
+        return [name, index];
+      }),
+    );
 
-      return {
+    // Update number-based IDs to string-based IDs
+    const oldGroupRelatives = data.slice(1).map((row) => ({
+      name: row[indices.name],
+      oldID: row[indices.id],
+      parent: indices.parent == -1 ? undefined : row[indices.parent],
+    }));
+
+    const newGroupRelatives = oldGroupRelatives.reduce(
+      (acc, group) => {
+        const parentGroup = oldGroupRelatives.find((g) => g.name == group.parent?.toString());
+        if (parentGroup) {
+          acc[group.name] = parentGroup.name;
+        }
+        return acc;
+      },
+      {} as { [key: string]: string },
+    );
+
+    const newGroups: Group[] = data.slice(1).map((row) => {
+      return buildGroup({
         name: row[indices.name],
         icon: row[indices.icon],
         iconColor: indices.iconColor == -1 ? undefined : row[indices.iconColor],
-        parent: indices.parent == -1 ? undefined : parseInt(row[indices.parent]),
+        parent: newGroupRelatives[row[indices.name]],
         sortStrategy:
           indices.sortStrategy == -1
             ? undefined
-            : (row[indices.sortStrategy] as keyof typeof SORT_STRATEGY) || SORT_STRATEGY.manual,
-        id: parseInt(row[indices.id]),
+            : (row[indices.sortStrategy] as (typeof SORT_STRATEGY)[keyof typeof SORT_STRATEGY]) || SORT_STRATEGY.MANUAL,
         visibility:
           indices.visibility == -1 ? undefined : (row[indices.visibility] as Visibility) || Visibility.VISIBLE,
         menubarDisplay:
           indices.menubarDisplay == -1
             ? undefined
             : (row[indices.menubarDisplay] as GroupDisplaySetting) || GroupDisplaySetting.USE_PARENT,
-        itemType: ItemType.GROUP,
-      };
+      });
     });
     await importJSONData({ groups: newGroups }, importMethod);
   }
@@ -196,7 +193,6 @@ const importXMLData = async (
   data: { groups?: XML.ElementCompact[]; pins?: XML.ElementCompact[] },
   importMethod: string,
 ) => {
-  // Convert XML elements to JSON-serializable objects (extract text from _text property of each element)
   const dataWrapper = {
     pins: data.pins?.map(
       (pin) =>
@@ -254,7 +250,6 @@ const importDataFromFile = async (file: string, importMethod: string) => {
  * @param setJSONError The function to call to set the error message.
  */
 const checkJSONFormat = (jsonString: string, setJSONError: (error: string | undefined) => void) => {
-  // Check for properly formatted pin data JSON string
   let error = null;
   try {
     const data = JSON.parse(jsonString);

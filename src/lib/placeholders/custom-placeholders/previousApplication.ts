@@ -1,6 +1,6 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
 import { getStorage } from "../../storage";
-import { StorageKey } from "../../constants";
+import { StorageKey } from "../../common";
 
 /**
  * Placeholder for the last application focused before the current application. If there is no previous application, this placeholder will not be replaced.

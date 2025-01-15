@@ -1,5 +1,5 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
-import { Pin } from "../../Pins";
+import { Pin } from "../../pin";
 
 /**
  * Placeholder for the notes for the current pin.

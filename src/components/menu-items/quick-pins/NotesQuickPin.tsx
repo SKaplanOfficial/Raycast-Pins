@@ -1,20 +1,20 @@
 import { Application, MenuBarExtra } from "@raycast/api";
 import { NoteRef } from "../../../lib/LocalData";
 import { cutoff } from "../../../lib/utils";
-import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
+import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/common";
 import { Group, createNewGroup } from "../../../lib/Groups";
 import { useCachedState } from "@raycast/utils";
-import { usePinStoreContext } from "../../../contexts/PinStoreContext";
-import { buildPin } from "../../../lib/Pins";
+import { buildPin } from "../../../lib/pin";
+import { useDataStorageContext } from "../../../contexts/DataStorageContext";
 
 type NotesQuickPinProps = {
   /**
-   * The application that is currently open.
+   * The current application.
    */
   app: Application;
 
   /**
-   * The notes that are currently selected in Notes.
+   * The currently selected notes in Notes.
    */
   notes: NoteRef[];
 
@@ -25,12 +25,12 @@ type NotesQuickPinProps = {
 };
 
 /**
- * A menu bar extra item that creates a new pin for each selected note in Notes.
- * @returns A menu bar extra item, or null if the current app is not Notes or no notes are selected.
+ * A menu item that creates a new pin for each selected note in Notes.
+ * @returns A menu item, or null if the current app is not Notes or no notes are selected.
  */
 export default function NotesQuickPin(props: NotesQuickPinProps) {
   const { app, notes, groups } = props;
-  const { add: addPin } = usePinStoreContext();
+  const { pinStore } = useDataStorageContext();
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
 
   if (app.name != "Notes" || notes.length == 0) {
@@ -46,7 +46,7 @@ export default function NotesQuickPin(props: NotesQuickPinProps) {
     <MenuBarExtra.Item
       title={title}
       icon={{ fileIcon: app.path }}
-      tooltip="Create a pin for each selected note, pinned to a new group if necessary"
+      tooltip="Pin the selected notes"
       shortcut={KEYBOARD_SHORTCUT.PIN_SELECTED_NOTES}
       onAction={async () => {
         if (notes.length == 1) {
@@ -57,7 +57,7 @@ export default function NotesQuickPin(props: NotesQuickPinProps) {
             icon: app.path,
             group: targetGroup?.name,
           });
-          await addPin([newPin]);
+          await pinStore.add([newPin]);
         } else {
           let newGroupName = "New Note Group";
           if (targetGroup) {
@@ -78,7 +78,7 @@ export default function NotesQuickPin(props: NotesQuickPinProps) {
               icon: app.path,
               group: newGroupName,
             });
-            await addPin([newPin]);
+            await pinStore.add([newPin]);
           }
         }
       }}

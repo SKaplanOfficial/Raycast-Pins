@@ -3,38 +3,37 @@ import { Icon, List, ActionPanel, getPreferenceValues } from "@raycast/api";
 import { pluralize } from "./lib/utils";
 import { ExtensionPreferences } from "./lib/preferences";
 import { PinForm } from "./components/PinForm";
-import { ItemType, PinAction, Visibility } from "./lib/constants";
-import { Pin, getLastOpenedPin, sortPins } from "./lib/Pins";
-import { buildGroup, useGroups } from "./lib/Groups";
+import { ItemType, PinAction, Visibility } from "./lib/common";
+import { Pin, getLastOpenedPin, sortPins } from "./lib/pin";
+import { buildGroup } from "./lib/Groups";
 import RecentApplicationsList from "./components/RecentApplicationsList";
 import { InstallExamplesAction } from "./components/actions/InstallExamplesAction";
 import { ViewPinsPreferences } from "./lib/preferences";
 import { useLocalData } from "./lib/LocalData";
 import PinListItem from "./components/PinListItem";
 import useExamples from "./hooks/useExamples";
-import TagStoreProvider, { useTagStoreContext } from "./contexts/TagStoreContext";
 import CreateNewItemAction from "./components/actions/CreateNewItemAction";
-import PinStoreProvider, { usePinStoreContext } from "./contexts/PinStoreContext";
+import DataStorageProvider, { useDataStorageContext } from "./contexts/DataStorageContext";
 
 /**
  * Raycast command to view all pins in a list within the Raycast window.
  */
-function PinsList(props: { args: { launchContext?: { pinID?: number; action?: PinAction } } }) {
+function PinList(props: { args: { launchContext?: { pinSpecifier?: string; action?: PinAction } } }) {
   const { args } = props;
-  const pinStore = usePinStoreContext();
-  const { groups, loadingGroups, revalidateGroups } = useGroups();
+  const { pinStore, groupStore } = useDataStorageContext();
   const preferences = getPreferenceValues<ExtensionPreferences & ViewPinsPreferences>();
   const { localData, loadingLocalData } = useLocalData();
   const [selectedPinID, setSelectedPinID] = useState<string | null>(null);
   const [filteredTag, setFilteredTag] = useState<string>("all");
   const [showingHidden, setShowingHidden] = useState<boolean>(false);
   const { examplesInstalled, setExamplesInstalled } = useExamples([ItemType.PIN]);
-  const tagStore = useTagStoreContext();
 
-  if (args.launchContext?.pinID) {
-    const pin = pinStore.objects.find((pin) => pin.id == args.launchContext?.pinID);
+  if (args.launchContext?.pinSpecifier) {
+    const pin = pinStore.objects.find(
+      (pin) => pin.id == args.launchContext?.pinSpecifier || pin.name == args.launchContext?.pinSpecifier,
+    );
     if (pin && args.launchContext.action !== PinAction.OPEN) {
-      return <PinForm pin={pin} pinStore={pinStore} tagStore={tagStore} />;
+      return <PinForm pin={pin} />;
     }
   }
 
@@ -55,16 +54,13 @@ function PinsList(props: { args: { launchContext?: { pinID?: number; action?: Pi
           pin.visibility === Visibility.VIEW_PINS_ONLY ||
           pin.visibility === undefined,
     );
-    return sortPins(visiblePins, groups).map((pin, index) => {
+    return sortPins(visiblePins, groupStore.objects).map((pin, index) => {
       return (
         <PinListItem
           key={pin.id}
           index={index}
           pin={pin}
           visiblePins={visiblePins}
-          groups={groups}
-          revalidateGroups={revalidateGroups}
-          tagStore={tagStore}
           maxTimesOpened={maxTimesOpened}
           lastOpenedPin={lastOpenedPin}
           showingHidden={showingHidden}
@@ -93,7 +89,7 @@ function PinsList(props: { args: { launchContext?: { pinID?: number; action?: Pi
 
   return (
     <List
-      isLoading={pinStore.loading || loadingGroups || loadingLocalData}
+      isLoading={pinStore.loading || pinStore.loading || loadingLocalData}
       searchBarPlaceholder="Search pins..."
       filtering={{ keepSectionOrder: true }}
       onSelectionChange={(pinID) => selectedPinID != pinID && setSelectedPinID(pinID)}
@@ -115,13 +111,9 @@ function PinsList(props: { args: { launchContext?: { pinID?: number; action?: Pi
       }
       actions={
         <ActionPanel>
-          <CreateNewItemAction itemType={ItemType.PIN} formView={<PinForm pinStore={pinStore} tagStore={tagStore} />} />
+          <CreateNewItemAction itemType={ItemType.PIN} formView={<PinForm />} />
           {!examplesInstalled || pinStore.objects.length == 0 ? (
-            <InstallExamplesAction
-              setExamplesInstalled={setExamplesInstalled}
-              revalidateGroups={revalidateGroups}
-              kind="pins"
-            />
+            <InstallExamplesAction setExamplesInstalled={setExamplesInstalled} kind="pins" />
           ) : null}
         </ActionPanel>
       }
@@ -131,7 +123,7 @@ function PinsList(props: { args: { launchContext?: { pinID?: number; action?: Pi
         description="Add a custom pin (⌘N)  or install some examples (⌘E)"
         icon="no-view.png"
       />
-      {[buildGroup({ name: "None" })].concat(groups).map((group) =>
+      {[buildGroup({ name: "None" })].concat(groupStore.objects).map((group) =>
         preferences.showGroups ? (
           !showingHidden && (group.visibility === Visibility.HIDDEN || group.visibility === Visibility.MENUBAR_ONLY) ? (
             getPinListItems(
@@ -166,16 +158,9 @@ function PinsList(props: { args: { launchContext?: { pinID?: number; action?: Pi
       <RecentApplicationsList
         pinActions={
           <>
-            <CreateNewItemAction
-              itemType={ItemType.PIN}
-              formView={<PinForm pinStore={pinStore} tagStore={tagStore} />}
-            />
+            <CreateNewItemAction itemType={ItemType.PIN} formView={<PinForm />} />
             {!examplesInstalled || pinStore.objects.length == 0 ? (
-              <InstallExamplesAction
-                setExamplesInstalled={setExamplesInstalled}
-                revalidateGroups={revalidateGroups}
-                kind="pins"
-              />
+              <InstallExamplesAction setExamplesInstalled={setExamplesInstalled} kind="pins" />
             ) : null}
           </>
         }
@@ -185,22 +170,9 @@ function PinsList(props: { args: { launchContext?: { pinID?: number; action?: Pi
 }
 
 export default function ViewPinsCommand(args: { launchContext?: { pinID?: number; action?: PinAction } }) {
-  // TODO: remove
-  // useEffect(() => {
-  //   const logMemUsage = () => {
-  //     const used = process.memoryUsage().heapUsed / 1024 / 1024;
-  //     console.log(`Memory usage: ${Math.round(used * 100) / 100} MB`);
-  //   }
-
-  //   const interval = setInterval(logMemUsage, 1000);
-  //   return () => clearInterval(interval);
-  // }, []);
-
   return (
-    <PinStoreProvider>
-      <TagStoreProvider>
-        <PinsList args={args} />
-      </TagStoreProvider>
-    </PinStoreProvider>
+    <DataStorageProvider>
+      <PinList args={args} />
+    </DataStorageProvider>
   );
 }

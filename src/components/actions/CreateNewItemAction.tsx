@@ -1,5 +1,5 @@
 import { Icon, Action, Keyboard } from "@raycast/api";
-import { ItemType } from "../../lib/constants";
+import { ItemType } from "../../lib/common";
 
 /**
  * Action to create a new item. Opens the provided form view with blank fields.

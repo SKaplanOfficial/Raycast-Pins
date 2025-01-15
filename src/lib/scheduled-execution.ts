@@ -10,7 +10,7 @@
 
 import { environment, showHUD, showToast } from "@raycast/api";
 
-import { StorageKey } from "./constants";
+import { StorageKey } from "./common";
 import { getStorage, setStorage } from "./storage";
 import { PLApplicator } from "placeholders-toolkit";
 import PinsPlaceholders from "./placeholders";

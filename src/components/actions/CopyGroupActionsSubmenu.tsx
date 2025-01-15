@@ -1,17 +1,16 @@
 import { Action, ActionPanel, Clipboard, Icon, showHUD } from "@raycast/api";
-import { Pin } from "../../lib/Pins";
+import { Pin } from "../../lib/pin";
 import { Group, getGroupStatistics } from "../../lib/Groups";
-import { usePinStoreContext } from "../../contexts/PinStoreContext";
+import { useDataStorageContext } from "../../contexts/DataStorageContext";
 
 /**
  * Submenu for actions that copy information about a group to the clipboard.
  * @param props.group The group to copy information about.
- * @param props.groups The list of groups to use for statistics.
  * @returns A submenu component.
  */
-export default function CopyGroupActionsSubmenu(props: { group: Group; groups: Group[] }) {
-  const { group, groups } = props;
-  const { objects: pins } = usePinStoreContext();
+export default function CopyGroupActionsSubmenu(props: { group: Group }) {
+  const { group } = props;
+  const { pinStore, groupStore } = useDataStorageContext();
 
   return (
     <ActionPanel.Submenu title="Clipboard Actions" icon={Icon.Clipboard}>
@@ -32,7 +31,7 @@ export default function CopyGroupActionsSubmenu(props: { group: Group; groups: G
         onAction={async () => {
           const data = {
             groups: [group],
-            pins: pins.filter((pin: Pin) => pin.group == group.name),
+            pins: pinStore.objects.filter((pin: Pin) => pin.group == group.name),
           };
 
           const jsonData = JSON.stringify(data);
@@ -42,12 +41,12 @@ export default function CopyGroupActionsSubmenu(props: { group: Group; groups: G
       />
       <Action.CopyToClipboard
         title="Copy Formatted Group Statistics"
-        content={getGroupStatistics(group, groups, pins) as string}
+        content={getGroupStatistics(group, groupStore.objects, pinStore.objects) as string}
         shortcut={{ modifiers: ["cmd", "shift"], key: "s" }}
       />
       <Action.CopyToClipboard
         title="Copy Group Statistics as JSON"
-        content={JSON.stringify(getGroupStatistics(group, groups, pins, "object"))}
+        content={JSON.stringify(getGroupStatistics(group, groupStore.objects, pinStore.objects, "object"))}
         shortcut={{ modifiers: ["cmd", "opt", "shift"], key: "j" }}
       />
     </ActionPanel.Submenu>

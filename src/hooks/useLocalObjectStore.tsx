@@ -43,6 +43,9 @@ type LocalObjectStoreArgs<T> = [
    * The functions to use for storing and retrieving values from storage (local or otherwise).
    */
   storageFunctions: StorageFns<T>,
+
+  // TODO: comment
+  validationFn?: (objects: LocalObjectType<T>[]) => LocalObjectType<T>[],
 ];
 
 export type LocalObjectType<T> = T & { id: LocalObjectID };
@@ -90,12 +93,12 @@ export type LocalObjectStore<T> = {
   add: (newObjects: T[], commit?: boolean) => Promise<LocalObjectType<T>[]>;
 
   /**
-   * Updates an object in the store.
-   * @param object The object to update, with its new values. The ID must match the ID of an existing object in the store.
+   * Updates objects in the store with new values.
+   * @param objectsToUpdate The list of objects to update.
    * @param commit Whether to save the updated list to storage.
    * @returns A promise that resolves when the object has been updated (and saved, if applicable).
    */
-  update: (object: LocalObjectType<T>, commit?: boolean) => Promise<void>;
+  update: (objectsToUpdate: LocalObjectType<T>[], commit?: boolean) => Promise<void>;
 
   /**
    * Moves an object to a new index in the store.
@@ -112,7 +115,7 @@ export type LocalObjectStore<T> = {
    * @param commit Whether to save the updated list to storage.
    * @returns A promise that resolves when the object has been removed (and saved, if applicable).
    */
-  remove: (object: LocalObjectType<T>, commit?: boolean) => Promise<void>;
+  remove: (object: LocalObjectType<T>[], commit?: boolean) => Promise<void>;
 
   /**
    * Removes all objects from the store.
@@ -184,75 +187,77 @@ export function objectStoreDefaultState<T>(): LocalObjectStore<T> {
   };
 }
 
-type LocalObjectID = string | number;
+type LocalObjectID = string;
 
-export async function getObjectsFromStore<T>(...args: LocalObjectStoreArgs<T>) {
-  const [key, storageFunctions] = args;
+export async function getStoredObjects<T>(...args: LocalObjectStoreArgs<T>) {
+  const [key, storageFunctions, validationFn] = args;
   const items = await storageFunctions.getItem(key);
   const loadedObjects: LocalObjectType<T>[] = items ? JSON.parse(items) : [];
 
   const ids = new Set<LocalObjectID>();
-  const validatedObjects = loadedObjects.map((object) => {
-    if (ids.has(object.id)) {
+  const processedObjects = loadedObjects.map((object) => {
+    if (!object.id || ids.has(object.id)) {
       object.id = storageFunctions.getNextID ? storageFunctions.getNextID() : randomUUID();
     }
     ids.add(object.id);
     return object;
   });
+  const validatedObjects = validationFn ? validationFn(processedObjects) : processedObjects;
   return validatedObjects;
 }
 
-export async function addObjectsToStore<T>(
-  key: LocalObjectStoreKey,
-  objects: LocalObjectType<T>[], // TODO: Swap this and newObjects
+export async function saveObjects<T extends { id?: string }>(
   newObjects: T[],
-  storageFunctions: StorageFns<T>,
-  commit = true,
+  storedObjects: LocalObjectType<T>[],
+  ...args: LocalObjectStoreArgs<T>
 ) {
+  const [key, storageFunctions, validationFn] = args;
   if (!newObjects.length) {
     return [];
   }
   const processedObjects = newObjects.map((object) => ({
     ...object,
-    id: storageFunctions.getNextID ? storageFunctions.getNextID() : randomUUID(),
+    id: object.id || (storageFunctions.getNextID ? storageFunctions.getNextID() : randomUUID()),
   }));
-  if (commit) {
-    await storageFunctions.setItem(key, JSON.stringify([...objects, ...processedObjects]));
-  }
-  return processedObjects;
+  const validatedObjects = validationFn ? validationFn(processedObjects) : processedObjects;
+  await storageFunctions.setItem(key, JSON.stringify([...storedObjects, ...validatedObjects]));
+  return validatedObjects;
 }
 
-export async function updateObjectInStore<T>(
-  objects: LocalObjectType<T>[], // TODO: Swap this and object
-  object: LocalObjectType<T>,
-  commit = true,
+/**
+ * Updates objects in the store with new values.
+ * @param objects The objects to update.
+ * @param storedObjects All objects currently in the store.
+ * @param args The key and storage functions to use.
+ * @returns A promise that resolves when the objects have been updated.
+ */
+export async function updateStoredObjects<T>(
+  objects: LocalObjectType<T>[],
+  storedObjects: LocalObjectType<T>[],
   ...args: LocalObjectStoreArgs<T>
 ) {
-  const [key, storageFunctions] = args;
-  const processedObjects = objects.map((existingObject) => (existingObject.id === object.id ? object : existingObject));
-  if (commit) {
-    await storageFunctions.setItem(key, JSON.stringify(processedObjects));
-  }
+  const [key, storageFunctions, validationFn] = args;
+  const processedObjects = storedObjects.map(
+    (existingObject) => objects.find((object) => object.id === existingObject.id) || existingObject,
+  );
+  const validatedObjects = validationFn ? validationFn(processedObjects) : processedObjects;
+  await storageFunctions.setItem(key, JSON.stringify(validatedObjects));
 }
 
-export async function removeObjectsFromStore<T>(
+// TODO: comment
+export async function removeStoredObjects<T>(
   objects: LocalObjectType<T>[],
   storeObjects: LocalObjectType<T>[],
-  commit = true,
   ...args: LocalObjectStoreArgs<T>
 ) {
   const [key, storageFunctions] = args;
   const remainingObjects = storeObjects.filter((someObject) => objects.every((object) => object.id !== someObject.id));
-  if (commit) {
-    await storageFunctions.setItem(key, JSON.stringify(remainingObjects));
-  }
+  await storageFunctions.setItem(key, JSON.stringify(remainingObjects));
 }
 
-export async function clearObjectsInStore<T>(commit = true, ...args: LocalObjectStoreArgs<T>) {
+export async function clearStoredObjects<T>(...args: LocalObjectStoreArgs<T>) {
   const [key, storageFunctions] = args;
-  if (commit) {
-    await storageFunctions.setItem(key, JSON.stringify([]));
-  }
+  await storageFunctions.setItem(key, JSON.stringify([]));
 }
 
 // enum StoreOperationStage {
@@ -277,7 +282,7 @@ export async function clearObjectsInStore<T>(commit = true, ...args: LocalObject
 // }
 
 export default function useLocalObjectStore<T>(...args: LocalObjectStoreArgs<T>): LocalObjectStore<T> {
-  const [key, storageFunctions] = args;
+  const [key, storageFunctions, validationFn] = args;
 
   const [objects, setObjects] = storageFunctions.useState
     ? storageFunctions.useState(key, [])
@@ -285,93 +290,66 @@ export default function useLocalObjectStore<T>(...args: LocalObjectStoreArgs<T>)
   const [loading, setLoading] = useState<boolean>(true);
   const stage = useRef(0);
 
-  // const log = (...messages: unknown[]) =>
-  //   debugLog(`[LocalObjectStore:${key}, stage:${StoreOperationStage[stage.current]}]`, ...messages);
-
   const validate = useCallback(
     (loadedObjects: LocalObjectType<T>[]) => {
-      // Ensure all objects have a unique ID, assigning new IDs as needed.
-      // log(`Validating objects...`);
       const ids = new Set<LocalObjectID>();
-      const newObjects = loadedObjects.map((object) => {
-        if (ids.has(object.id)) {
-          // log(`Object ${object.id} is not unique. Assigning new ID.`);
+      const processedObjects = loadedObjects.map((object) => {
+        if (!object.id || ids.has(object.id)) {
           object.id = storageFunctions.getNextID ? storageFunctions.getNextID() : randomUUID();
         }
         ids.add(object.id);
         return object;
       });
-      // log(`Finished validating objects.`);
-      return newObjects;
+      const validatedObjects = validationFn ? validationFn(processedObjects) : processedObjects;
+      return validatedObjects;
     },
     [storageFunctions],
   );
 
   const load = useCallback(async () => {
-    // log(`Loading objects from storage...`);
-    // stage.current = StoreOperationStage.LOADING;
     const items = await storageFunctions.getItem(key);
     const loadedObjects: LocalObjectType<T>[] = items ? JSON.parse(items) : [];
     const validatedObjects = validate(loadedObjects);
-    console.log("VALIDATED", validatedObjects);
     setObjects(validatedObjects);
     setLoading(false);
-    // stage.current = StoreOperationStage.LOADED;
-    // log(`Loaded ${validatedObjects.length} objects.`);
   }, [validate, storageFunctions]);
 
   const save = useCallback(
     async (newObjects: LocalObjectType<T>[]) => {
-      // log(`Saving objects...`);
-      // stage.current = StoreOperationStage.SAVING;
-      await storageFunctions.setItem(key, JSON.stringify(newObjects));
-      // stage.current = StoreOperationStage.SAVED;
-      // log(`Saved ${objects.length} objects.`);
+      const validatedObjects = validate(newObjects);
+      await storageFunctions.setItem(key, JSON.stringify(validatedObjects));
     },
     [storageFunctions],
   );
 
   const sort = useCallback(
     async (compareFn: (a: LocalObjectType<T>, b: LocalObjectType<T>) => number, commit = true) => {
-      // log(`Sorting objects...`);
-      // stage.current = StoreOperationStage.SORTING;
       const sortedObjects = [...objects].sort(compareFn);
       setObjects(sortedObjects);
       if (commit) {
         await save(sortedObjects);
       }
-      // stage.current = StoreOperationStage.SORTED;
-      // log(`Finished sorting objects.`);
     },
     [objects, save],
   );
 
   const remove = useCallback(
-    // TODO: Allow for multiple objects to be removed at once
-    async (object: LocalObjectType<T>, commit = true) => {
-      // log(`Removing object ${object.id}...`);
-      // stage.current = StoreOperationStage.REMOVING;
-      const remainingObjects = objects.filter((someObject) => someObject.id !== object.id);
+    async (objectsToRemove: LocalObjectType<T>[], commit = true) => {
+      const remainingObjects = objects.filter((someObject) => objectsToRemove.every((object) => object.id !== someObject.id));
       setObjects(remainingObjects);
       if (commit) {
         await save(remainingObjects);
       }
-      // stage.current = StoreOperationStage.REMOVED;
-      // log(`Finished removing object ${object.id}.`);
     },
     [objects, save],
   );
 
   const clear = useCallback(
     async (commit = true) => {
-      // log(`Clearing objects...`);
-      // stage.current = StoreOperationStage.CLEARING;
       setObjects([]);
       if (commit) {
         await save([]);
       }
-      // stage.current = StoreOperationStage.CLEARED;
-      // log(`Finished clearing objects.`);
     },
     [save],
   );
@@ -381,52 +359,42 @@ export default function useLocalObjectStore<T>(...args: LocalObjectStoreArgs<T>)
       if (!newObjects.length) {
         return [];
       }
-      // log(`Adding ${newObjects.length} objects...`);
-      // stage.current = StoreOperationStage.ADDING;
       const processedObjects = newObjects.map((object) => ({
         ...object,
         id: storageFunctions.getNextID ? storageFunctions.getNextID() : randomUUID(),
       }));
-      setObjects([...objects, ...processedObjects]);
+      const validatedObjects = validationFn ? validationFn(processedObjects) : processedObjects;
+      setObjects([...objects, ...validatedObjects]);
       if (commit) {
-        await save([...objects, ...processedObjects]);
+        await save([...objects, ...validatedObjects]);
       }
-      // stage.current = StoreOperationStage.ADDED;
-      // log(`Finished adding ${newObjects.length} objects.`);
-      return processedObjects;
+      return validatedObjects;
     },
     [objects, save, storageFunctions],
   );
 
   const update = useCallback(
-    async (object: LocalObjectType<T>, commit = true) => {
-      // log(`Updating object ${object.id}...`);
-      // stage.current = StoreOperationStage.UPDATING;
-      const processedObjects = objects.map((existingObject) =>
-        existingObject.id === object.id ? object : existingObject,
+    async (objectsToUpdate: LocalObjectType<T>[], commit = true) => {
+      const processedObjects = objects.map(
+        (existingObject) => objectsToUpdate.find((object) => object.id === existingObject.id) || existingObject,
       );
-      setObjects(processedObjects);
+      const validatedObjects = validationFn ? validationFn(processedObjects) : processedObjects;
+      setObjects(validatedObjects);
       if (commit) {
-        await save(processedObjects);
+        await save(validatedObjects);
       }
-      // stage.current = StoreOperationStage.UPDATED;
-      // log(`Finished updating object ${object.id}.`);
     },
     [objects, save],
   );
 
   const move = useCallback(
     async (object: LocalObjectType<T>, targetIndex: number, commit = true) => {
-      // log(`Moving object ${object.id}...`);
-      // stage.current = StoreOperationStage.UPDATING;
       const oldObjects = [...objects];
       oldObjects.splice(targetIndex, 0, oldObjects.splice(oldObjects.indexOf(object), 1)[0]);
       setObjects(oldObjects);
       if (commit) {
         await save(oldObjects);
       }
-      // stage.current = StoreOperationStage.UPDATED;
-      // log(`Finished moving object ${object.id}.`);
     },
     [objects, save],
   );
@@ -437,9 +405,6 @@ export default function useLocalObjectStore<T>(...args: LocalObjectStoreArgs<T>)
       merge?: (...similarObjects: LocalObjectType<T>[]) => LocalObjectType<T>,
       commit = true,
     ) => {
-      // log(`Starting deduplication...`);
-      // log(`Grouping duplicates by keys: ${keys.join(", ")}...`);
-      // stage.current = StoreOperationStage.DEDUPLICATING;
       const duplicateGroups = objects.reduce(
         (groups, object) => {
           const groupName = keys.map((key) => object[key]).join(",");
@@ -449,9 +414,7 @@ export default function useLocalObjectStore<T>(...args: LocalObjectStoreArgs<T>)
         },
         {} as { [key: string]: LocalObjectType<T>[] },
       );
-      // log(`Found ${Object.keys(duplicateGroups).length} groups of duplicates.`);
 
-      // log(merge ? "Merging duplicates..." : "Removing duplicates...");
       const removedObjects: LocalObjectType<T>[] = [];
       const remainingObjects = Object.values(duplicateGroups).map((group) => {
         if (group.length > 1) {
@@ -469,8 +432,7 @@ export default function useLocalObjectStore<T>(...args: LocalObjectStoreArgs<T>)
       if (commit) {
         await save(remainingObjects);
       }
-      // stage.current = StoreOperationStage.DEDUPLICATED;
-      // log(`Finished deduplication.`);
+
       return {
         remainingObjects,
         removedObjects,
@@ -503,15 +465,11 @@ export default function useLocalObjectStore<T>(...args: LocalObjectStoreArgs<T>)
 
   const fillKey = useCallback(
     async (key: keyof T, value: T[keyof T], commit = true) => {
-      // log(`Filling key ${String(key)} with value ${value}...`);
-      // stage.current = StoreOperationStage.UPDATING;
       const processedObjects = objects.map((object) => ({ ...object, [key]: value }));
       setObjects(processedObjects);
       if (commit) {
         await save(processedObjects);
       }
-      // stage.current = StoreOperationStage.UPDATED;
-      // log(`Finished filling key ${String(key)}.`);
     },
     [objects, save],
   );
@@ -519,11 +477,9 @@ export default function useLocalObjectStore<T>(...args: LocalObjectStoreArgs<T>)
   useEffect(() => {
     if (stage.current === 0) {
       stage.current = 1;
-      // stage.current = StoreOperationStage.LOADING;
       load();
     }
   }, [loading]);
-  // }, [loading, stage.current]);
 
   return {
     objects,

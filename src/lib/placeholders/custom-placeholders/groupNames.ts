@@ -1,7 +1,7 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
 import { getStorage } from "../../storage";
 import { Group } from "../../Groups";
-import { StorageKey } from "../../constants";
+import { StorageKey } from "../../common";
 
 /**
  * Placeholder for the comma-separated list of group names. The list's order matches the order of groups in the 'View Pins' command.

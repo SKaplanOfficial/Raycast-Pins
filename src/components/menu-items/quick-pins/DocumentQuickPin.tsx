@@ -1,15 +1,15 @@
 import { Application, MenuBarExtra } from "@raycast/api";
 import { FileRef } from "../../../lib/LocalData";
 import { cutoff } from "../../../lib/utils";
-import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
+import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/common";
 import { useCachedState } from "@raycast/utils";
 import { Group } from "../../../lib/Groups";
-import { usePinStoreContext } from "../../../contexts/PinStoreContext";
-import { buildPin } from "../../../lib/Pins";
+import { buildPin } from "../../../lib/pin";
+import { useDataStorageContext } from "../../../contexts/DataStorageContext";
 
 type DocumentQuickPinProps = {
   /**
-   * The application that is currently open.
+   * The current application.
    */
   app: Application;
 
@@ -20,12 +20,12 @@ type DocumentQuickPinProps = {
 };
 
 /**
- * A menu bar extra item that creates a new pin whose target path is the document currently open in the frontmost application.
- * @returns A menu bar extra item, or null if there is no document open in the frontmost application.
+ * A menu item that creates a new pin whose target is the path of current document.
+ * @returns A menu item, or null if there is no document open in the frontmost application.
  */
 export default function DocumentQuickPin(props: DocumentQuickPinProps) {
   const { app, document } = props;
-  const { add: addPin } = usePinStoreContext();
+  const { pinStore } = useDataStorageContext();
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
 
   if (document.path == "") {
@@ -41,7 +41,7 @@ export default function DocumentQuickPin(props: DocumentQuickPinProps) {
     <MenuBarExtra.Item
       title={title}
       icon={{ fileIcon: app.path }}
-      tooltip="Create a pin whose target path is the document currently open in the frontmost application"
+      tooltip={`Pin the path of the current document in ${app.name}`}
       shortcut={KEYBOARD_SHORTCUT.PIN_CURRENT_DOCUMENT}
       onAction={async () => {
         const newPin = buildPin({
@@ -49,7 +49,7 @@ export default function DocumentQuickPin(props: DocumentQuickPinProps) {
           url: document.path,
           group: targetGroup?.name,
         });
-        await addPin([newPin]);
+        await pinStore.add([newPin]);
       }}
     />
   );

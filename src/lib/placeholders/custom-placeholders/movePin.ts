@@ -1,9 +1,9 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
-import { Pin, movePin } from "../../Pins";
+import { Pin, validatePins } from "../../pin";
 import { Group, createNewGroup } from "../../Groups";
-import { StorageKey, Visibility } from "../../constants";
-import { getStorage, storageMethods } from "../../storage";
-import { updateObjectInStore } from "../../../hooks/useLocalObjectStore";
+import { StorageKey, Visibility } from "../../common";
+import { storageMethods } from "../../storage";
+import { getStoredObjects, updateStoredObjects } from "../../../hooks/useLocalObjectStore";
 
 /**
  * Placeholder directive for moving a pin to a different group.
@@ -17,14 +17,14 @@ const MovePinDirective: Placeholder = {
     const pinRef = matches?.[1] || "";
     if (!pinRef) return { result: "" };
 
-    const allPins: Pin[] = await getStorage(StorageKey.LOCAL_PINS);
+    const allPins: Pin[] = await getStoredObjects<Pin>(StorageKey.PIN_STORE, storageMethods);
     const pin = allPins.find((p) => p.name == pinRef || p.id.toString() == pinRef);
     if (!pin) return { result: "" };
 
     const group = matches?.[4];
     if (!group) return { result: "" };
 
-    const allGroups: Group[] = await getStorage(StorageKey.LOCAL_GROUPS);
+    const allGroups: Group[] = await getStoredObjects<Group>(StorageKey.GROUP_STORE, storageMethods);
     if (group != "None" && !allGroups.some((g) => g.name == group)) {
       if (group === "Expired Pins") {
         await createNewGroup({ name: group, icon: "BellDisabled", visibility: Visibility.HIDDEN });
@@ -33,7 +33,7 @@ const MovePinDirective: Placeholder = {
       }
     }
 
-    await movePin(pin, group, (pin) => updateObjectInStore(allPins, pin, true, StorageKey.PIN_STORE, storageMethods));
+    await updateStoredObjects([{ ...pin, group: group }], allPins, StorageKey.PIN_STORE, storageMethods, validatePins);
     return { result: "" };
   },
   constant: false,

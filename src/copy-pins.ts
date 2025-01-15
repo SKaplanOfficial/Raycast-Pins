@@ -6,7 +6,7 @@ import Papa from "papaparse";
 import * as TOML from "@iarna/toml";
 import { Clipboard, getPreferenceValues, open, showToast, Toast } from "@raycast/api";
 
-import { getPinsJSON, PinKeys } from "./lib/Pins";
+import { getPinsJSON, PinKeys } from "./lib/pin";
 import { CopyPinsPreferences } from "./lib/preferences";
 import { GroupKeys } from "./lib/Groups";
 

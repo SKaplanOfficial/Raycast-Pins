@@ -1,4 +1,4 @@
-import { checkExpirations } from "./lib/Pins";
+import { checkExpirations } from "./lib/pin";
 import { checkDelayedExecutions } from "./lib/scheduled-execution";
 
 /**

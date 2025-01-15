@@ -1,13 +1,14 @@
 import { Clipboard, LaunchType, MenuBarExtra, launchCommand, showToast } from "@raycast/api";
 import { getPinIcon } from "../../lib/icons";
-import { Pin, disablePin, hidePin, openPin } from "../../lib/Pins";
+import { Pin, openPin } from "../../lib/pin";
 import { ExtensionPreferences, PinsMenubarPreferences, RightClickAction } from "../../lib/preferences";
 import { LocalDataObject } from "../../lib/LocalData";
 import { bulkApply } from "placeholders-toolkit/dist/lib/apply";
 import { PinsInfoPlaceholders } from "../../lib/placeholders";
 import { useEffect, useState } from "react";
-import { usePinStoreContext } from "../../contexts/PinStoreContext";
 import { deleteItem } from "../actions/DeleteItemAction";
+import { Visibility } from "../../lib/common";
+import { useDataStorageContext } from "../../contexts/DataStorageContext";
 
 /**
  * A menu item for a pin.
@@ -25,7 +26,7 @@ export default function PinMenuItem(props: {
   localData: LocalDataObject;
 }) {
   const { pin, relevant, preferences, localData } = props;
-  const pinStore = usePinStoreContext();
+  const { pinStore } = useDataStorageContext();
   const [title, setTitle] = useState<string>(
     pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url),
   );
@@ -51,10 +52,7 @@ export default function PinMenuItem(props: {
             pin,
             preferences,
             async (pin: Pin) => {
-              await pinStore.add([pin]);
-            },
-            async (pin: Pin) => {
-              await pinStore.update(pin);
+              await pinStore.update([pin]);
             },
             localData as unknown as { [key: string]: string },
           );
@@ -66,16 +64,13 @@ export default function PinMenuItem(props: {
                 pin,
                 preferences,
                 async (pin: Pin) => {
-                  await pinStore.add([pin]);
-                },
-                async (pin: Pin) => {
-                  await pinStore.update(pin);
+                  await pinStore.update([pin]);
                 },
                 localData as unknown as { [key: string]: string },
               );
               break;
             case RightClickAction.Delete:
-              await deleteItem(pin, pinStore.remove);
+              await deleteItem(pin, (pin) => pinStore.remove([pin]));
               break;
             case RightClickAction.Copy:
               await Clipboard.copy(pin.url);
@@ -85,10 +80,10 @@ export default function PinMenuItem(props: {
               launchCommand({ name: "view-pins", type: LaunchType.UserInitiated, context: { pinID: pin.id } });
               break;
             case RightClickAction.Hide:
-              await hidePin(pin, pinStore.update);
+              await pinStore.update([{ ...pin, visibility: Visibility.HIDDEN }]);
               break;
             case RightClickAction.Disable:
-              await disablePin(pin, pinStore.update);
+              await pinStore.update([{ ...pin, visibility: Visibility.DISABLED }]);
               break;
           }
         }

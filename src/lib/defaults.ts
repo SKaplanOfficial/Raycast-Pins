@@ -10,270 +10,186 @@
 
 import { LocalStorage, showToast, Toast } from "@raycast/api";
 
-import { ItemType, StorageKey } from "./constants";
-import { getNextGroupID, Group } from "./Groups";
-import { buildPin, Pin } from "./Pins";
-import { getStorage, setStorage, storageMethods } from "./storage";
-import { addObjectsToStore, getObjectsFromStore } from "../hooks/useLocalObjectStore";
-import { buildTag, Tag } from "./tag";
+import { ItemType, StorageKey } from "./common";
+import { buildGroup, Group, validateGroups } from "./Groups";
+import { buildPin, Pin, validatePins } from "./pin";
+import { storageMethods } from "./storage";
+import { saveObjects, getStoredObjects } from "../hooks/useLocalObjectStore";
+import { buildTag, Tag, validateTags } from "./tag";
 
 /**
  * A set of example pins and groups to help users get started.
  */
-const examplePins: Pin[] = [
+const examplePins: Partial<Pin>[] = [
   {
-    id: 1,
     name: "Google",
     url: "https://google.com",
-    icon: "Favicon / File Icon",
     group: "None",
-    application: "None",
-    itemType: ItemType.PIN,
   },
   {
-    id: 2,
     name: "GitHub",
     url: "https://github.com",
-    icon: "Favicon / File Icon",
     group: "Dev Utils",
-    application: "None",
-    itemType: ItemType.PIN,
   },
   {
-    id: 3,
     name: "Regex 101",
     url: "https://regex101.com",
-    icon: "Favicon / File Icon",
     group: "Dev Utils",
-    application: "None",
-    itemType: ItemType.PIN,
   },
   {
-    id: 4,
     name: "Terminal",
     url: "/System/Applications/Utilities/Terminal.app",
-    icon: "Favicon / File Icon",
     group: "Dev Utils",
-    application: "None",
     tags: ["terminal"],
-    itemType: ItemType.PIN,
   },
   {
-    id: 5,
     name: "New Folder Here",
     url: `osascript -e 'tell application "Finder"' -e 'set dirPath to folder (POSIX file "{{currentDirectory}}" as alias)' -e 'set newFolder to make new folder at dirPath' -e 'select newFolder' -e 'end tell'`,
     icon: "NewFolder",
     group: "Scripts",
-    application: "None",
     execInBackground: true,
-    itemType: ItemType.PIN,
   },
   {
-    id: 6,
     name: "New File Here",
     url: `osascript -e 'tell application "Finder"' -e 'set dirPath to folder (POSIX file "{{currentDirectory}}" as alias)' -e 'set newFile to make new file at dirPath' -e 'select newFile' -e 'end tell'`,
     icon: "NewDocument",
     group: "Scripts",
-    application: "None",
     execInBackground: true,
-    itemType: ItemType.PIN,
   },
   {
-    id: 7,
     name: "New Terminal Here",
     url: `cd {{currentDirectory}}`,
     icon: "Terminal",
     group: "Scripts",
-    application: "None",
-    itemType: ItemType.PIN,
   },
   {
-    id: 8,
     name: "ChatGPT",
     url: "https://chat.openai.com",
-    icon: "Favicon / File Icon",
     group: "None",
-    application: "None",
-    itemType: ItemType.PIN,
   },
   {
-    id: 9,
     name: "Random Duck",
     url: "https://random-d.uk",
-    icon: "Favicon / File Icon",
     group: "None",
-    application: "None",
-    itemType: ItemType.PIN,
   },
   {
-    id: 10,
     name: "Search On Google",
     url: "https://www.google.com/search?q={{selectedText}}",
-    icon: "Favicon / File Icon",
     group: "None",
-    application: "None",
-    itemType: ItemType.PIN,
   },
   {
-    id: 11,
     name: "Raycast Developer Docs",
     url: "https://developers.raycast.com",
-    icon: "Favicon / File Icon",
     group: "Raycast Stuff",
-    application: "None",
-    itemType: ItemType.PIN,
   },
   {
-    id: 12,
     name: "Raycast Script Commands",
     url: "https://github.com/raycast/script-commands",
-    icon: "Favicon / File Icon",
     group: "Raycast Stuff",
-    application: "None",
-    itemType: ItemType.PIN,
   },
   {
-    id: 13,
     name: "Raycast Store",
     url: "https://www.raycast.com/store",
-    icon: "Favicon / File Icon",
     group: "Raycast Stuff",
-    application: "None",
-    itemType: ItemType.PIN,
   },
   {
-    id: 14,
     name: "AI Joke",
     url: "{{alert:{{AI:Tell me a joke}}}}",
     icon: "Emoji",
     group: "Raycast AI Examples",
-    application: "None",
     iconColor: "raycast-green",
     tags: ["AI"],
-    itemType: ItemType.PIN,
   },
   {
-    id: 15,
     name: "Summarize Tab",
     url: '{{alert title="Tab Summary":{{AI:Summarize the following content sourced from {{currentURL}}: ###{{currentTabText}}###}}}}',
     icon: "Network",
     group: "Raycast AI Examples",
-    application: "None",
     tags: ["AI", "selection"],
-    itemType: ItemType.PIN,
   },
   {
-    id: 16,
     name: "Summarize Clipboard",
     url: '{{alert title="Clipboard Summary":{{AI:Summarize this: ###{{clipboardText}}###}}}}',
     icon: "Clipboard",
     group: "Raycast AI Examples",
-    application: "None",
     tags: ["AI"],
-    itemType: ItemType.PIN,
   },
   {
-    id: 17,
     name: "Date: {{date}}",
     url: "{{copy:{{date}}}}",
     icon: "Calendar",
     group: "Placeholder Examples",
-    application: "None",
-    itemType: ItemType.PIN,
   },
   {
-    id: 18,
     name: "Day: {{day}}",
     url: "{{copy:{{day}}}}",
     icon: "Calendar",
     group: "Placeholder Examples",
-    application: "None",
-    itemType: ItemType.PIN,
   },
   {
-    id: 19,
     name: "Time: {{time}}",
     url: "{{copy:{{time}}}}",
     icon: "Clock",
     group: "Placeholder Examples",
-    application: "None",
-    itemType: ItemType.PIN,
   },
   {
-    id: 20,
     name: "Reopen Last Application",
     url: "open -a '{{previousApplication}}'",
     icon: "RotateAntiClockwise",
     group: "Placeholder Examples",
-    application: "None",
     execInBackground: true,
-    itemType: ItemType.PIN,
   },
   {
-    id: 21,
     name: "Summarize Selected Text",
     url: '{{alert title="Selected Text Summary":{{AI:Summarize this: ###{{selectedText}}###}}}}',
     icon: "Text",
     group: "Raycast AI Examples",
-    application: "None",
     tags: ["AI", "selection"],
-    itemType: ItemType.PIN,
   },
   {
-    id: 22,
     name: "Copy Address",
     url: "{{copy:{{address}}}}",
     icon: "House",
     group: "Placeholder Examples",
-    application: "None",
-    itemType: ItemType.PIN,
   },
   {
-    id: 23,
     name: "Paste UUID",
     url: "{{paste:{{uuid}}}}",
     icon: "Number27",
     group: "Placeholder Examples",
-    application: "None",
-    itemType: ItemType.PIN,
   },
 ];
 
-const exampleGroups: Group[] = [
+const exampleGroups: Partial<Group>[] = [
   {
-    id: 1,
     name: "Dev Utils",
     icon: "CodeBlock",
     itemType: ItemType.GROUP,
   },
   {
-    id: 2,
     name: "Scripts",
     icon: "Text",
     iconColor: "raycast-orange",
     itemType: ItemType.GROUP,
   },
   {
-    id: 3,
     name: "Raycast Stuff",
     icon: "RaycastLogoNeg",
     iconColor: "raycast-red",
-    parent: 1,
+    parent: "Dev Utils",
     itemType: ItemType.GROUP,
   },
   {
-    id: 4,
     name: "Placeholder Examples",
     icon: "Bolt",
     iconColor: "raycast-blue",
     itemType: ItemType.GROUP,
   },
   {
-    id: 5,
     name: "Raycast AI Examples",
     icon: "Stars",
     iconColor: "raycast-purple",
-    parent: 4,
+    parent: "Placeholder Examples",
     itemType: ItemType.GROUP,
   },
 ];
@@ -283,40 +199,28 @@ const exampleGroups: Group[] = [
  */
 export const installExamples = async (kind: "pins" | "groups") => {
   if (kind == "pins") {
-    const storedPins = await getObjectsFromStore<Pin>(StorageKey.PIN_STORE, storageMethods);
+    const storedPins = await getStoredObjects<Pin>(StorageKey.PIN_STORE, storageMethods, validatePins);
     const newPins = examplePins
       .filter((pin) => !storedPins.some((storedPin) => storedPin.name == pin.name))
       .map((pin) => buildPin(pin));
-    await addObjectsToStore(StorageKey.PIN_STORE, storedPins, newPins, storageMethods);
+    await saveObjects(newPins, storedPins, StorageKey.PIN_STORE, storageMethods, validatePins);
 
-    const storedTags = await getObjectsFromStore<Tag>(StorageKey.TAG_STORE, storageMethods);
+    const storedTags = await getStoredObjects<Tag>(StorageKey.TAG_STORE, storageMethods, validateTags);
     const newTags = examplePins
       .map((pin) => pin.tags)
       .flat()
       .filter((tag) => tag != undefined && !storedTags.some((storedTag) => storedTag.name == tag))
       .filter((tag, index, self) => self.indexOf(tag) === index)
       .map((tagName) => buildTag({ name: tagName }));
-    await addObjectsToStore(StorageKey.TAG_STORE, storedTags, newTags, storageMethods);
+    await saveObjects(newTags, storedTags, StorageKey.TAG_STORE, storageMethods, validateTags);
     await LocalStorage.setItem(StorageKey.EXAMPLE_PINS_INSTALLED, true);
   }
 
-  const storedGroups: Group[] = (await getStorage(StorageKey.LOCAL_GROUPS)) || [];
-
-  let nextGroupID = await getNextGroupID();
-  const examplesWithValidIDs = exampleGroups
-    .map((group) => {
-      if (group.id < nextGroupID) {
-        group.id = nextGroupID;
-        nextGroupID++;
-      }
-      group.dateCreated = new Date().toUTCString();
-      return group;
-    })
-    .filter((group) => !storedGroups.some((storedGroup) => storedGroup.name == group.name));
-
-  const allGroups = [...storedGroups, ...examplesWithValidIDs];
-  await setStorage(StorageKey.LOCAL_GROUPS, allGroups);
+  const storedGroups: Group[] = await getStoredObjects<Group>(StorageKey.GROUP_STORE, storageMethods, validateGroups);
+  const newGroups = exampleGroups
+    .filter((group) => !storedGroups.some((storedGroup) => storedGroup.name == group.name))
+    .map((group) => buildGroup(group));
+  await saveObjects(newGroups, storedGroups, StorageKey.GROUP_STORE, storageMethods, validateGroups);
   await LocalStorage.setItem(StorageKey.EXAMPLE_GROUPS_INSTALLED, true);
-
   await showToast({ title: "Examples Installed!", style: Toast.Style.Success });
 };

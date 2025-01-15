@@ -1,32 +1,32 @@
 import { Application, MenuBarExtra } from "@raycast/api";
 import { TrackRef } from "../../../lib/LocalData";
 import { cutoff } from "../../../lib/utils";
-import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/constants";
+import { KEYBOARD_SHORTCUT, StorageKey } from "../../../lib/common";
 import { getMusicTrackScript, getSpotifyTrackScript, getTVTrackScript } from "../../../lib/scripts";
 import { useCachedState } from "@raycast/utils";
 import { Group } from "../../../lib/Groups";
-import { buildPin } from "../../../lib/Pins";
-import { usePinStoreContext } from "../../../contexts/PinStoreContext";
+import { buildPin } from "../../../lib/pin";
+import { useDataStorageContext } from "../../../contexts/DataStorageContext";
 
 type TrackQuickPinProps = {
   /**
-   * The application that is currently open.
+   * The current application.
    */
   app: Application;
 
   /**
-   * The track that is currently playing in Music, Spotify, or TV.
+   * The current track in Music, Spotify, or TV.
    */
   track: TrackRef;
 };
 
 /**
- * A menu bar extra item that creates a new pin whose target is a script that will play the currently track in Music, Spotify, or TV.
- * @returns A menu bar extra item, or null if there is no track playing.
+ * A menu item that creates a new pin whose target script plays the current track in Music, Spotify, or TV.
+ * @returns A menu item, or null if there is no track playing.
  */
 export default function TrackQuickPin(props: TrackQuickPinProps) {
   const { app, track } = props;
-  const { add: addPin } = usePinStoreContext();
+  const { pinStore } = useDataStorageContext();
   const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
 
   if (track.name == "") {
@@ -42,7 +42,7 @@ export default function TrackQuickPin(props: TrackQuickPinProps) {
     <MenuBarExtra.Item
       title={title}
       icon={{ fileIcon: app.path }}
-      tooltip="Create a pin whose target path is the path of the currently playing track in Music, Spotify, or TV"
+      tooltip="Pin the path of the current track"
       shortcut={KEYBOARD_SHORTCUT.PIN_CURRENT_TRACK}
       onAction={async () => {
         let trackScript = "return";
@@ -61,7 +61,7 @@ export default function TrackQuickPin(props: TrackQuickPinProps) {
           icon: app.path,
           group: targetGroup?.name,
         });
-        await addPin([newPin]);
+        await pinStore.add([newPin]);
       }}
     />
   );
