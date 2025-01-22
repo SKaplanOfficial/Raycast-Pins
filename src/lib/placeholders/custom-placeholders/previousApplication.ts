@@ -1,6 +1,6 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
 import { getStorage } from "../../storage";
-import { StorageKey } from "../../common";
+import { storageKeys } from "../../common";
 
 /**
  * Placeholder for the last application focused before the current application. If there is no previous application, this placeholder will not be replaced.
@@ -12,7 +12,7 @@ const PreviousApplicationPlaceholder: Placeholder = {
   rules: [
     async () => {
       try {
-        const recents = await getStorage(StorageKey.RECENT_APPS);
+        const recents = await getStorage(storageKeys.recentApps);
         if (!recents) return false;
         if (!Array.isArray(recents)) return false;
         return recents.length > 1;
@@ -22,7 +22,7 @@ const PreviousApplicationPlaceholder: Placeholder = {
     },
   ],
   apply: async () => {
-    const recents = await getStorage(StorageKey.RECENT_APPS);
+    const recents = await getStorage(storageKeys.recentApps);
     if (Array.isArray(recents)) {
       return { result: recents[1].name, previousApplication: recents[1].name };
     }

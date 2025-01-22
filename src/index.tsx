@@ -21,7 +21,7 @@ import OpenAllMenuItem from "./components/menu-items/OpenAllMenuItem";
 import PinMenuItem from "./components/menu-items/PinMenuItem";
 import RecentApplicationsList from "./components/RecentApplicationsList";
 import { KEYBOARD_SHORTCUT, Visibility } from "./lib/common";
-import { getSubgroups, Group, useGroups } from "./lib/group";
+import { getAncestorsOfGroup, getSubgroups, Group, shouldDisplayGroup } from "./lib/group";
 import { getGroupIcon } from "./lib/utils";
 import { useLocalData } from "./lib/LocalData";
 import { copyPinData, openPin, Pin, sortPins } from "./lib/pin";
@@ -40,15 +40,13 @@ import {
   FilesQuickPin,
 } from "./components/menu-items/QuickPinMenuItems";
 import TargetGroupMenu from "./components/TargetGroupMenu";
-import { useDataStorageContext } from "./contexts/DataStorageContext";
+import DataStorageProvider, { useDataStorageContext } from "./contexts/DataStorageContext";
 
-// TODO: need to wrap this in providers
-export default function ShowPinsCommand() {
-  const { getAncestorsOfGroup, shouldDisplayGroup } = useGroups(); // TODO: This
+export function PinsMenubarExtra() {
   const { pinStore, groupStore, loadingStores } = useDataStorageContext();
+  const { localData, loadingLocalData } = useLocalData();
   const [relevantPins, setRelevantPins] = useCachedState<Pin[]>("relevant-pins", []);
   const [irrelevantPins, setIrrelevantPins] = useCachedState<Pin[]>("irrelevant-pins", []);
-  const { localData, loadingLocalData } = useLocalData();
   const preferences = getPreferenceValues<ExtensionPreferences & PinsMenubarPreferences>();
 
   const iconColor =
@@ -91,7 +89,7 @@ export default function ShowPinsCommand() {
         })(),
       );
     }
-  }, [loadingStores, preferences.showInapplicablePins, localData, loadingLocalData]);
+  }, [loadingStores, loadingLocalData, localData]);
 
   const selectedFiles = localData.selectedFiles.filter(
     (file) =>
@@ -118,27 +116,27 @@ export default function ShowPinsCommand() {
    * @returns A submenu containing the group's subsections and pins.
    */
   const getSubsections = (group: Group, groups: Group[]): JSX.Element | null => {
-    const parent = groups.find((g) => g.id == group.parent);
+    const parent = groups.find((g) => g.name == group.parent);
     const allSubgroups = getSubgroups(group, groups, true);
     const children = groups.filter((g) => g.parent == group.name);
     const memberPins = allPins.filter((pin) => pin.group == group.name);
     const subgroupPins = allPins.filter((pin) => children.some((g) => g.name == pin.group));
-    if (memberPins.length == 0 && subgroupPins.length == 0) {
+    if (memberPins.length + subgroupPins.length == 0) {
       return null;
     }
 
-    const trueDepth = getAncestorsOfGroup(group).length;
+    const trueDepth = getAncestorsOfGroup(group, groups).length;
     const visualDepth = Math.max(
-      getAncestorsOfGroup(group).findIndex(
+      getAncestorsOfGroup(group, groups).findIndex(
         (g) =>
           g.menubarDisplay === GroupDisplaySetting.SUBMENUS ||
-          (groups.find((pr) => pr.id === g.parent)?.menubarDisplay === GroupDisplaySetting.SUBMENUS &&
+          (groups.find((pr) => pr.name === g.parent)?.menubarDisplay === GroupDisplaySetting.SUBMENUS &&
             g.menubarDisplay === GroupDisplaySetting.USE_PARENT),
       ),
       0,
     );
 
-    if (!shouldDisplayGroup(group)) {
+    if (!shouldDisplayGroup(group, groups)) {
       return (
         <Fragment key={group.name}>
           {allPins
@@ -189,7 +187,7 @@ export default function ShowPinsCommand() {
                 );
               }
               for (const subgroup of allSubgroups) {
-                const ancestors = getAncestorsOfGroup(subgroup, { excluding: [group] });
+                const ancestors = getAncestorsOfGroup(subgroup, groups, { excluding: [group] });
                 const openSubgroup =
                   ancestors.every((g) => g.menubarDisplay === GroupDisplaySetting.USE_PARENT) &&
                   subgroup.menubarDisplay === GroupDisplaySetting.USE_PARENT;
@@ -209,7 +207,7 @@ export default function ShowPinsCommand() {
             }}
           />
           {children.map((g) => {
-            const ancestors = getAncestorsOfGroup(g, { excluding: [group] });
+            const ancestors = getAncestorsOfGroup(g, groups, { excluding: [group] });
             const displaySubgroup =
               ancestors.some((g) => g.menubarDisplay !== GroupDisplaySetting.USE_PARENT) ||
               g.menubarDisplay !== GroupDisplaySetting.USE_PARENT;
@@ -408,5 +406,13 @@ export default function ShowPinsCommand() {
         ) : null}
       </MenuBarExtra.Section>
     </MenuBarExtra>
+  );
+}
+
+export default function ShowPinsCommand() {
+  return (
+    <DataStorageProvider>
+      <PinsMenubarExtra />
+    </DataStorageProvider>
   );
 }

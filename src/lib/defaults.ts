@@ -1,6 +1,6 @@
 import { LocalStorage, showToast, Toast } from "@raycast/api";
 
-import { ItemType, StorageKey } from "./common";
+import { ItemType, storageKeys } from "./common";
 import { buildGroup, getGroups, Group, validateGroups } from "./group";
 import { buildPin, getPins, Pin, validatePins } from "./pin";
 import { storageMethods } from "./storage";
@@ -193,7 +193,7 @@ export const installExamples = async (kind: ItemType) => {
     const newPins = examplePins
       .filter((pin) => !storedPins.some((storedPin) => storedPin.name == pin.name))
       .map((pin) => buildPin(pin));
-    await saveObjects(newPins, storedPins, StorageKey.PIN_STORE, storageMethods, validatePins);
+    await saveObjects(newPins, storedPins, storageKeys.pinStore, storageMethods, validatePins);
 
     const storedTags = await getTags();
     const newTags = examplePins
@@ -202,15 +202,15 @@ export const installExamples = async (kind: ItemType) => {
       .filter((tag) => tag != undefined && !storedTags.some((storedTag) => storedTag.name == tag))
       .filter((tag, index, self) => self.indexOf(tag) === index)
       .map((tagName) => buildTag({ name: tagName }));
-    await saveObjects(newTags, storedTags, StorageKey.TAG_STORE, storageMethods, validateTags);
-    await LocalStorage.setItem(StorageKey.EXAMPLE_PINS_INSTALLED, true);
+    await saveObjects(newTags, storedTags, storageKeys.tagStore, storageMethods, validateTags);
+    await LocalStorage.setItem(storageKeys.examplePinsInstalled, true);
   }
 
   const storedGroups = await getGroups();
   const newGroups = exampleGroups
     .filter((group) => !storedGroups.some((storedGroup) => storedGroup.name == group.name))
     .map((group) => buildGroup(group));
-  await saveObjects(newGroups, storedGroups, StorageKey.GROUP_STORE, storageMethods, validateGroups);
-  await LocalStorage.setItem(StorageKey.EXAMPLE_GROUPS_INSTALLED, true);
+  await saveObjects(newGroups, storedGroups, storageKeys.groupStore, storageMethods, validateGroups);
+  await LocalStorage.setItem(storageKeys.exampleGroupsInstalled, true);
   await showToast({ title: "Examples Installed!", style: Toast.Style.Success });
 };

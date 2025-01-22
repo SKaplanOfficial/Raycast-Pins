@@ -4,9 +4,9 @@ import { Group } from "../../lib/group";
 import { Tag } from "../../lib/tag";
 
 /**
- * Submenu for actions that copy information about an item to the clipboard.
- * @param props.item The group to copy information about.
- * @returns A submenu component.
+ * Submenu for actions to copy an item's information to the clipboard.
+ * @param props.item The pin or group to copy information about.
+ * @param props.children Additional actions to include in the submenu.
  */
 export default function CopyActionsSubmenu(props: { item: Pin | Group | Tag; children?: React.ReactNode }) {
   const { item, children } = props;

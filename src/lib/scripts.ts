@@ -23,7 +23,6 @@ export type Location = {
 export const LocationManager = {
   /**
    * Get all location data from the Location Manager applet.
-   * @returns {Promise<Location | Record<string, string | number>>} A promise that resolves to a dictionary of location data.
    */
   getLocation: async (): Promise<Location | Record<string, string | number>> => {
     const LMAppPath = path.join(
@@ -49,7 +48,6 @@ export const LocationManager = {
 
   /**
    * Get a formatted street address from the Location Manager applet.
-   * @returns {Promise<string>} A promise that resolves to the current street address.
    */
   getStreetAddress: async (): Promise<string> => {
     const location = await LocationManager.getLocation();
@@ -58,7 +56,6 @@ export const LocationManager = {
 
   /**
    * Get the user's country from the Location Manager applet.
-   * @returns {Promise<string>} A promise that resolves to the current country.
    */
   getCountry: async (): Promise<string> => {
     const location = await LocationManager.getLocation();
@@ -67,7 +64,6 @@ export const LocationManager = {
 
   /**
    * Get the user's city from the Location Manager applet.
-   * @returns {Promise<string>} A promise that resolves to the current city.
    */
   getCity: async (): Promise<string> => {
     const location = await LocationManager.getLocation();
@@ -76,7 +72,6 @@ export const LocationManager = {
 
   /**
    * Get the user's state from the Location Manager applet.
-   * @returns {Promise<string>} A promise that resolves to the current state.
    */
   getState: async (): Promise<string> => {
     const location = await LocationManager.getLocation();
@@ -85,7 +80,6 @@ export const LocationManager = {
 
   /**
    * Get the user's postal code from the Location Manager applet.
-   * @returns {Promise<string>} A promise that resolves to the current postal code.
    */
   getPostalCode: async (): Promise<string> => {
     const location = await LocationManager.getLocation();
@@ -94,7 +88,6 @@ export const LocationManager = {
 
   /**
    * Get the user's current latitude from the Location Manager applet.
-   * @returns {Promise<number>} A promise that resolves to the current latitude.
    */
   getLatitude: async (): Promise<number> => {
     const location = await LocationManager.getLocation();
@@ -107,7 +100,6 @@ export const LocationManager = {
 
   /**
    * Get the user's current longitude from the Location Manager applet.
-   * @returns {Promise<number>} A promise that resolves to the current longitude.
    */
   getLongitude: async (): Promise<number> => {
     const location = await LocationManager.getLocation();
@@ -120,11 +112,10 @@ export const LocationManager = {
 };
 
 /**
- * Returns an AppleScript that plays a track in the Music app.
+ * Returns an AppleScript script that plays a track in the Music app.
  * @param track The name of the track to play.
  * @param artist The artist of the track.
  * @param album The album of the track.
- * @returns {string} The AppleScript.
  */
 export const getMusicTrackScript = (track: string, artist: string, album: string): string => {
   return `tell application "Music"
@@ -139,9 +130,8 @@ end tell`;
 };
 
 /**
- * Returns an AppleScript that plays a track in the Spotify app.
+ * Returns an AppleScript script that plays a track in the Spotify app.
  * @param uri The URI of the track to play.
- * @returns {string} The AppleScript.
  */
 export const getSpotifyTrackScript = (uri: string): string => {
   return `tell application "Spotify"
@@ -150,11 +140,10 @@ end tell`;
 };
 
 /**
- * Returns an AppleScript that plays a track in the TV app.
+ * Returns an AppleScript script that plays a track in the TV app.
  * @param track The name of the track to play.
  * @param director The director of the track.
  * @param album The album of the track.
- * @returns {string} The AppleScript.
  */
 export const getTVTrackScript = (track: string, director: string, album: string): string => {
   return `tell application "TV"

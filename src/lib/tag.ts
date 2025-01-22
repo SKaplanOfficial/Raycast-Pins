@@ -1,6 +1,6 @@
 import { Color } from "@raycast/api";
 import { getStoredObjects, LocalObjectStore, LocalObjectType } from "../hooks/useLocalObjectStore";
-import { BaseItem, ItemType, StorageKey } from "./common";
+import { BaseItem, ItemType, storageKeys } from "./common";
 import { storageMethods } from "./storage";
 
 export type Tag = BaseItem & {
@@ -33,7 +33,7 @@ export function isTag(object: unknown): object is Tag {
 }
 
 export async function getTags() {
-  return await getStoredObjects<Tag>(StorageKey.TAG_STORE, storageMethods, validateTags);
+  return await getStoredObjects<Tag>(storageKeys.tagStore, storageMethods, validateTags);
 }
 
 export function validateTags(tags: Partial<Tag>[]): Tag[] {

@@ -1,7 +1,5 @@
-import { useEffect, useState } from "react";
-import { getStorage, setStorage, storageMethods } from "./storage";
-import { useCachedState } from "@raycast/utils";
-import { BaseItem, ItemType, SORT_FN, SORT_STRATEGY, StorageKey, Visibility } from "./common";
+import { storageMethods } from "./storage";
+import { BaseItem, ItemType, SORT_FN, SORT_STRATEGY, storageKeys, Visibility } from "./common";
 import { Color, environment, showToast } from "@raycast/api";
 import { Pin, sortPins } from "./pin";
 import { GroupDisplaySetting } from "./preferences";
@@ -71,7 +69,6 @@ export const GroupKeys = [
 /**
  * Checks if an object is a group.
  * @param obj The item to check.
- * @returns Whether or not the item is a group.
  */
 export const isGroup = (object: unknown): object is Group => {
   return typeof object === "object" && object !== null && "itemType" in object && object["itemType"] === ItemType.GROUP;
@@ -82,23 +79,7 @@ export const isGroup = (object: unknown): object is Group => {
  * @returns The list of groups.
  */
 export const getGroups = async () => {
-  return await getStoredObjects<Group>(StorageKey.GROUP_STORE, storageMethods, validateGroups);
-};
-
-/**
- * Gets the next available group ID.
- */
-export const getNextGroupID = async () => {
-  // Get the stored groups
-  const storedGroups = await getGroups();
-
-  // Get the next available group ID
-  let newID = (await getStorage(StorageKey.NEXT_GROUP_ID))[0] || 1;
-  while (storedGroups.some((group: Group) => group.id == newID)) {
-    newID++;
-  }
-  setStorage(StorageKey.NEXT_GROUP_ID, [newID + 1]);
-  return newID;
+  return await getStoredObjects<Group>(storageKeys.groupStore, storageMethods, validateGroups);
 };
 
 /**
@@ -154,50 +135,6 @@ export const validateGroups = (groups: Group[]) => {
   return groups.map(buildGroup);
 };
 
-/**
- * Gets the stored groups.
- * @returns The list of groups alongside an update function.
- */
-export const useGroups = () => {
-  const [groups, setGroups] = useCachedState<Group[]>("pin-groups", []);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  const revalidateGroups = async () => {
-    setLoading(true);
-    const storedGroups = await getGroups();
-    const validatedGroups = await validateGroups(storedGroups);
-    setGroups(validatedGroups);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    revalidateGroups();
-  }, []);
-
-  return {
-    groups: groups,
-    setGroups: setGroups,
-    loadingGroups: loading,
-    revalidateGroups: revalidateGroups,
-
-    /**
-     * Gets the ancestors of a group.
-     * @param group The group to get the ancestors of.
-     * @param options Options for which ancestors to include/exclude.
-     * @returns An array of ancestor groups of the group.
-     */
-    getAncestorsOfGroup: (group: Group, options?: { excluding: Group[] }) =>
-      getAncestorsOfGroup(group, groups, options),
-
-    /**
-     * Checks if a group should be displayed in the current context.
-     * @param group The group to check.
-     * @returns True if the group should be displayed, false otherwise.
-     */
-    shouldDisplayGroup: (group: Group) => shouldDisplayGroup(group, groups),
-  };
-};
-
 // TODO: This comment
 /**
  * Creates a dummy group object.
@@ -228,8 +165,8 @@ export const buildGroup = (properties?: Partial<Group>): Group => {
  * Modifies the properties of a group.
  * @param group The group to modify (used to source the group's ID)
  * @param attributes The new attributes for the group.
- * @param setGroups Function to update the list of groups.
- * @param pop Function to pop the current view off the navigation stack.
+ * @param updateGroup The function to update the group.
+ * @param pinStore The store of pins.
  */
 export const modifyGroup = async (
   group: Group,
@@ -308,23 +245,23 @@ export const checkGroupNameField = (
 };
 
 /**
- * Checks that the entered parent ID is valid (i.e. that a group with that ID exists, and that the group is not the group currently being created).
- * @param suggestedID The value of the parent ID field.
+ * Checks that the entered parent name is valid (i.e. a group with that name exists, and the group is not the one currently being created).
+ * @param suggestedName The value of the parent's name field.
  * @param setParentError A function to set the parent error.
  */
 export const checkGroupParentField = async (
-  suggestedID: string,
+  suggestedName: string,
   setParentError: React.Dispatch<React.SetStateAction<string | undefined>>,
   groups: Group[],
+  groupName: string,
 ): Promise<boolean> => {
-  const nextID = await getStorage(StorageKey.NEXT_GROUP_ID);
-  if (suggestedID.trim().length == 0) {
+  if (suggestedName.trim().length == 0) {
     setParentError(undefined);
     return true;
-  } else if (!groups.map((g) => g.id).includes(suggestedID)) {
+  } else if (!groups.map((g) => g.name).includes(suggestedName)) {
     setParentError("No group with this ID exists!");
     return false;
-  } else if (parseInt(suggestedID) == nextID) {
+  } else if (suggestedName == groupName) {
     setParentError("Group cannot be its own parent!");
     return false;
   } else {
@@ -355,7 +292,6 @@ export const getMemberPins = (group: Group, groups: Group[], pins: Pin[], recurs
  * @param group The group to get the subgroups of.
  * @param groups The list of all groups.
  * @param recursive Whether or not to recursively search for subgroups.
- * @returns The list of subgroups.
  */
 export const getSubgroups = (group: Group, groups: Group[], recursive = false) => {
   const subgroups: Group[] = [];
@@ -371,12 +307,10 @@ export const getSubgroups = (group: Group, groups: Group[], recursive = false) =
 
 /**
  * Gets the statistics for a given group as either a string (default) or an object.
- *
  * @param group The group to get statistics for.
  * @param groups The list of all groups.
  * @param pins The list of all pins.
  * @param format The format to return the statistics in. Defaults to "string".
- * @returns The statistics for the group.
  */
 export const getGroupStatistics = (
   group: Group,

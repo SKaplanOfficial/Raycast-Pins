@@ -4,16 +4,16 @@ import { useDataStorageContext } from "../../contexts/DataStorageContext";
 import { ItemType } from "../../lib/common";
 
 /**
- * Action to install example pins. Only shows if examples are not installed and no pins have been created.
+ * Action to install example pins.
  * @param props.setExamplesInstalled The function to set the examples installed state.
  * @param props.kind The kind of examples to install (pins or groups).
  * @returns An action component.
  */
 export const InstallExamplesAction = (props: {
-  setExamplesInstalled: React.Dispatch<React.SetStateAction<boolean>>;
   kind: ItemType;
+  onInstall?: () => void;
 }) => {
-  const { setExamplesInstalled, kind } = props;
+  const { kind, onInstall } = props;
   const { pinStore, groupStore, tagStore } = useDataStorageContext();
   const kindLabel = kind ==ItemType.PIN ? "Pins" : "Groups";
   return (
@@ -33,10 +33,10 @@ export const InstallExamplesAction = (props: {
           })
         ) {
           await installExamples(kind);
-          setExamplesInstalled(true);
           await pinStore.load();
           await groupStore.load();
           await tagStore.load();
+          onInstall?.();
           await showToast({ title: `Installed Example ${kindLabel}` });
         }
       }}

@@ -1,14 +1,16 @@
-import { Clipboard, LaunchType, MenuBarExtra, launchCommand, showToast } from "@raycast/api";
-import { getPinIcon } from "../../lib/utils";
-import { Pin, openPin } from "../../lib/pin";
-import { ExtensionPreferences, PinsMenubarPreferences, RightClickAction } from "../../lib/preferences";
-import { LocalDataObject } from "../../lib/LocalData";
 import { bulkApply } from "placeholders-toolkit/dist/lib/apply";
-import { PinsInfoPlaceholders } from "../../lib/placeholders";
 import { useEffect, useState } from "react";
-import { deleteItem } from "../actions/DeleteItemAction";
-import { Visibility } from "../../lib/common";
+
+import { Clipboard, launchCommand, LaunchType, MenuBarExtra, showToast } from "@raycast/api";
+
 import { useDataStorageContext } from "../../contexts/DataStorageContext";
+import { Visibility } from "../../lib/common";
+import { LocalDataObject } from "../../lib/LocalData";
+import { openPin, Pin } from "../../lib/pin";
+import { PinsInfoPlaceholders } from "../../lib/placeholders";
+import { ExtensionPreferences, PinsMenubarPreferences, RightClickAction } from "../../lib/preferences";
+import { cutoff, getPinIcon } from "../../lib/utils";
+import { deleteItem } from "../actions/DeleteItemAction";
 
 /**
  * A menu item for a pin.
@@ -16,8 +18,6 @@ import { useDataStorageContext } from "../../contexts/DataStorageContext";
  * @param props.preferences The preferences for the extension.
  * @param props.relevant Whether or not the pin is relevant to the current context.
  * @param props.localData The local data object specifying the current context.
- * @param props.setPins The function to call to update the list of pins.
- * @returns A menu item component.
  */
 export default function PinMenuItem(props: {
   pin: Pin;
@@ -27,9 +27,7 @@ export default function PinMenuItem(props: {
 }) {
   const { pin, relevant, preferences, localData } = props;
   const { pinStore } = useDataStorageContext();
-  const [title, setTitle] = useState<string>(
-    pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url),
-  );
+  const [title, setTitle] = useState<string>(pin.name || cutoff(pin.url, 20));
 
   useEffect(() => {
     (async () => {
@@ -57,7 +55,6 @@ export default function PinMenuItem(props: {
             localData as unknown as { [key: string]: string },
           );
         } else {
-          // Handle right-click based on user's preferences
           switch (preferences.rightClickAction) {
             case RightClickAction.Open:
               await openPin(
@@ -92,7 +89,7 @@ export default function PinMenuItem(props: {
         <MenuBarExtra.Item
           key={pin.id}
           icon={getPinIcon(pin)}
-          title={`Edit '${pin.name || (pin.url.length > 20 ? pin.url.substring(0, 19) + "..." : pin.url)}'`}
+          title={`Edit '${pin.name || cutoff(pin.url, 20)}'`}
           tooltip={pin.tooltip}
           onAction={async () =>
             launchCommand({ name: "view-pins", type: LaunchType.UserInitiated, context: { pinID: pin.id } })

@@ -2,11 +2,11 @@ import { createContext, useEffect, useMemo, useState } from "react";
 import useLocalObjectStore, { objectStoreDefaultState } from "../hooks/useLocalObjectStore";
 import { Tag, upgradeTags, validateTags } from "../lib/tag";
 import { useContext } from "react";
-import { StorageKey } from "../lib/common";
 import { getStorage, storageMethods } from "../lib/storage";
 import { Pin, validatePins } from "../lib/pin";
 import { Group, validateGroups } from "../lib/group";
 import { LocalStorage } from "@raycast/api";
+import { storageKeys } from "../lib/common";
 
 const dataStoreDefaultState = {
   pinStore: objectStoreDefaultState<Pin>(),
@@ -20,18 +20,18 @@ const DataStorageContext = createContext(dataStoreDefaultState);
 
 function DataStorageProvider(props: { children: React.ReactNode }) {
   const { children } = props;
-  const pinStore = useLocalObjectStore<Pin>(StorageKey.PIN_STORE, storageMethods, validatePins);
-  const groupStore = useLocalObjectStore<Group>(StorageKey.GROUP_STORE, storageMethods, validateGroups);
-  const tagStore = useLocalObjectStore<Tag>(StorageKey.TAG_STORE, storageMethods, validateTags);
+  const pinStore = useLocalObjectStore<Pin>(storageKeys.pinStore, storageMethods, validatePins);
+  const groupStore = useLocalObjectStore<Group>(storageKeys.groupStore, storageMethods, validateGroups);
+  const tagStore = useLocalObjectStore<Tag>(storageKeys.tagStore, storageMethods, validateTags);
   const [migrationComplete, setMigrationComplete] = useState(false);
   const [loadingStores, setLoadingStores] = useState(true);
   const [tagAssociations, setTagAssociations] = useState(dataStoreDefaultState.tagAssociations);
 
   useEffect(() => {
     async function migratePins() {
-      const oldPins: Pin[] = await getStorage(StorageKey.LOCAL_PINS);
+      const oldPins: Pin[] = await getStorage(storageKeys.oldPinList);
       if (oldPins) {
-        await LocalStorage.removeItem(StorageKey.LOCAL_PINS);
+        await LocalStorage.removeItem(storageKeys.oldPinList);
         await pinStore.add(oldPins);
         const pinTags = oldPins
           .map((pin) => pin.tags)

@@ -1,7 +1,5 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
-import { getStorage } from "../../storage";
-import { StorageKey } from "../../common";
-import { Group } from "../../group";
+import { getGroups } from "../../group";
 
 /**
  * Placeholder for the JSON representation of all groups.
@@ -13,7 +11,7 @@ const GroupsPlaceholder: Placeholder = {
   apply: async (str: string) => {
     let numToSelect = parseInt(str.match(/(?<=amount=)[0-9]+/)?.[0] || "-1");
     try {
-      const groups: Group[] = (await getStorage(StorageKey.LOCAL_GROUPS)) || [];
+      const groups = await getGroups();
       if (numToSelect >= 0) {
         numToSelect = Math.min(numToSelect, groups.length);
         while (groups.length > numToSelect) {

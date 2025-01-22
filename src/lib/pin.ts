@@ -11,8 +11,8 @@ import {
   showHUD,
   showToast,
 } from "@raycast/api";
-import { SORT_FN, StorageKey, SORT_STRATEGY, Visibility, PinAction, ItemType, BaseItem } from "./common";
-import { objectFromNonNullableEntriesOfObject, runCommand, runCommandInTerminal } from "./utils";
+import { SORT_FN, SORT_STRATEGY, Visibility, PinAction, ItemType, BaseItem, storageKeys } from "./common";
+import { isNullish, runCommand, runCommandInTerminal } from "./utils";
 import { ExtensionPreferences } from "./preferences";
 import * as fs from "fs";
 import * as os from "os";
@@ -167,7 +167,7 @@ export function validatePins(pins: Partial<Pin>[]): Pin[] {
  * @returns The list of pin objects.
  */
 export const getPins = async () => {
-  return await getStoredObjects<Pin>(StorageKey.PIN_STORE, storageMethods, validatePins);
+  return await getStoredObjects<Pin>(storageKeys.pinStore, storageMethods, validatePins);
 };
 
 /**
@@ -258,7 +258,7 @@ export const checkExpirations = async () => {
   }
 
   // TODO: Use context
-  await setStorage(StorageKey.LOCAL_PINS, newPins);
+  await setStorage(storageKeys.oldPinList, newPins);
 
   for (const pin of customActionPins) {
     if (pin.expirationAction) {
@@ -290,10 +290,10 @@ export const openPin = async (
       await Clipboard.copy(pin.url);
       3;
       await showToast({ title: "Copied To Clipboard" });
-      await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
+      await setStorage(storageKeys.lastOpenedPin, pin.id);
     } else {
       // Convert LocalData objects to strings
-      const filteredContext = objectFromNonNullableEntriesOfObject(context || {});
+      const filteredContext = Object.fromEntries(Object.entries(context || {}).filter(([, value]) => isNullish(value)));
       if (filteredContext["selectedFiles"]) {
         filteredContext["selectedFiles"] = Object.values(filteredContext["selectedFiles"])
           .map((file: FileRef) => file.path)
@@ -327,7 +327,7 @@ export const openPin = async (
           // Open the path in the target application (fallback to default application for the file type)
           if (fs.existsSync(target)) {
             await open(path.resolve(target), targetApplication);
-            await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
+            await setStorage(storageKeys.lastOpenedPin, pin.id);
           } else {
             throw new Error("File does not exist.");
           }
@@ -335,10 +335,10 @@ export const openPin = async (
           if (target.match(/^[a-zA-Z](?![%])[a-zA-Z0-9+.-]+?:.*/g)) {
             // Open the URL in the target application (fallback to preferred browser, then default browser)
             await open(encodeURI(target), targetApplication || preferences.preferredBrowser);
-            await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
+            await setStorage(storageKeys.lastOpenedPin, pin.id);
           } else {
             // Open Terminal command in Terminal.app
-            await setStorage(StorageKey.LAST_OPENED_PIN, pin.id);
+            await setStorage(storageKeys.lastOpenedPin, pin.id);
             if (pin.execInBackground) {
               // Run the Terminal command in the background
               await runCommand(target);
@@ -407,7 +407,7 @@ export function buildPin(properties?: Partial<Pin>): Pin {
  * @returns The {@link Pin} that was last opened.
  */
 export const getPreviousPin = async (): Promise<Pin | undefined> => {
-  const previousPin = await getStorage(StorageKey.LAST_OPENED_PIN);
+  const previousPin = await getStorage(storageKeys.lastOpenedPin);
   if (previousPin == undefined || parseInt(previousPin) == undefined) return undefined;
   const pins = await getPins();
   return pins.find((pin: Pin) => pin.id == previousPin);

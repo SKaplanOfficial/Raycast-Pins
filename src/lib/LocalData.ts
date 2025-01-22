@@ -225,8 +225,7 @@ export const requestLocalData = async (): Promise<{
 };
 
 /**
- * Hook to get the local data object, see {@link LocalDataObject}.
- * @returns An object containing the local data object and a boolean indicating whether the object is still loading.
+ * Hook to get the local data object and its loading state. See {@link LocalDataObject}.
  */
 export const useLocalData = () => {
   const [localData, setLocalData] = useCachedState<LocalDataObject>("--local-data", dummyData());

@@ -11,9 +11,8 @@ import CopyActionsSubmenu from "./components/actions/CopyActionsSubmenu";
 
 export function TagList() {
   const { pinStore, tagStore, loadingStores, tagAssociations } = useDataStorageContext();
-  const preferences = getPreferenceValues<ExtensionPreferences>();
-
   const sortedTags = useMemo(() => tagStore.objects.sort(SORT_FN.ALPHA_ASC), [tagStore.objects]);
+  const preferences = getPreferenceValues<ExtensionPreferences>();
 
   return (
     <List

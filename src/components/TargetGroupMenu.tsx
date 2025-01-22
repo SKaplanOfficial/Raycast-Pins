@@ -1,7 +1,7 @@
 import { Icon, MenuBarExtra, showHUD } from "@raycast/api";
 import { Group } from "../lib/group";
 import { useCachedState } from "@raycast/utils";
-import { StorageKey } from "../lib/common";
+import { storageKeys } from "../lib/common";
 
 type TargetGroupMenuProps = {
   groups: Group[];
@@ -9,7 +9,7 @@ type TargetGroupMenuProps = {
 
 export default function TargetGroupMenu(props: TargetGroupMenuProps) {
   const { groups } = props;
-  const [targetGroup, setTargetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
+  const [targetGroup, setTargetGroup] = useCachedState<Group | undefined>(storageKeys.targetGroup, undefined);
 
   let title = "Target Group";
   if (targetGroup) {

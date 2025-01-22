@@ -1,10 +1,9 @@
 import { getFrontmostApplication, Application, getPreferenceValues } from "@raycast/api";
-// import EventEmitter from "events";
 import { useState, useEffect } from "react";
-import { StorageKey } from "../lib/common";
 import { ExtensionPreferences } from "../lib/preferences";
 import { getStorage, setStorage } from "../lib/storage";
 import { useCachedState } from "@raycast/utils";
+import { storageKeys } from "../lib/common";
 
 /**
  * Tracks recently used applications (if enabled in the extension's settings).
@@ -12,7 +11,7 @@ import { useCachedState } from "@raycast/utils";
 export const updateRecentApplications = async () => {
   try {
     const app = await getFrontmostApplication();
-    const recentApps = await getStorage(StorageKey.RECENT_APPS);
+    const recentApps = await getStorage(storageKeys.recentApps);
     const newRecentApps = recentApps.filter(
       (recentApp: Application) => recentApp.name != app.name && recentApp.name != "Raycast",
     );
@@ -23,7 +22,7 @@ export const updateRecentApplications = async () => {
     while (newRecentApps.length > 10) {
       newRecentApps.pop();
     }
-    await setStorage(StorageKey.RECENT_APPS, newRecentApps);
+    await setStorage(storageKeys.recentApps, newRecentApps);
   } catch (error) {
     console.error(error);
   }
@@ -35,18 +34,16 @@ export const updateRecentApplications = async () => {
  */
 export const getRecentApplications = async (): Promise<Application[]> => {
   await updateRecentApplications();
-  const recentApps = await getStorage(StorageKey.RECENT_APPS);
+  const recentApps = await getStorage(storageKeys.recentApps);
   return recentApps;
 };
-
-// const TestEmitter = new EventEmitter();
 
 /**
  * Hook to get the list of recently used applications.
  * @returns An object containing the list of recently used applications and a boolean indicating whether the list is still loading.
  */
 export const useRecentApps = () => {
-  const [recentApps, setRecentApps] = useCachedState<Application[]>(StorageKey.RECENT_APPS, []);
+  const [recentApps, setRecentApps] = useCachedState<Application[]>(storageKeys.recentApps, []);
   const [loadingRecentApps, setLoadingRecentApps] = useState(true);
 
   useEffect(() => {
@@ -59,14 +56,6 @@ export const useRecentApps = () => {
     } else {
       setLoadingRecentApps(false);
     }
-
-    // TestEmitter.on("updateRecentApplications", async () => {
-    //   console.log("Updating recent applications...");
-    // });
-
-    // setInterval(() => {
-    //   TestEmitter.emit("updateRecentApplications");
-    // }, 5000);
   }, []);
 
   return { recentApplications: recentApps, loadingRecentApplications: loadingRecentApps };

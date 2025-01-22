@@ -1,34 +1,21 @@
 import {
-  Icon,
-  List,
-  Action,
-  ActionPanel,
-  confirmAlert,
-  Alert,
-  getPreferenceValues,
-  Keyboard,
-  showToast,
-} from "@raycast/api";
-import { Direction, ItemType } from "./lib/common";
-import { Group, buildGroup, deleteGroup, getGroupStatistics } from "./lib/group";
-import { Pin, openPin } from "./lib/pin";
-import {
-  addIDAccessory,
-  addParentGroupAccessory,
-  addSortingStrategyAccessory,
-  addVisibilityAccessory,
-} from "./lib/accessories";
-import { getGroupIcon } from "./lib/utils";
-import GroupForm from "./components/GroupForm";
-import { InstallExamplesAction } from "./components/actions/InstallExamplesAction";
-import { ExtensionPreferences, ViewGroupsPreferences } from "./lib/preferences";
-import { pluralize } from "./lib/utils";
-import useExamples from "./hooks/useExamples";
-import CreateNewItemAction from "./components/actions/CreateNewItemAction";
-import DeleteItemAction from "./components/actions/DeleteItemAction";
-import DataStorageProvider, { useDataStorageContext } from "./contexts/DataStorageContext";
-import { LocalObjectStore } from "./hooks/useLocalObjectStore";
-import CopyActionsSubmenu from "./components/actions/CopyActionsSubmenu";
+    Action, ActionPanel, Alert, confirmAlert, getPreferenceValues, Icon, Keyboard, List, showToast
+} from '@raycast/api';
+
+import CopyActionsSubmenu from './components/actions/CopyActionsSubmenu';
+import CreateNewItemAction from './components/actions/CreateNewItemAction';
+import DeleteItemAction from './components/actions/DeleteItemAction';
+import { InstallExamplesAction } from './components/actions/InstallExamplesAction';
+import GroupForm from './components/GroupForm';
+import DataStorageProvider, { useDataStorageContext } from './contexts/DataStorageContext';
+import useExamples from './hooks/useExamples';
+import { LocalObjectStore } from './hooks/useLocalObjectStore';
+import { getGroupAccessories } from './lib/accessories';
+import { Direction, ItemType } from './lib/common';
+import { buildGroup, deleteGroup, getGroupStatistics, Group } from './lib/group';
+import { openPin, Pin } from './lib/pin';
+import { ExtensionPreferences, ViewGroupsPreferences } from './lib/preferences';
+import { getGroupIcon, pluralize } from './lib/utils';
 
 /**
  * Moves a group up or down in the list of groups.
@@ -59,23 +46,19 @@ export function GroupList() {
         <ActionPanel>
           <CreateNewItemAction itemType={ItemType.GROUP} formView={<GroupForm />} />
           {!examplesInstalled || groupStore.objects.length == 0 ? (
-            <InstallExamplesAction setExamplesInstalled={setExamplesInstalled} kind={ItemType.GROUP} />
+            <InstallExamplesAction kind={ItemType.GROUP} onInstall={() => setExamplesInstalled(true)} />
           ) : null}
         </ActionPanel>
       }
     >
       <List.EmptyView
         title="No Groups Yet!"
-        description="Create a group (⌘N)  or install some examples (⌘E)"
+        description="Create a group (⌘N) or install some examples (⌘E)"
         icon="no-view.png"
       />
       {groupStore.objects.map((group, index) => {
         const groupPins = pinStore.objects.filter((pin: Pin) => pin.group == group.name);
-        const accessories: List.Item.Accessory[] = [];
-        if (preferences.showVisibility) addVisibilityAccessory(group, accessories, true);
-        if (preferences.showSortStrategy) addSortingStrategyAccessory(group, accessories);
-        if (preferences.showIDs) addIDAccessory(group, accessories, groupStore.objects);
-        if (preferences.showParentGroup) addParentGroupAccessory(group, accessories, groupStore.objects);
+        const accessories = getGroupAccessories(group, groupStore.objects, preferences);
 
         return (
           <List.Item
@@ -192,7 +175,7 @@ export function GroupList() {
                   shortcut={{ modifiers: ["cmd", "shift"], key: "s" }}
                 />
                 {!examplesInstalled ? (
-                  <InstallExamplesAction setExamplesInstalled={setExamplesInstalled} kind={ItemType.GROUP} />
+                  <InstallExamplesAction kind={ItemType.GROUP} onInstall={() => setExamplesInstalled(true)} />
                 ) : null}
                 <CopyActionsSubmenu item={group}>
                   <Action.CopyToClipboard

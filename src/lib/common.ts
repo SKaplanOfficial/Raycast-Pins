@@ -1,4 +1,4 @@
-import { Keyboard } from "@raycast/api";
+import { Keyboard } from '@raycast/api';
 
 export enum ItemType {
   PIN = "pin",
@@ -20,66 +20,44 @@ export type BaseItem = {
 /**
  * Storage keys used throughout the extension.
  */
-export enum StorageKey {
-  LOCAL_PINS = "localPins",
-  LOCAL_GROUPS = "localGroups",
-
-  PIN_STORE = "local-pins",
-  GROUP_STORE = "local-groups",
-  TAG_STORE = "local-tags",
-
-  APP_DATA = "local-app-data",
+export const storageKeys = {
+  oldPinList: "local-pins",
+  oldGroupList: "local-groups",
+  pinStore: "local-pin-store",
+  groupStore: "local-group-store",
+  tagStore: "local-tag-store",
+  appData: "local-app-data",
 
   /**
-   * The list of recently used applications. This is used to cache the list of applications so that it does not need to be fetched every time the list of pins is displayed.
+   * The cached list of recently used applications.
    */
-  RECENT_APPS = "local-recent-apps",
-
-  /**
-   * The ID of the next pin to be created. This is generally the highest ID in the list of pins, but it is not guaranteed. It is used to ensure that each pin has a unique ID.
-   */
-  NEXT_PIN_ID = "nextPinID",
-
-  /**
-   * The ID of the next group to be created. This is generally the highest ID in the list of groups, but it is not guaranteed. It is used to ensure that each group has a unique ID.
-   */
-  NEXT_GROUP_ID = "nextGroupID",
+  recentApps: "local-recent-apps",
 
   /**
    * The current group to add new pins to by default.
    */
-  TARGET_GROUP = "targetGroup",
+  targetGroup: "target-group",
 
   /**
-   * Whether or not the user has installed the example pins.
+   * Indicates whether user has installed the example pins.
    */
-  EXAMPLE_PINS_INSTALLED = "examplePinsInstalled",
+  examplePinsInstalled: "example-pins-installed",
 
   /**
-   * Whether or not the user has installed the example groups.
+   * Indicates whether user has installed the example groups.
    */
-  EXAMPLE_GROUPS_INSTALLED = "exampleGroupsInstalled",
+  exampleGroupsInstalled: "example-groups-installed",
 
   /**
-   * UUID placeholders used thus far.
+   * The ID of the last opened pin.
    */
-  USED_UUIDS = "usedUUIDs",
+  lastOpenedPin: "last-opened-pin",
 
   /**
-   * The ID of the pin that was most recently opened.
+   * The list of delayed executions.
    */
-  LAST_OPENED_PIN = "lastOpenedPin",
-
-  /**
-   * The list of persistent variables, their current values, and their default (initial) values.
-   */
-  PERSISTENT_VARS = "persistentVars",
-
-  /**
-   * The list of delayed executions, their targets, and their due dates.
-   */
-  DELAYED_EXECUTIONS = "delayedExecutions",
-}
+  delayedExecutions: "delayed-executions",
+} as const;
 
 /**
  * Reserved shortcuts used throughout the extension.
@@ -100,7 +78,7 @@ export const KEYBOARD_SHORTCUT: { [key: string]: Keyboard.Shortcut } = {
   COPY_PINS_JSON: { modifiers: ["cmd"], key: "j" },
   OPEN_PLACEHOLDERS_GUIDE: { modifiers: ["cmd"], key: "g" },
   OPEN_PREFERENCES: { modifiers: ["cmd"], key: "," },
-};
+} as const;
 
 /**
  * Sorting strategies and their display names.

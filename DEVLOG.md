@@ -2,6 +2,12 @@
 
 ## 1.10.0 Release, TBA
 
+### 2025-01-20
+
+- Updated menu bar extra to use DataStorageContext for improved data management.
+- Adjusted various comments for improved clarity and conciseness.
+- Further reduced code footprint.
+
 ### 2025-01-15
 
 - Updated groups to use DataStorageContext for improved data management.

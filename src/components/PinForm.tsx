@@ -2,22 +2,11 @@ import * as os from "os";
 import path from "path";
 import { useState } from "react";
 
-import {
-  Action,
-  ActionPanel,
-  Color,
-  environment,
-  Form,
-  Icon,
-  Keyboard,
-  showToast,
-  useNavigation,
-} from "@raycast/api";
+import { Action, ActionPanel, Color, environment, Form, Icon, Keyboard, showToast, useNavigation } from "@raycast/api";
 import { getFavicon } from "@raycast/utils";
 
 import { KEYBOARD_SHORTCUT, PinAction, Visibility } from "../lib/common";
 import { buildGroup, Group } from "../lib/group";
-import { iconMap } from "../lib/utils";
 import { buildPin, getPinStatistics, Pin } from "../lib/pin";
 import CopyPinActionsSubmenu from "./actions/CopyPinActionsSubmenu";
 import { PLChecker } from "placeholders-toolkit";
@@ -26,6 +15,7 @@ import TagForm from "./TagForm";
 import DeleteItemAction from "./actions/DeleteItemAction";
 import { useDataStorageContext } from "../contexts/DataStorageContext";
 import useAppMatcher from "../hooks/useAppMatcher";
+import { getIcon } from "../lib/utils";
 
 export interface PinFormValues {
   nameField: string;
@@ -54,7 +44,6 @@ export interface PinFormValues {
  * @param props.pin The pin to edit.
  * @param props.setPins The function to call to update the list of pins.
  * @param props.pins The list of all pins.
- * @returns A form view component.
  */
 export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
   const { pin, draftValues } = props;
@@ -289,26 +278,26 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
         defaultValue={draftValues?.iconField || pin?.icon || "Favicon / File Icon"}
         onChange={(value) => setValues({ ...values, icon: value })}
       >
-        {iconList.map((icon) => {
+        {iconList.map((iconKey) => {
           const urlIcon = (values.url as string)
             ? (values.url as string).startsWith("/") || (values.url as string).startsWith("~")
               ? { fileIcon: values.url as string }
               : (values.url as string).match(/^[a-zA-Z0-9]*?:.*/g)
                 ? getFavicon(values.url as string)
                 : Icon.Terminal
-            : iconMap["Minus"];
+            : Icon.Minus;
 
           return (
             <Form.Dropdown.Item
-              key={icon}
-              title={icon}
-              value={icon}
+              key={iconKey}
+              title={iconKey}
+              value={iconKey}
               icon={
-                icon in iconMap
-                  ? { source: iconMap[icon], tintColor: values.iconColor as string }
-                  : icon == "Favicon / File Icon"
+                iconKey in Icon
+                  ? getIcon(iconKey, values.iconColor)
+                  : iconKey == "Favicon / File Icon"
                     ? urlIcon
-                    : iconMap["Minus"]
+                    : Icon.Minus
               }
             />
           );
@@ -409,9 +398,7 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
           info="The group that this Pin is associated with in the 'View Pins' command and in the menu bar dropdown."
         >
           {[buildGroup({ name: "None" })].concat(groupStore.objects).map((group) => {
-            return (
-              <Form.Dropdown.Item key={group.name} title={group.name} value={group.name} icon={iconMap[group.icon]} />
-            );
+            return <Form.Dropdown.Item key={group.name} title={group.name} value={group.name} icon={group.icon} />;
           })}
         </Form.Dropdown>
       ) : null}
@@ -529,7 +516,7 @@ export const PinForm = (props: { pin?: Pin; draftValues?: PinFormValues }) => {
                 key={group.name}
                 title={group.name}
                 value={group.name}
-                icon={group.icon === "None" ? Icon.Minus : { source: iconMap[group.icon], tintColor: group.iconColor }}
+                icon={group.icon === "None" ? Icon.Minus : getIcon(group.icon, group.iconColor)}
               />
             );
           })}

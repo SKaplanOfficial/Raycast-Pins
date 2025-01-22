@@ -33,7 +33,7 @@ export async function deleteItem<T>(
 }
 
 /**
- * Action to delete an item. Prompts the user to confirm the deletion.
+ * Action to delete an item. Prompts the user for confirmation.
  * @param props.item The item to delete.
  * @param props.onCancel A callback to run if the user cancels the deletion.
  * @param props.onDelete A callback to run if the user confirms the deletion.

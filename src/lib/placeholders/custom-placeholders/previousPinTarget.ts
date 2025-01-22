@@ -1,7 +1,7 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
 import { getPreviousPin } from "../../pin";
 import { getStorage } from "../../storage";
-import { StorageKey } from "../../common";
+import { storageKeys } from "../../common";
 
 /**
  * Placeholder for the url-encoded target of the most recently opened pin before the current one.
@@ -12,7 +12,7 @@ const PreviousPinTargetPlaceholder: Placeholder = {
   rules: [
     async () => {
       try {
-        const previousPin = getStorage(StorageKey.LAST_OPENED_PIN);
+        const previousPin = getStorage(storageKeys.lastOpenedPin);
         if (!previousPin) return false;
         return true;
       } catch (e) {

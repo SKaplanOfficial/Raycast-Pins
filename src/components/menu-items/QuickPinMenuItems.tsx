@@ -1,7 +1,7 @@
 import { Application, getSelectedText, Icon, MenuBarExtra } from "@raycast/api";
 import { useCachedState } from "@raycast/utils";
 import { useDataStorageContext } from "../../contexts/DataStorageContext";
-import { StorageKey, KEYBOARD_SHORTCUT } from "../../lib/common";
+import { KEYBOARD_SHORTCUT, storageKeys } from "../../lib/common";
 import { buildGroup, Group } from "../../lib/group";
 import { buildPin } from "../../lib/pin";
 import { FileRef, NoteRef, TabRef, TrackRef } from "../../lib/LocalData";
@@ -11,25 +11,25 @@ import { getMusicTrackScript, getSpotifyTrackScript, getTVTrackScript } from "..
 
 type BaseQuickPinProps = {
   /**
-   * The application to pin.
+   * The current application.
    */
   app: Application;
 };
 
 /**
- * A menu item for creating a new pin whose target is the path of the current app.
+ * A menu item for pinning the path of the current app.
  * @returns The menu item, or null if the app is not pinnable (e.g. Finder or Desktop).
  */
 export function AppQuickPin(props: BaseQuickPinProps) {
   const { app } = props;
   const { pinStore } = useDataStorageContext();
-  const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
+  const [targetGroup] = useCachedState<Group | undefined>(storageKeys.targetGroup, undefined);
 
-  if (app.name.length == 0 || app.name == "Finder" || app.name == "Desktop") {
+  if (!app.name || app.name == "Finder" || app.name == "Desktop") {
     return null;
   }
 
-  let title = `Pin This App (${app.name.substring(0, 20)})`;
+  let title = `Pin This App (${cutoff(app.name, 20)})`;
   if (targetGroup) {
     title = `${title} to Target Group`;
   }
@@ -60,13 +60,13 @@ type DirectoryQuickPinProps = BaseQuickPinProps & {
 };
 
 /**
- * A menu item that creates a new pin whose target path is the current directory of Finder.
+ * A menu item for pinning the path of the current directory in Finder.
  * @returns A menu item, or null if the current app is not a file manager.
  */
 export function DirectoryQuickPin(props: DirectoryQuickPinProps) {
   const { app, directory } = props;
   const { pinStore } = useDataStorageContext();
-  const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
+  const [targetGroup] = useCachedState<Group | undefined>(storageKeys.targetGroup, undefined);
 
   // TODO: PathFinder
   if (app.name != "Finder" || directory.name == "Desktop") {
@@ -98,19 +98,19 @@ export function DirectoryQuickPin(props: DirectoryQuickPinProps) {
 
 type DocumentQuickPinProps = BaseQuickPinProps & {
   /**
-   * The document that is currently open in the frontmost application.
+   * The current document of the frontmost application.
    */
   document: FileRef;
 };
 
 /**
- * A menu item that creates a new pin whose target is the path of current document.
+ * A menu item for pinning the path of current document.
  * @returns A menu item, or null if there is no document open in the frontmost application.
  */
 export function DocumentQuickPin(props: DocumentQuickPinProps) {
   const { app, document } = props;
   const { pinStore } = useDataStorageContext();
-  const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
+  const [targetGroup] = useCachedState<Group | undefined>(storageKeys.targetGroup, undefined);
 
   if (document.path == "") {
     return null;
@@ -152,13 +152,13 @@ type FilesQuickPinProps = BaseQuickPinProps & {
 };
 
 /**
- * A menu item that creates a new pin for each selected file.
+ * A menu item to create a pin for each selected file.
  * @returns A menu item, or null if the current app is not a file manager.
  */
 export function FilesQuickPin(props: FilesQuickPinProps) {
   const { app, selectedFiles, groups } = props;
   const { pinStore, groupStore } = useDataStorageContext();
-  const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
+  const [targetGroup] = useCachedState<Group | undefined>(storageKeys.targetGroup, undefined);
 
   // TODO: PathFinder
   if (app.name != "Finder" || selectedFiles.length == 0) {
@@ -237,7 +237,7 @@ type NotesQuickPinProps = BaseQuickPinProps & {
 export function NotesQuickPin(props: NotesQuickPinProps) {
   const { app, notes, groups } = props;
   const { pinStore, groupStore } = useDataStorageContext();
-  const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
+  const [targetGroup] = useCachedState<Group | undefined>(storageKeys.targetGroup, undefined);
 
   if (app.name != "Notes" || notes.length == 0) {
     return null;
@@ -304,13 +304,13 @@ type TabQuickPinProps = BaseQuickPinProps & {
 };
 
 /**
- * A menu item that creates a new pin whose target URL is the URL of the current browser tab.
+ * A menu item for pinning the URL of the current browser tab.
  * @returns A menu item, or null if the current application is not a supported browser.
  */
 export function TabQuickPin(props: TabQuickPinProps) {
   const { app, tab } = props;
   const { pinStore } = useDataStorageContext();
-  const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
+  const [targetGroup] = useCachedState<Group | undefined>(storageKeys.targetGroup, undefined);
 
   if (!utils.SupportedBrowsers.find((b) => b.name == app.name)) {
     return null;
@@ -359,9 +359,9 @@ type TabsQuickPinProps = BaseQuickPinProps & {
 export function TabsQuickPin(props: TabsQuickPinProps) {
   const { app, tabs, groups } = props;
   const { pinStore, groupStore } = useDataStorageContext();
-  const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
+  const [targetGroup] = useCachedState<Group | undefined>(storageKeys.targetGroup, undefined);
 
-  if (!utils.SupportedBrowsers.find((b) => b.name == app?.name) || tabs.length == 0) {
+  if (!utils.SupportedBrowsers.find((b) => b.name == app?.name) || tabs.length < 2) {
     return null;
   }
 
@@ -407,12 +407,11 @@ export function TabsQuickPin(props: TabsQuickPinProps) {
 }
 
 /**
- * A menu item that creates a new pin whose target is the currently selected text.
- * @returns A menu item.
+ * A menu item for pinning the currently selected text.
  */
 export function TextQuickPin() {
   const { pinStore } = useDataStorageContext();
-  const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
+  const [targetGroup] = useCachedState<Group | undefined>(storageKeys.targetGroup, undefined);
 
   let title = "Pin Selected Text";
   if (targetGroup) {
@@ -453,7 +452,7 @@ type TrackQuickPinProps = BaseQuickPinProps & {
 export function TrackQuickPin(props: TrackQuickPinProps) {
   const { app, track } = props;
   const { pinStore } = useDataStorageContext();
-  const [targetGroup] = useCachedState<Group | undefined>(StorageKey.TARGET_GROUP, undefined);
+  const [targetGroup] = useCachedState<Group | undefined>(storageKeys.targetGroup, undefined);
 
   if (track.name == "") {
     return null;

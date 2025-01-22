@@ -1,16 +1,15 @@
 import { exec } from "child_process";
 import { getFavicon, runAppleScript } from "@raycast/utils";
-import { Icon } from "@raycast/api";
+import { Icon, Image } from "@raycast/api";
 import { Group } from "./group";
 import { Pin } from "./pin";
-import { useEffect, useRef, useState } from "react";
 
 /**
  * Runs a terminal command asynchronously.
  * @param command The command to run.
  * @param callback A callback function to run on each line of output.
  */
-export const runCommand = async (command: string, callback?: (arg0: string) => unknown) => {
+export const runCommand = async (command: string, callback?: (arg0: string) => unknown): Promise<string> => {
   const child = exec(command);
   let result = "";
 
@@ -22,14 +21,12 @@ export const runCommand = async (command: string, callback?: (arg0: string) => u
   while (child.stdout?.readable) {
     await new Promise((r) => setTimeout(r, 100));
   }
-
   return result;
 };
 
 /**
- * Runs Terminal command in a new Terminal tab.
+ * Runs a Terminal command in a new Terminal tab.
  * @param command The command to run.
- * @returns A promise resolving to the output of the command as a string.
  */
 export const runCommandInTerminal = async (command: string): Promise<string> => {
   const output = await runAppleScript(
@@ -65,10 +62,7 @@ export const pluralize = (str: string, count: number) => {
 };
 
 /**
- * Checks if a value is nullish.
- *
- * A nullish value is a value that is either null, undefined, an empty string, an empty array, or an empty object.
- *
+ * Checks if a value is nullish (i.e. null, undefined, an empty string, an empty array, or an empty object).
  * @param value The value to check.
  * @returns True if the value is nullish, false otherwise.
  */
@@ -86,32 +80,18 @@ export const isNullish = (value: unknown): value is null | undefined => {
 };
 
 /**
- * Returns a new object with all nullish values removed.
- * @param obj The object to remove nullish values from.
- * @returns A new object with all nullish values removed.
- */
-export const objectFromNonNullableEntriesOfObject = <T extends Record<string, unknown>>(obj: T): T => {
-  const entries = Object.entries(obj);
-  return Object.fromEntries(entries.filter(([, value]) => isNullish(value))) as T;
-}; /**
- * A map of icon strings to their corresponding icon objects.
- */
-
-export const iconMap = Icon as Record<string, Icon>;
-
-/**
  * Converts a vague icon reference to an icon object.
  * @param iconRef The icon reference to convert.
  * @param color The color to tint the icon.
- * @returns The icon object.
  */
-export const getIcon = (iconRef: string, color?: string) => {
-  if (iconRef in iconMap) {
-    return { source: iconMap[iconRef], tintColor: color };
+export const getIcon = (iconRef: string, color?: string): Image.ImageLike => {
+  const ref = iconRef as keyof typeof Icon;
+  if (ref in Icon) {
+    return { source: Icon[ref], tintColor: color };
   } else if (iconRef.startsWith("/") || iconRef.startsWith("~")) {
-    return { fileIcon: iconRef };
+    return { fileIcon: ref };
   } else if (iconRef.match(/^[a-zA-Z0-9]*?:.*/g)) {
-    return getFavicon(iconRef);
+    return getFavicon(ref);
   } else if (iconRef == "None" || iconRef.replace(/{{(([^{]|{(?!{)|{{[\s\S]*?}})*?)}}/g, "").trim().length == 0) {
     return { source: Icon.Minus, tintColor: color };
   }
@@ -119,12 +99,10 @@ export const getIcon = (iconRef: string, color?: string) => {
 };
 
 /**
- * Gets the icon for a given pin, regardless of whether it's a URL, file path, or icon reference.
- * @param pin The pin to get the icon for.
- * @returns The icon object.
+ * Gets the de-referenced icon of a pin.
  */
 export const getPinIcon = (pin: Pin) => {
-  return pin.icon in iconMap || pin.icon == "None" || pin.icon.startsWith("/")
+  return pin.icon in Icon || pin.icon == "None" || pin.icon.startsWith("/")
     ? getIcon(pin.icon, pin.iconColor)
     : pin.fragment
       ? Icon.Text
@@ -132,30 +110,12 @@ export const getPinIcon = (pin: Pin) => {
 };
 
 /**
- * Gets the icon for a given group.
- * @param group The group to get the icon for.
- * @returns The icon object.
+ * Gets the de-referenced icon of a group.
  */
-export const getGroupIcon = (group: Group) => {
+export const getGroupIcon = (group: Group): Image.ImageLike => {
   return group.name == "Recent Applications"
     ? Icon.Clock
-    : group.icon in iconMap
-      ? { source: iconMap[group.icon], tintColor: group.iconColor }
+    : group.icon in Icon
+      ? getIcon(group.icon, group.iconColor)
       : Icon.Minus;
 };
-
-export default function useRenderCount(callback: (count: number) => void) {
-  const count = useRef<number>(0);
-  const [, setStep] = useState<number>(0);
-
-  useEffect(() => {
-    count.current++;
-    if ((count.current + 1) % 2 == 0) {
-      const trueCount = (count.current + 1) / 2;
-      callback(trueCount);
-      setStep(count.current);
-    }
-  });
-
-  return count.current;
-}

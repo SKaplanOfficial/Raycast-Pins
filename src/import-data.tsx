@@ -8,7 +8,7 @@ import YAML from "yaml";
 import * as TOML from "@iarna/toml";
 import { Action, ActionPanel, Form, Icon, popToRoot, showToast, Toast } from "@raycast/api";
 
-import { StorageKey, SORT_STRATEGY, Visibility } from "./lib/common";
+import { SORT_STRATEGY, storageKeys, Visibility } from "./lib/common";
 import { buildGroup, getGroups, Group, validateGroups } from "./lib/group";
 import { buildPin, getPins, Pin } from "./lib/pin";
 import { setStorage } from "./lib/storage";
@@ -52,12 +52,12 @@ const importJSONData = async (data: { groups?: Group[]; pins?: Pin[] }, importMe
     const newGroups = oldGroups.concat(data.groups || []);
     await validateGroups(newGroups);
     // TODO: use context
-    await setStorage(StorageKey.LOCAL_GROUPS, newGroups);
+    await setStorage(storageKeys.oldGroupList, newGroups);
 
     // Update pins
     const oldPins = await getPins();
     const newPins = oldPins.concat(data.pins || []);
-    await setStorage(StorageKey.LOCAL_PINS, newPins);
+    await setStorage(storageKeys.oldPinList, newPins);
     showToast({ title: "Merged Pin data!" });
   } else if (importMethod == "Merge2") {
     // Remove duplicates
@@ -65,23 +65,23 @@ const importJSONData = async (data: { groups?: Group[]; pins?: Pin[] }, importMe
     const dataGroups = data.groups;
     const oldGroups = await getGroups();
     const newGroups = await mergeRemovingDuplicates(dataGroups || [], oldGroups);
-    await setStorage(StorageKey.LOCAL_GROUPS, newGroups);
+    await setStorage(storageKeys.oldGroupList, newGroups);
 
     // Remove pin duplicates
     const dataPins = data.pins || [];
     const oldPins = await getPins();
     const newPins = await mergeRemovingDuplicates(dataPins, oldPins);
-    await setStorage(StorageKey.LOCAL_PINS, newPins);
+    await setStorage(storageKeys.oldPinList, newPins);
 
     showToast({ title: "Updated Pin data!" });
   } else if (importMethod == "Replace") {
     // Replace all groups and pins
     if (data.pins) {
-      await setStorage(StorageKey.LOCAL_PINS, data.pins);
+      await setStorage(storageKeys.oldPinList, data.pins);
     }
 
     if (data.groups) {
-      await setStorage(StorageKey.LOCAL_GROUPS, data.groups);
+      await setStorage(storageKeys.oldGroupList, data.groups);
     }
 
     showToast({ title: "Replaced Pin data!" });

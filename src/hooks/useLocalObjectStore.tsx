@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type LocalObjectStoreKey = `local-${Lowercase<string>}`;
+type LocalObjectStoreKey = `local-${Lowercase<string>}-store`;
 
 type StorageFns<T> = {
   /**

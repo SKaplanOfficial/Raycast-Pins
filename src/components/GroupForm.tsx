@@ -35,7 +35,6 @@ export interface GroupFormValues {
 /**
  * Form for editing a group.
  * @param props.group The group to edit.
- * @returns A form view.
  */
 export default function GroupForm(props: { group?: Group; draftValues?: GroupFormValues }) {
   const { group, draftValues } = props;
@@ -44,6 +43,7 @@ export default function GroupForm(props: { group?: Group; draftValues?: GroupFor
     draftValues?.visibility || (group?.visibility ?? Visibility.USE_PARENT),
   );
   const [iconColor, setIconColor] = useState<string | undefined>(draftValues?.iconColor || group?.iconColor);
+  const [name, setName] = useState<string>(draftValues?.name || group?.name || "");
   const [nameError, setNameError] = useState<string | undefined>();
   const [parentError, setParentError] = useState<string | undefined>();
   const { pop } = useNavigation();
@@ -95,13 +95,14 @@ export default function GroupForm(props: { group?: Group; draftValues?: GroupFor
         id="name"
         title="Group Name"
         error={nameError}
-        onChange={(value) =>
+        onChange={(value) => {
+          setName(value);
           checkGroupNameField(
             value,
             setNameError,
             groupStore.objects.filter((g) => g.id != targetGroup.id).map((group) => group.name),
-          )
-        }
+          );
+        }}
         defaultValue={targetGroup.name}
       />
 
@@ -217,7 +218,7 @@ export default function GroupForm(props: { group?: Group; draftValues?: GroupFor
         info="The name of this group's parent; use this to create multi-layer groupings within the menu bar dropdown menu"
         error={parentError}
         onChange={async (value) => {
-          await checkGroupParentField(value, setParentError, groupStore.objects);
+          await checkGroupParentField(value, setParentError, groupStore.objects, name);
         }}
       />
 

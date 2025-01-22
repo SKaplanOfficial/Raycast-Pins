@@ -1,19 +1,18 @@
 import { getPreferenceValues, MenuBarExtra } from "@raycast/api";
 
 import { openPin, Pin } from "../../lib/pin";
-import { ExtensionPreferences } from "../../lib/preferences";
+import { ExtensionPreferences, PinsMenubarPreferences } from "../../lib/preferences";
 import { useDataStorageContext } from "../../contexts/DataStorageContext";
 
 /**
  * A menu item to open all pins in a submenu.
  * @param props.pins The pins to open.
  * @param props.submenuName The name of the submenu.
- * @returns A menu bar extra section component.
  */
 export default function OpenAllMenuItem(props: { pins: Pin[]; submenuName: string }) {
   const { pins, submenuName } = props;
   const { pinStore } = useDataStorageContext();
-  const preferences = getPreferenceValues<ExtensionPreferences & { showOpenAll: boolean }>();
+  const preferences = getPreferenceValues<ExtensionPreferences & PinsMenubarPreferences>();
 
   return (
     <MenuBarExtra.Section>

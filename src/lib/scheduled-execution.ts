@@ -1,12 +1,13 @@
-import { environment, showHUD, showToast } from "@raycast/api";
+import { PLApplicator } from 'placeholders-toolkit';
 
-import { StorageKey } from "./common";
-import { getStorage, setStorage } from "./storage";
-import { PLApplicator } from "placeholders-toolkit";
-import PinsPlaceholders from "./placeholders";
+import { showToast } from '@raycast/api';
+
+import { storageKeys } from './common';
+import PinsPlaceholders from './placeholders';
+import { getStorage, setStorage } from './storage';
 
 /**
- * A scheduled execution of a placeholder. These are stored in the extension's persistent local storage.
+ * A scheduled execution of a placeholder.
  */
 export interface DelayedExecution {
   /**
@@ -26,24 +27,19 @@ export interface DelayedExecution {
  * @param dueDate The date and time at which the content should be evaluated.
  */
 export const scheduleTargetEvaluation = async (target: string, dueDate: Date) => {
-  const delayedExecutions = await getStorage(StorageKey.DELAYED_EXECUTIONS);
+  const delayedExecutions = await getStorage(storageKeys.delayedExecutions);
   delayedExecutions.push({ target: target, dueDate: dueDate });
-  await setStorage(StorageKey.DELAYED_EXECUTIONS, delayedExecutions);
-
-  if (environment.commandName == "index") {
-    await showHUD("Scheduled Delayed Evaluation");
-  } else {
-    await showToast({
-      title: "Scheduled Delayed Evaluation",
-      primaryAction: {
-        title: "Cancel",
-        onAction: async () => {
-          await removedScheduledEvaluation(target, dueDate);
-          await showToast({ title: "Canceled Delayed Evaluation" });
-        },
+  await setStorage(storageKeys.delayedExecutions, delayedExecutions);
+  await showToast({
+    title: "Scheduled Delayed Evaluation",
+    primaryAction: {
+      title: "Cancel",
+      onAction: async () => {
+        await removedScheduledEvaluation(target, dueDate);
+        await showToast({ title: "Canceled Delayed Evaluation" });
       },
-    });
-  }
+    },
+  });
 };
 
 /**
@@ -52,9 +48,9 @@ export const scheduleTargetEvaluation = async (target: string, dueDate: Date) =>
  * @param dueDate The date and time at which the evaluation was scheduled to occur.
  */
 export const removedScheduledEvaluation = async (target: string, dueDate: Date) => {
-  const delayedExecutions: { target: string; dueDate: string }[] = await getStorage(StorageKey.DELAYED_EXECUTIONS);
+  const delayedExecutions: DelayedExecution[] = await getStorage(storageKeys.delayedExecutions);
   await setStorage(
-    StorageKey.DELAYED_EXECUTIONS,
+    storageKeys.delayedExecutions,
     delayedExecutions.filter((execution) => execution.target != target && new Date(execution.dueDate) != dueDate),
   );
 };
@@ -63,7 +59,7 @@ export const removedScheduledEvaluation = async (target: string, dueDate: Date) 
  * Checks if any scheduled executions are due to be evaluated, and evaluates them if they are.
  */
 export const checkDelayedExecutions = async () => {
-  const delayedExecutions: { target: string; dueDate: string }[] = await getStorage(StorageKey.DELAYED_EXECUTIONS);
+  const delayedExecutions: DelayedExecution[] = await getStorage(storageKeys.delayedExecutions);
   const now = new Date();
   for (const execution of delayedExecutions) {
     if (new Date(execution.dueDate) <= now) {
@@ -71,7 +67,7 @@ export const checkDelayedExecutions = async () => {
     }
   }
   await setStorage(
-    StorageKey.DELAYED_EXECUTIONS,
+    storageKeys.delayedExecutions,
     delayedExecutions.filter((execution) => new Date(execution.dueDate) > now),
   );
 };

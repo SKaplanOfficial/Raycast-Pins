@@ -1,9 +1,9 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
 import { getPins } from "../../pin";
-import { StorageKey } from "../../common";
 import { storageMethods } from "../../storage";
 import { deleteItem } from "../../../components/actions/DeleteItemAction";
 import { removeStoredObjects } from "../../../hooks/useLocalObjectStore";
+import { storageKeys } from "../../common";
 
 /**
  * Placeholder directive for deleting a pin.
@@ -24,7 +24,7 @@ const DeletePinDirective: Placeholder = {
 
     await deleteItem(
       pin,
-      (item) => removeStoredObjects([item], allPins, StorageKey.PIN_STORE, storageMethods),
+      (item) => removeStoredObjects([item], allPins, storageKeys.pinStore, storageMethods),
       { requireConfirmation: !silent },
     );
     return { result: "" };

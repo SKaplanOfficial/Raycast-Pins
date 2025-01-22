@@ -1,10 +1,10 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
 import { Pin, getPins, openPin, validatePins } from "../../pin";
 import { storageMethods } from "../../storage";
-import { StorageKey } from "../../common";
 import { getPreferenceValues } from "@raycast/api";
 import { ExtensionPreferences } from "../../preferences";
 import { updateStoredObjects } from "../../../hooks/useLocalObjectStore";
+import { storageKeys } from "../../common";
 
 /**
  * Placeholder directive for opening/launching a target pin.
@@ -25,7 +25,7 @@ const LaunchPinDirective: Placeholder = {
       target,
       preferences,
       async (pin: Pin) => {
-        await updateStoredObjects([pin], pins, StorageKey.PIN_STORE, storageMethods, validatePins);
+        await updateStoredObjects([pin], pins, storageKeys.pinStore, storageMethods, validatePins);
       },
     );
     return { result: "" };

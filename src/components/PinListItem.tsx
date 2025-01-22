@@ -1,35 +1,27 @@
-import { Action, ActionPanel, Icon, Keyboard, List, environment, getPreferenceValues, showToast } from "@raycast/api";
-import { LocalDataObject } from "../lib/LocalData";
-import { getRecentApplications } from "../hooks/useRecentApps";
-import { Pin, buildPin, getPinKeywords, getPinStatistics, getPins, openPin } from "../lib/pin";
-import { PinForm } from "./PinForm";
-import { getPinIcon } from "../lib/utils";
-import { Direction, ItemType, PinAction, SORT_STRATEGY, Visibility } from "../lib/common";
-import { cutoff } from "../lib/utils";
-import { ExtensionPreferences, ViewPinsPreferences } from "../lib/preferences";
-import path from "path";
+import path from 'path';
+import { bulkApply } from 'placeholders-toolkit/dist/lib/apply';
+import { useEffect, useState } from 'react';
+
 import {
-  addApplicationAccessory,
-  addCreationDateAccessory,
-  addExecutionVisibilityAccessory,
-  addExpirationDateAccessory,
-  addFrequencyAccessory,
-  addLastOpenedAccessory,
-  addLinksAccessory,
-  addTagAccessories,
-  addTextFragmentAccessory,
-  addVisibilityAccessory,
-} from "../lib/accessories";
-import { buildGroup, Group } from "../lib/group";
-import { PinsInfoPlaceholders } from "../lib/placeholders";
-import { bulkApply } from "placeholders-toolkit/dist/lib/apply";
-import { useEffect, useState } from "react";
-import { InstallExamplesAction } from "./actions/InstallExamplesAction";
-import { LocalObjectStore } from "../hooks/useLocalObjectStore";
-import CreateNewItemAction from "./actions/CreateNewItemAction";
-import DeleteItemAction from "./actions/DeleteItemAction";
-import { useDataStorageContext } from "../contexts/DataStorageContext";
-import CopyActionsSubmenu from "./actions/CopyActionsSubmenu";
+    Action, ActionPanel, environment, getPreferenceValues, Icon, Keyboard, List, showToast
+} from '@raycast/api';
+
+import { useDataStorageContext } from '../contexts/DataStorageContext';
+import { LocalObjectStore } from '../hooks/useLocalObjectStore';
+import { getRecentApplications } from '../hooks/useRecentApps';
+import { getPinAccessories } from '../lib/accessories';
+import { Direction, ItemType, PinAction, SORT_STRATEGY, Visibility } from '../lib/common';
+import { buildGroup, Group } from '../lib/group';
+import { LocalDataObject } from '../lib/LocalData';
+import { buildPin, getPinKeywords, getPins, getPinStatistics, openPin, Pin } from '../lib/pin';
+import { PinsInfoPlaceholders } from '../lib/placeholders';
+import { ExtensionPreferences, ViewPinsPreferences } from '../lib/preferences';
+import { cutoff, getPinIcon } from '../lib/utils';
+import CopyActionsSubmenu from './actions/CopyActionsSubmenu';
+import CreateNewItemAction from './actions/CreateNewItemAction';
+import DeleteItemAction from './actions/DeleteItemAction';
+import { InstallExamplesAction } from './actions/InstallExamplesAction';
+import { PinForm } from './PinForm';
 
 /**
  * Moves a pin up or down in the list of pins. Pins stay within their groups unless grouping is disabled in preferences.
@@ -120,18 +112,9 @@ export default function PinListItem(props: {
   }, [pinStore.objects, pin.name]);
 
   // Add accessories based on the user's preferences
-  const accessories: List.Item.Accessory[] = [];
+  let accessories: List.Item.Accessory[] = [];
   if (!loadingStores) {
-    if (preferences.showVisibility) addVisibilityAccessory(pin, accessories, showingHidden);
-    if (preferences.showLastOpened) addLastOpenedAccessory(pin, accessories, lastOpenedPin?.id);
-    if (preferences.showCreationDate) addCreationDateAccessory(pin, accessories);
-    if (preferences.showExpiration) addExpirationDateAccessory(pin, accessories);
-    if (preferences.showApplication) addApplicationAccessory(pin, accessories);
-    if (preferences.showExecutionVisibility) addExecutionVisibilityAccessory(pin, accessories);
-    if (preferences.showFragment) addTextFragmentAccessory(pin, accessories);
-    if (preferences.showLinkCount) addLinksAccessory(pin, accessories, pinStore.objects, groupStore.objects);
-    if (preferences.showFrequency) addFrequencyAccessory(pin, accessories, maxTimesOpened);
-    if (preferences.showTags) addTagAccessories(pin, tagStore.toMap("name"), accessories);
+    accessories = getPinAccessories(pin, preferences, showingHidden, maxTimesOpened, pinStore.objects, groupStore.objects, tagStore.toMap("name"), lastOpenedPin);
   }
 
   const group =
@@ -273,7 +256,7 @@ export default function PinListItem(props: {
           </ActionPanel.Section>
           <CreateNewItemAction itemType={ItemType.PIN} formView={<PinForm />} />
           {!examplesInstalled ? (
-            <InstallExamplesAction setExamplesInstalled={setExamplesInstalled} kind={ItemType.PIN} />
+            <InstallExamplesAction kind={ItemType.PIN} onInstall={() => setExamplesInstalled(true)} />
           ) : null}
 
           <Action

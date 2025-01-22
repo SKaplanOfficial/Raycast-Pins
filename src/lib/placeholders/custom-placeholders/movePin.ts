@@ -1,7 +1,7 @@
 import { Placeholder, PlaceholderCategory, PlaceholderType } from "placeholders-toolkit";
 import { getPins, validatePins } from "../../pin";
 import { Group, buildGroup, getGroups, validateGroups } from "../../group";
-import { StorageKey, Visibility } from "../../common";
+import { storageKeys, Visibility } from "../../common";
 import { storageMethods } from "../../storage";
 import { saveObjects, updateStoredObjects } from "../../../hooks/useLocalObjectStore";
 
@@ -39,10 +39,10 @@ const MovePinDirective: Placeholder = {
           icon: "None",
         });
       }
-      await saveObjects([newGroup], allGroups, StorageKey.GROUP_STORE, storageMethods, validateGroups);
+      await saveObjects([newGroup], allGroups, storageKeys.groupStore, storageMethods, validateGroups);
     }
 
-    await updateStoredObjects([{ ...pin, group: group }], allPins, StorageKey.PIN_STORE, storageMethods, validatePins);
+    await updateStoredObjects([{ ...pin, group: group }], allPins, storageKeys.pinStore, storageMethods, validatePins);
     return { result: "" };
   },
   constant: false,

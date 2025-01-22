@@ -5,9 +5,8 @@ import { useDataStorageContext } from "../../contexts/DataStorageContext";
 import CopyActionsSubmenu from "./CopyActionsSubmenu";
 
 /**
- * Submenu for actions that copy pin information to the clipboard.
+ * Submenu for actions to copy pin information to the clipboard.
  * @param props.pin The pin to copy information about.
- * @returns A submenu component.
  */
 export default function CopyPinActionsSubmenu(props: { pin: Pin }) {
   const { pin } = props;

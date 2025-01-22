@@ -9,8 +9,7 @@ export const setStorage = async (key: string, value: unknown) => {
 };
 
 /**
- * Gets the value of a local storage key.
- * @returns The JSON-parsed value of the key.
+ * Gets the JSON-parsed value of a local storage key.
  */
 export const getStorage = async (key: string) => {
   const storageString = await LocalStorage.getItem<string>(key);

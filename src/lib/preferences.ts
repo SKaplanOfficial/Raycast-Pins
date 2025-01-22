@@ -1,4 +1,4 @@
-import { Application } from "@raycast/api";
+import { Application } from '@raycast/api';
 
 /**
  * Preferences for the entire extension.
@@ -12,7 +12,7 @@ export interface ExtensionPreferences {
   /**
    * The first section displayed in lists of pins, e.g. grouped-pins-first or ungrouped-pins-first.
    */
-  topSection: string;
+  topSection: "pins" | "groups" | "quickPins";
 
   /**
    * Whether or not to show the recent applications section in lists of pins.
@@ -22,12 +22,12 @@ export interface ExtensionPreferences {
   /**
    * The default sort strategy for lists of pins outside of groups.
    */
-  defaultSortStrategy: string;
+  defaultSortStrategy: "dateCreated" | "manual" | "alphabetical" | "recency" | "frequency";
 
   /**
    * The default Raycast AI model to use for AI queries.
    */
-  defaultAIModel: string;
+  defaultAIModel: "OpenAI_GPT3.5-turbo" | "OpenAI_GPT4" | "OpenAI_GPT4-turbo" | "OpenAI_GPT4o" | "Anthropic_Claude_Haiku" | "Anthropic_Claude_Sonnet" | "Anthropic_Claude_Opus" | "Perplexity_Llama3_Sonar_Small" | "Perplexity_Llama3_Sonar_Large" | "Llama3_70B" | "MixtraL_8x7B";
 }
 
 /**

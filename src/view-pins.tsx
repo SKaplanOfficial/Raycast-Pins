@@ -129,7 +129,7 @@ function PinList(props: { args: { launchContext?: { pinSpecifier?: string; actio
         <ActionPanel>
           <CreateNewItemAction itemType={ItemType.PIN} formView={<PinForm />} />
           {!examplesInstalled || pinStore.objects.length == 0 ? (
-            <InstallExamplesAction setExamplesInstalled={setExamplesInstalled} kind={ItemType.PIN} />
+            <InstallExamplesAction kind={ItemType.PIN} onInstall={() => setExamplesInstalled(true)} />
           ) : null}
         </ActionPanel>
       }
@@ -146,7 +146,7 @@ function PinList(props: { args: { launchContext?: { pinSpecifier?: string; actio
             <>
               <CreateNewItemAction itemType={ItemType.PIN} formView={<PinForm />} />
               {!examplesInstalled || pinStore.objects.length == 0 ? (
-                <InstallExamplesAction setExamplesInstalled={setExamplesInstalled} kind={ItemType.PIN} />
+                <InstallExamplesAction kind={ItemType.PIN} onInstall={() => setExamplesInstalled(true)} />
               ) : null}
             </>
           }
